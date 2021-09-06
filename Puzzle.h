@@ -18,6 +18,7 @@ struct Puzzle {
   int _height = 0;
   int _width = 0;
   int _numConnections = 0;
+  std::string _name;
   std::vector<std::tuple<int, int>> _connections;
   Cell** _grid;
 

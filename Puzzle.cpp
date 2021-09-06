@@ -31,6 +31,7 @@ Puzzle::Puzzle(int width, int height) {
 
 Puzzle Puzzle::GeneratePolyominos(Random& rng) {
   Puzzle p = Puzzle(4, 4);
+  p._name = "Random polyominos #" + std::to_string(rng._seed);
   p._grid[0][8].type = "line";
   p._grid[0][8].start = true;
   p._grid[8][0].type = "line";
@@ -109,28 +110,30 @@ tuple<int, int> Puzzle::GetEmptyCell(Random& rng) {
 
 ostream& operator<<(ostream& os, const Cell& c) {
   if (c.type.empty()) {
-    os << 'null';
+    os << "null";
     return os;
   }
 
   os << '{';
-    if (c.dot != 0) os << "'dot': " << c.dot << ",";
-    if (c.gap != 0) os << "'gap': " << c.gap << ",";
-    if (c.polyshape != 0) os << "'polyshape': " << c.polyshape << ",";
-    if (c.start) os << "'start': true,";
-    if (!c.end.empty()) os << "'end': '" << c.end << "',";
-    if (!c.color.empty()) os << "'color': '" << c.color << "',";
-    os << "'type': '" << c.type << "'";
+    if (c.dot != 0) os << "\\\"dot\\\": " << c.dot << ",";
+    if (c.gap != 0) os << "\\\"gap\\\": " << c.gap << ",";
+    if (c.polyshape != 0) os << "\\\"polyshape\\\": " << c.polyshape << ",";
+    if (c.start) os << "\\\"start\\\": true,";
+    if (!c.end.empty()) os << "\\\"end\\\": \\\"" << c.end << "\\\",";
+    if (!c.color.empty()) os << "\\\"color\\\": \\\"" << c.color << "\\\",";
+    os << "\\\"type\\\": \\\"" << c.type << "\\\"";
   os << '}';
   return os;
 }
 
 ostream& operator<<(ostream& os, const Puzzle& p) {
-  os << '{';
-    os << "'width': " << p._width << ',';
-    os << "'height': " << p._height << ',';
+  os << "\"{";
+    os << "\\\"width\\\": " << p._width << ',';
+    os << "\\\"height\\\": " << p._height << ',';
+    os << "\\\"pillar\\\": false,";
+    os << "\\\"name\\\": \\\"" << p._name << "\\\",";
 
-    os << "'grid': [";
+    os << "\\\"grid\\\": [";
     for (int x=0; x<2*p._width+1; x++) {
       os << '[';
       for (int y=0; y<2*p._height+1; y++) {
@@ -138,7 +141,7 @@ ostream& operator<<(ostream& os, const Puzzle& p) {
           if (x%2 == 1 && y%2 == 1) {
             os << "null";
           } else {
-            os << "{'type': 'line'}";
+            os << "{\\\"type\\\": \\\"line\\\"}";
           }
         } else {
           os << p._grid[x][y];
@@ -148,8 +151,8 @@ ostream& operator<<(ostream& os, const Puzzle& p) {
       os << ']';
       if (x < 2*p._width) os << ',';
     }
-    os << "]";
+    os << ']';
 
-  os << '}';
+  os << "}\"";
   return os;
 }
