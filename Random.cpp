@@ -41,3 +41,39 @@ void Random::ShuffleIntegers(vector<int>& arr) {
     arr[size-1] = tmp;
   }
 }
+
+unsigned int RotatePolyshape(unsigned int polyshape) {
+  unsigned int newshape = 0;
+  for (int x=0; x<4; x++) {
+    for (int y=0; y<4; y++) {
+      if (polyshape & (1 << (x*4 + y))) newshape |= 1 << (y*4 + 3-x);
+    }
+  }
+  return newshape;
+}
+
+unsigned int Random::RandomPolyshape() {
+  int cursor_x = 0;
+  int cursor_y = 0;
+  unsigned short polyshape = 1;
+
+  for (int size = (Get() % 3) + 2; size > 0; size--) {
+    if (Get() % 2 == 0) {
+      cursor_y++;
+    } else {
+      cursor_x++;
+    }
+
+    // Note: This can overflow if you roll the same cursor 5 times in a row.
+    // This means that a 5-J or a 4-I is produced instead of a 5-I.
+    polyshape |= 1 << (cursor_x*4 + cursor_y);
+  }
+
+  // Slight adjustment here due to differences in rotation between WitnessPuzzles and The Witness.
+  int rotation = (Get() + 1) % 4;
+  for (; rotation > 0; rotation--) {
+    polyshape = RotatePolyshape(polyshape);
+  }
+
+  return polyshape;
+}

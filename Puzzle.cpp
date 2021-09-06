@@ -1,5 +1,6 @@
 #include "Puzzle.h"
 #include "Random.h"
+#include <ostream>
 using namespace std;
 
 Puzzle::Puzzle(int width, int height) {
@@ -30,7 +31,9 @@ Puzzle::Puzzle(int width, int height) {
 
 Puzzle Puzzle::GeneratePolyominos(Random& rng) {
   Puzzle p = Puzzle(4, 4);
+  p._grid[0][8].type = "line";
   p._grid[0][8].start = true;
+  p._grid[8][0].type = "line";
   p._grid[8][0].end = "right"; p._numConnections++;
 
   rng.Get();
@@ -54,6 +57,17 @@ Puzzle Puzzle::GeneratePolyominos(Random& rng) {
 
   p.CutRandomEdges(rng, 8);
 
+  unsigned short polyshape1 = rng.RandomPolyshape();
+  unsigned short polyshape2 = rng.RandomPolyshape();
+  auto [x1, y1] = p.GetEmptyCell(rng);
+  auto [x2, y2] = p.GetEmptyCell(rng);
+  p._grid[x1][y1].type = "poly";
+  p._grid[x1][y1].color = colorNames[colors[1]];
+  p._grid[x1][y1].polyshape = polyshape1;
+  p._grid[x2][y2].type = "poly";
+  p._grid[x2][y2].color = colorNames[colors[1]];
+  p._grid[x2][y2].polyshape = polyshape2;
+
   return p;
 }
 
@@ -76,6 +90,7 @@ void Puzzle::CutRandomEdges(Random& rng, int numCuts) {
     auto [x, y] = _connections[rand];
     if (_grid[x][y].gap == 0) {
       _numConnections++;
+      _grid[x][y].type = "line";
       _grid[x][y].gap = 1;
     }
   }
@@ -90,4 +105,51 @@ tuple<int, int> Puzzle::GetEmptyCell(Random& rng) {
     int y = (_height - rand/_width)*2 - 1;
     if (_grid[x][y].type.empty()) return {x, y};
   }
+}
+
+ostream& operator<<(ostream& os, const Cell& c) {
+  if (c.type.empty()) {
+    os << 'null';
+    return os;
+  }
+
+  os << '{';
+    if (c.dot != 0) os << "'dot': " << c.dot << ",";
+    if (c.gap != 0) os << "'gap': " << c.gap << ",";
+    if (c.polyshape != 0) os << "'polyshape': " << c.polyshape << ",";
+    if (c.start) os << "'start': true,";
+    if (!c.end.empty()) os << "'end': '" << c.end << "',";
+    if (!c.color.empty()) os << "'color': '" << c.color << "',";
+    os << "'type': '" << c.type << "'";
+  os << '}';
+  return os;
+}
+
+ostream& operator<<(ostream& os, const Puzzle& p) {
+  os << '{';
+    os << "'width': " << p._width << ',';
+    os << "'height': " << p._height << ',';
+
+    os << "'grid': [";
+    for (int x=0; x<2*p._width+1; x++) {
+      os << '[';
+      for (int y=0; y<2*p._height+1; y++) {
+        if (p._grid[x][y].type.empty()) {
+          if (x%2 == 1 && y%2 == 1) {
+            os << "null";
+          } else {
+            os << "{'type': 'line'}";
+          }
+        } else {
+          os << p._grid[x][y];
+        }
+        if (y < 2*p._height) os << ',';
+      }
+      os << ']';
+      if (x < 2*p._width) os << ',';
+    }
+    os << "]";
+
+  os << '}';
+  return os;
 }

@@ -113,9 +113,9 @@ int main(int argc, char* argv[]) {
     cout << "Done" << endl;
 
   } else if (argc > 1 && strcmp(argv[1], "rand") == 0) {
-    rng._seed = 0x21BA7418;
+    rng._seed = 0x0BB63EB7;
     Puzzle p = Puzzle::GeneratePolyominos(rng);
-    int k = 1;
+    cout << p << endl;
   }
 
   return 0;

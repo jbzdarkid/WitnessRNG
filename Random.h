@@ -10,4 +10,6 @@ struct Random {
 
   // The good shuffle
   void ShuffleIntegers(std::vector<int>& arr);
+
+  unsigned int RandomPolyshape();
 };
