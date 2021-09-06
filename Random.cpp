@@ -22,25 +22,11 @@ int Random::Get() {
   return nextRng;
 }
 
-void Random::ShuffleIntegers(vector<int>& arr)
-{
-  int rbx = arr.size(); // 4
-  vector<int>& rsi = arr;
-  if (rbx <= 1) return;
-  int* rdi = &arr[0] + rbx; // Note: Beyond the end of the array!
-  do {
-    int rng = Get();
-    int r8d = *(rdi - 1); // PA
-    int edx = rng % rbx;
-    rdi -= 1; // PA
-    rbx--;
-    int rax = edx;
-    int* rcx = &arr[rax];
-    rax = arr[rax];
-    *rdi = rax;
-    *rcx = r8d;
-  } while (rbx > 1);
-
-
-  int k = 1;
+void Random::ShuffleIntegers(vector<int>& arr) {
+  for (size_t size = arr.size(); size > 1; size--) {
+    size_t rng = Get() % size;
+    int tmp = arr[rng];
+    arr[rng] = arr[size-1];
+    arr[size-1] = tmp;
+  }
 }
