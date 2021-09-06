@@ -9,6 +9,7 @@ struct Cell {
   int gap = 0;
   bool start = false;
   std::string end;
+  std::string color;
 };
 
 struct Puzzle {
@@ -19,12 +20,13 @@ struct Puzzle {
   Cell** _grid;
 
   Puzzle(int _width, int _height);
-  static Puzzle GeneratePolyominos();
+  static Puzzle GeneratePolyominos(Random& rng);
 
   void SetCell(int x, int y, Cell cell);
   const Cell* GetCell(int x, int y);
 
   void CutRandomEdges(Random& rng, int numCuts);
   void AddRandomDots(Random& rng, int numDots);
+  std::tuple<int, int> GetEmptyCell(Random& rng);
 
 };

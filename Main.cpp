@@ -3,6 +3,7 @@
 #include <unordered_set>
 #include "Random.h"
 #include <cassert>
+#include "Puzzle.h"
 using namespace std;
 
 unordered_map<int, int> tests = {
@@ -93,7 +94,6 @@ vector<tuple<int, int, vector<int>>> tests2 = {
 auto rng = Random();
 
 int main(int argc, char* argv[]) {
-  
   if (argc > 1 && strcmp(argv[1], "test") == 0) {
     for (const auto [key, value] : tests) {
       rng._seed = key;
@@ -112,8 +112,10 @@ int main(int argc, char* argv[]) {
 
     cout << "Done" << endl;
 
-  } else if (argc > 0 && strcmp(argv[0], "rand") == 0) {
-
+  } else if (argc > 1 && strcmp(argv[1], "rand") == 0) {
+    rng._seed = 0x21BA7418;
+    Puzzle p = Puzzle::GeneratePolyominos(rng);
+    int k = 1;
   }
 
   return 0;

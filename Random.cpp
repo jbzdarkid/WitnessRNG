@@ -22,6 +22,17 @@ int Random::Get() {
   return nextRng;
 }
 
+void Random::ShuffleInt(std::vector<int>& arr) {
+  size_t size = arr.size();
+  for (size_t i=0; i<size; i++) {
+    size_t rng1 = Get() % size;
+    size_t rng2 = Get() % size;
+    int tmp = arr[rng1];
+    arr[rng1] = arr[rng2];
+    arr[rng2] = tmp;
+  }
+}
+
 void Random::ShuffleIntegers(vector<int>& arr) {
   for (size_t size = arr.size(); size > 1; size--) {
     size_t rng = Get() % size;
