@@ -1,8 +1,7 @@
 #pragma once
 #include <vector>
 
-struct Random
-{
+struct Random {
   int _seed = 0;
   int Get();
 
