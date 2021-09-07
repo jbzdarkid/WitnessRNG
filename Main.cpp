@@ -1,9 +1,16 @@
-#include <unordered_map>
-#include <iostream>
-#include <unordered_set>
-#include "Random.h"
 #include <cassert>
+#include <iostream>
+#include <iomanip>
+#include <unordered_map>
+#include <unordered_set>
+#include <thread>
+#include <sstream>
+
+#include "Windows.h"
+
+#include "Random.h"
 #include "Puzzle.h"
+
 using namespace std;
 
 unordered_map<int, int> tests = {
@@ -116,6 +123,54 @@ int main(int argc, char* argv[]) {
     rng._seed = 0x0BB63EB7;
     Puzzle p = Puzzle::GeneratePolyominos(rng);
     cout << p << endl;
+
+  } else if (argc > 1 && strcmp(argv[1], "thrd") == 0) {
+    vector<thread> threads;
+    const int numThreads = 8;
+    for (int i=0; i<numThreads; i++) {
+      thread t([numThreads](int i) {
+        string fileName = "thread_" + to_string(i) + ".txt";
+        auto file = CreateFileA(fileName.c_str(), FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
+
+        Random rng;
+        for (int j=i; j<0x10'0000; j+=numThreads) {
+          rng._seed = j;
+          Puzzle p = Puzzle::GeneratePolyominos(rng);
+          stringstream output;
+          output << "0x" << hex << uppercase << setfill('0') << j << '\t'; // RNG
+          output << "0x" << hex << uppercase << setfill('0') << rng._seed << '\t'; // Ending RNG (used to deduplicate puzzles)
+          output << "unevaluated" << '\t'; // State (will be updated by other systems)
+          output << p << '\t'; // Contents
+          output << '\n';
+          string outputStr = output.str();
+          DWORD unused;
+          WriteFile(file, &outputStr[0], outputStr.size(), &unused, nullptr);
+        }
+        CloseHandle(file);
+      }, i);
+      threads.push_back(std::move(t));
+    }
+
+    for (auto& thread : threads) {
+      if (thread.joinable()) thread.join();
+    }
+
+    auto outFile = CreateFileA("thread_merged.tsv", FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
+
+    string buffer(1024 * 1024, '\0');
+    for (int i=0; i<numThreads; i++) {
+      string fileName = "thread_" + to_string(i) + ".txt";
+      auto file = CreateFileA(fileName.c_str(), GENERIC_READ, NULL, nullptr, OPEN_EXISTING, NULL, nullptr);
+      DWORD bytesRead;
+      do {
+        ReadFile(file, &buffer[0], buffer.size(), &bytesRead, nullptr);
+        DWORD unused;
+        WriteFile(outFile, &buffer[0], bytesRead, &unused, nullptr);
+        SetFilePointer(outFile, 0, nullptr, FILE_END);
+      } while (bytesRead > 0);
+      CloseHandle(file);
+    }
+    CloseHandle(outFile);
   }
 
   return 0;

@@ -86,7 +86,7 @@ void Puzzle::CutRandomEdges(Random& rng, int numCuts) {
     int rand = rng.Get() % numConnections;
 
     // In TW, additional connections are added whenever a cut is made. So, we continue if the RNG is larger than the true connection size.
-    if (rand > _connections.size()) continue;
+    if (rand >= _connections.size()) continue;
 
     auto [x, y] = _connections[rand];
     if (_grid[x][y].gap == 0) {
