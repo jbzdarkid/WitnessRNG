@@ -12,6 +12,8 @@ struct Cell {
 
   std::string end;
   std::string color;
+
+  std::string ToString(int x, int y);
 };
 
 struct Puzzle {

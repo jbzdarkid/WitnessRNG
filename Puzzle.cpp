@@ -1,6 +1,9 @@
+#include <cstdarg>
+#include <sstream>
+
 #include "Puzzle.h"
 #include "Random.h"
-#include <ostream>
+
 using namespace std;
 
 Puzzle::Puzzle(int width, int height) {
@@ -115,37 +118,29 @@ ostream& operator<<(ostream& os, const Cell& c) {
   }
 
   os << '{';
-    if (c.dot != 0) os << "\\\"dot\\\": " << c.dot << ",";
-    if (c.gap != 0) os << "\\\"gap\\\": " << c.gap << ",";
-    if (c.polyshape != 0) os << "\\\"polyshape\\\": " << c.polyshape << ",";
-    if (c.start) os << "\\\"start\\\": true,";
-    if (!c.end.empty()) os << "\\\"end\\\": \\\"" << c.end << "\\\",";
-    if (!c.color.empty()) os << "\\\"color\\\": \\\"" << c.color << "\\\",";
-    os << "\\\"type\\\": \\\"" << c.type << "\\\"";
+    if (c.dot != 0) os << "\"dot\": " << dec << c.dot << ",";
+    if (c.gap != 0) os << "\"gap\": " << dec << c.gap << ",";
+    if (c.polyshape != 0) os << "\"polyshape\": " << dec << c.polyshape << ",";
+    if (c.start) os << "\"start\": true,";
+    if (!c.end.empty()) os << "\"end\": \"" << c.end << "\",";
+    if (!c.color.empty()) os << "\"color\": \"" << c.color << "\",";
+    os << "\"type\": \"" << c.type << "\"";
   os << '}';
   return os;
 }
 
 ostream& operator<<(ostream& os, const Puzzle& p) {
-  os << "\"{";
-    os << "\\\"width\\\": " << p._width << ',';
-    os << "\\\"height\\\": " << p._height << ',';
-    os << "\\\"pillar\\\": false,";
-    os << "\\\"name\\\": \\\"" << p._name << "\\\",";
+  os << "{";
+    os << "\"width\": " << dec << p._width << ',';
+    os << "\"height\": " << dec << p._height << ',';
+    os << "\"pillar\": false,";
+    os << "\"name\": \"" << p._name << "\",";
 
-    os << "\\\"grid\\\": [";
+    os << "\"grid\": [";
     for (int x=0; x<2*p._width+1; x++) {
       os << '[';
       for (int y=0; y<2*p._height+1; y++) {
-        if (p._grid[x][y].type.empty()) {
-          if (x%2 == 1 && y%2 == 1) {
-            os << "null";
-          } else {
-            os << "{\\\"type\\\": \\\"line\\\"}";
-          }
-        } else {
-          os << p._grid[x][y];
-        }
+        os << dec << p._grid[x][y].ToString(x, y);
         if (y < 2*p._height) os << ',';
       }
       os << ']';
@@ -153,6 +148,46 @@ ostream& operator<<(ostream& os, const Puzzle& p) {
     }
     os << ']';
 
-  os << "}\"";
+  os << "}";
   return os;
+}
+
+#define PRINTF(format, ...) \
+  int length = snprintf(nullptr, 0, format, ##__VA_ARGS__); \
+  string output(length, '\0'); \
+  snprintf(&output[0], output.size() + 1, format, ##__VA_ARGS__); \
+  do {} while(0)
+
+const char* IntToString(int i) {
+  switch (i) {
+    case 0: default:
+      return "";
+    case 1:
+      return "1";
+  }
+}
+
+std::string Cell::ToString(int x, int y) {
+  if (x%2 == 1 && y%2 == 1 && type.empty()) return "null";
+
+  char polyshapeStr[sizeof(R"("polyshape":65535,)")] = {'\0'};
+  if (polyshape != 0) sprintf_s(&polyshapeStr[0], sizeof(polyshapeStr), ",\"polyshape\":%hu", polyshape);
+
+  PRINTF("{\"type\":\"%s\",\"line\":0"
+    "%s%s" // dot
+    "%s%s" // gap
+    "%s" // start
+    "%s%s%s" // end
+    "%s%s%s" // color
+    "%s" // polyshape
+    "}",
+    type.empty() ? "line" : type.c_str(),
+    (dot != 0 ? ",\"dot\":" : ""), IntToString(dot),
+    (gap != 0 ? ",\"gap\":" : ""), IntToString(gap),
+    (start != 0 ? ",\"start\":true" : ""),
+    (!end.empty() ? ",\"end\":\"" : ""), end.c_str(), (!end.empty() ? "\"" : ""),
+    (!color.empty() ? ",\"color\":\"" : ""), color.c_str(), (!color.empty() ? "\"" : ""),
+    polyshapeStr
+  );
+  return output;
 }

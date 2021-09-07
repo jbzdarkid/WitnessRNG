@@ -126,14 +126,18 @@ int main(int argc, char* argv[]) {
 
   } else if (argc > 1 && strcmp(argv[1], "thrd") == 0) {
     vector<thread> threads;
+    #if _DEBUG
+    const int numThreads = 1;
+    #else
     const int numThreads = 8;
+    #endif
     for (int i=0; i<numThreads; i++) {
       thread t([numThreads](int i) {
         string fileName = "thread_" + to_string(i) + ".txt";
         auto file = CreateFileA(fileName.c_str(), FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
 
         Random rng;
-        for (int j=i; j<0x10'0000; j+=numThreads) {
+        for (int j=i; j<0x1'0000; j+=numThreads) {
           rng._seed = j;
           Puzzle p = Puzzle::GeneratePolyominos(rng);
           stringstream output;
