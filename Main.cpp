@@ -11,6 +11,7 @@
 #include "Random.h"
 #include "Puzzle.h"
 #include "Utilities.h"
+#include "Validate.h"
 
 using namespace std;
 
@@ -126,6 +127,7 @@ int main(int argc, char* argv[]) {
     rng._seed = 0x0BB63EB7;
     Puzzle p = Puzzle::GeneratePolyominos(rng);
     cout << p << endl;
+    Validator::Validate(p);
 
   } else if (argc > 1 && strcmp(argv[1], "thrd") == 0) {
     vector<thread> threads;
