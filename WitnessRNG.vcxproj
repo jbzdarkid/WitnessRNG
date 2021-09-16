@@ -146,10 +146,13 @@
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Puzzle.cpp" />
     <ClCompile Include="Random.cpp" />
+    <ClCompile Include="Validate.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Puzzle.h" />
     <ClInclude Include="Random.h" />
+    <ClInclude Include="Utilities.h" />
+    <ClInclude Include="Validate.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

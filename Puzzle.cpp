@@ -11,7 +11,13 @@ Puzzle::Puzzle(int width, int height) {
   _height = height;
   _numConnections = (width+1)*height + width*(height+1);
   _grid = new Cell*[2*width+1];
-  for (int x=0; x<2*width+1; x++) _grid[x] = new Cell[2*height+1];
+  for (int x = 0; x < 2 * width + 1; x++) {
+    _grid[x] = new Cell[2 * height + 1];
+    for (int y = 0; y < 2 * height + 1; y++) {
+      _grid[x][y].x = x;
+      _grid[x][y].y = y;
+    }
+  }
   _connections.resize(_numConnections);
 
   int i = 0;
@@ -83,6 +89,10 @@ const Cell* Puzzle::GetCell(int x, int y) {
   return &_grid[x][y];
 }
 
+vector<Region> Puzzle::GetRegions() {
+  return {}; // This function is big and complicated... but can probably be made simpler for this project.
+}
+
 void Puzzle::CutRandomEdges(Random& rng, int numCuts) {
   int numConnections = _numConnections; // TW stores the value of this before making cuts.
   for (int i=0; i<numCuts; i++) {
@@ -149,6 +159,11 @@ ostream& operator<<(ostream& os, const Puzzle& p) {
     os << ']';
 
   os << "}";
+  return os;
+}
+
+ostream& operator<<(ostream& os, const Region& r) {
+  os << "Region@" << &r;
   return os;
 }
 
