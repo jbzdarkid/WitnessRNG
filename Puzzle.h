@@ -3,15 +3,14 @@
 #include <vector>
 struct Random;
 
-#define LINE_NONE 0
-
 struct Cell {
   std::string type;
+  int x = 0;
+  int y = 0;
   int dot = 0;
   int gap = 0;
   int line = 0;
-  int x = 0;
-  int y = 0;
+  int count = 0;
   unsigned short polyshape = 0u;
   bool start = false;
 
@@ -42,8 +41,11 @@ struct Region {
 
 class Puzzle {
 public:
+  int _origWidth = 0;
+  int _origHeight = 0;
   int _height = 0;
   int _width = 0;
+  bool _pillar = false;
   int _numConnections = 0;
   std::string _name;
   std::vector<std::tuple<int, int>> _connections;
@@ -53,15 +55,18 @@ public:
   bool _valid = false;
   bool _hasNegations = false;
   bool _hasPolyominos = false;
-  std::vector<Cell*> _negations;
+  std::vector<std::tuple<Cell*, Cell*>> _negations;
   std::vector<Cell*> _invalidElements;
   std::vector<Cell*> _veryInvalidElements;
 
   // Non-RNG functions from WP
-  Puzzle(int _width, int _height);
+  Puzzle(int width, int height, bool pillar=false);
 
   void SetCell(int x, int y, Cell cell);
-  const Cell* GetCell(int x, int y);
+  Cell* GetCell(int x, int y);
+  // A variant of getCell which specifically returns line values,
+  // and treats objects as being out-of-bounds
+  int GetLine(int x, int y);
   std::vector<Region> GetRegions();
 
   // RNG functions (from TW)
@@ -70,6 +75,10 @@ public:
   void CutRandomEdges(Random& rng, int numCuts);
   void AddRandomDots(Random& rng, int numDots);
   std::tuple<int, int> GetEmptyCell(Random& rng);
+
+private:
+  int _mod(int x);
+  bool _safeCell(int x, int y);
 };
 
 std::ostream& operator<<(std::ostream& os, const Puzzle& p);

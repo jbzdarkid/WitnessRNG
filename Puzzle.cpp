@@ -3,17 +3,20 @@
 
 #include "Puzzle.h"
 #include "Random.h"
+#include "Utilities.h"
 
 using namespace std;
 
-Puzzle::Puzzle(int width, int height) {
-  _width = width;
-  _height = height;
+Puzzle::Puzzle(int width, int height, bool pillar) {
+  _origWidth = width;
+  _origHeight = height;
+  _width = 2*width + (pillar ? 0 : 1);
+  _height = 2*height+1;
   _numConnections = (width+1)*height + width*(height+1);
-  _grid = new Cell*[2*width+1];
-  for (int x = 0; x < 2 * width + 1; x++) {
-    _grid[x] = new Cell[2 * height + 1];
-    for (int y = 0; y < 2 * height + 1; y++) {
+  _grid = new Cell*[_width];
+  for (int x=0; x<_width; x++) {
+    _grid[x] = new Cell[_height];
+    for (int y = 0; y < _height; y++) {
       _grid[x][y].x = x;
       _grid[x][y].y = y;
     }
@@ -85,8 +88,28 @@ void Puzzle::SetCell(int x, int y, Cell cell) {
   _grid[x][y] = cell;
 }
 
-const Cell* Puzzle::GetCell(int x, int y) {
+Cell* Puzzle::GetCell(int x, int y) {
+  x = _mod(x);
+  if (!_safeCell(x, y)) return nullptr;
   return &_grid[x][y];
+}
+
+int Puzzle::_mod(int x) {
+  if (_pillar == false) return x;
+  return (x + 2 * _width * _height) % _width;
+}
+
+bool Puzzle::_safeCell(int x, int y) {
+  if (x < 0 || x >= _width) return false;
+  if (y < 0 || y >= _height) return false;
+  return true;
+}
+
+int Puzzle::GetLine(int x, int y) {
+  Cell* cell = GetCell(x, y);
+  if (cell == nullptr) return LINE_NONE;
+  if (cell->type != "line") return LINE_NONE;
+  return cell->line;
 }
 
 vector<Region> Puzzle::GetRegions() {
@@ -112,11 +135,11 @@ void Puzzle::CutRandomEdges(Random& rng, int numCuts) {
 
 tuple<int, int> Puzzle::GetEmptyCell(Random& rng) {
   while (true) {
-    int rand = rng.Get() % (_width * _height);
+    int rand = rng.Get() % (_origWidth * _origHeight);
 
     // This is a guess at converting to WitnessPuzzles grid reference.
-    int x = (rand % _width)*2 + 1;
-    int y = (_height - rand/_width)*2 - 1;
+    int x = (rand % _origWidth)*2 + 1;
+    int y = (_origHeight - rand/_origWidth)*2 - 1;
     if (_grid[x][y].type.empty()) return {x, y};
   }
 }
@@ -141,20 +164,20 @@ ostream& operator<<(ostream& os, const Cell& c) {
 
 ostream& operator<<(ostream& os, const Puzzle& p) {
   os << "{";
-    os << "\"width\": " << dec << p._width << ',';
-    os << "\"height\": " << dec << p._height << ',';
+    os << "\"width\": " << dec << p._origWidth << ',';
+    os << "\"height\": " << dec << p._origHeight << ',';
     os << "\"pillar\": false,";
     os << "\"name\": \"" << p._name << "\",";
 
     os << "\"grid\": [";
-    for (int x=0; x<2*p._width+1; x++) {
+    for (int x=0; x<p._width; x++) {
       os << '[';
-      for (int y=0; y<2*p._height+1; y++) {
+      for (int y=0; y<p._height; y++) {
         os << dec << p._grid[x][y].ToString(x, y);
-        if (y < 2*p._height) os << ',';
+        if (y < p._height-1) os << ',';
       }
       os << ']';
-      if (x < 2*p._width) os << ',';
+      if (x < p._width-1) os << ',';
     }
     os << ']';
 

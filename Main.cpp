@@ -10,8 +10,11 @@
 
 #include "Random.h"
 #include "Puzzle.h"
+#include "Utilities.h"
 
 using namespace std;
+
+Console console;
 
 unordered_map<int, int> tests = {
   {0x00000000, 0x6F4EE991},

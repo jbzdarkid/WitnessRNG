@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <unordered_map>
 
 #define LINE_NONE 0
 #define LINE_BLACK 1
@@ -13,12 +14,6 @@
 #define GAP_NONE 0
 #define GAP_BREAK 1
 #define GAP_FULL 2
-
-template <typename T>
-std::vector<T> Append(std::vector<T>& dest, const std::vector<T>& source) {
-  dest.insert(dest.end(), source.begin(), source.end());
-  return dest;
-}
 
 class Console {
   enum Level {
@@ -65,7 +60,21 @@ private:
   }
 };
 
-Console console;
+extern Console console;
+
+// Functions I wish std::vector had, but it doesn't.
+template <typename T>
+std::vector<T> Append(std::vector<T>& dest, const std::vector<T>& source) {
+  dest.insert(dest.end(), source.begin(), source.end());
+  return dest;
+}
+
+template <typename T>
+T Pop(std::vector<T>& src) {
+  T back = src.back();
+  src.pop_back();
+  return back;
+}
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec) {
@@ -80,4 +89,13 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec) {
   }
   os << ']';
   return os;
+}
+
+// Functions I wish std::map had
+
+template <typename K, typename V>
+V GetValueOrDefault(const std::unordered_map<K, V>& map, K key, V defaultValue) {
+  auto search = map.find(key);
+  if (search != map.end()) return search->second;
+  return defaultValue;
 }
