@@ -151,6 +151,7 @@ int main(int argc, char* argv[]) {
           output << "0x" << hex << uppercase << setfill('0') << j << '\t'; // RNG
           output << "0x" << hex << uppercase << setfill('0') << rng._seed << '\t'; // Ending RNG (used to deduplicate puzzles)
           output << solutions.size() << '\t'; // # Solutions
+          if (solutions.size() > 0) output << p << '\t'; // Puzzle, if solvable
           output << '\n';
           string outputStr = output.str();
           DWORD unused;

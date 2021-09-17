@@ -1,8 +1,9 @@
 #include <unordered_map>
 
-#include "Validate.h"
+#include "Polyominos.h"
 #include "Puzzle.h"
 #include "Utilities.h"
+#include "Validate.h"
 
 using namespace std;
 
@@ -202,7 +203,7 @@ RegionData Validator::RegionCheck(Puzzle& puzzle, const Region& region, bool qui
   }
 
   if (puzzle._hasPolyominos) {
-    if (!PolyFit(region, puzzle)) {
+    if (!Polyominos::PolyFit(region, puzzle)) {
       for (const auto [x, y] : region.cells) {
         Cell* cell = puzzle.GetCell(x, y);
         if (cell == nullptr) continue;

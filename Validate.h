@@ -41,8 +41,4 @@ private:
   // since the region is only coordinate locations, and might be modified by regionCheckNegations2
   // @Performance: This is a pretty core function to the solve loop.
   static RegionData RegionCheck(Puzzle& puzzle, const Region& region, bool quick = false);
-
-  static bool PolyFit(const Region& region, Puzzle& puzzle) {
-    return true;
-  }
 };

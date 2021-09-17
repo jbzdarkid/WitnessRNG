@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <unordered_map>
+#include <unordered_set>
 
 #define LINE_NONE 0
 #define LINE_BLACK 1
@@ -68,7 +69,8 @@ private:
 
 extern Console console;
 
-// Functions I wish std::vector had, but it doesn't.
+// Functions I wish std::vector had
+
 template <typename T>
 std::vector<T> Append(std::vector<T>& dest, const std::vector<T>& source) {
   dest.insert(dest.end(), source.begin(), source.end());
@@ -100,8 +102,15 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec) {
 // Functions I wish std::map had
 
 template <typename K, typename V>
-V GetValueOrDefault(const std::unordered_map<K, V>& map, K key, V defaultValue) {
+V GetValueOrDefault(const std::unordered_map<K, V>& map, const K& key, V defaultValue) {
   auto search = map.find(key);
   if (search != map.end()) return search->second;
   return defaultValue;
+}
+
+// Functions I wish std::set had
+
+template <typename T>
+bool Contains(const std::unordered_set<T>& set, const T& value) {
+  return set.find(value) != set.end();
 }

@@ -85,7 +85,7 @@ public:
   void AddRandomDots(Random& rng, int numDots);
   std::tuple<int, int> GetEmptyCell(Random& rng);
 
-private:
+// private:
   int _mod(int x);
   bool _safeCell(int x, int y);
 };

@@ -144,12 +144,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Polyominos.cpp" />
     <ClCompile Include="Puzzle.cpp" />
     <ClCompile Include="Random.cpp" />
     <ClCompile Include="Solve.cpp" />
     <ClCompile Include="Validate.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Polyominos.h" />
     <ClInclude Include="Puzzle.h" />
     <ClInclude Include="Random.h" />
     <ClInclude Include="Solve.h" />
