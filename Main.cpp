@@ -143,7 +143,7 @@ int main(int argc, char* argv[]) {
         auto file = CreateFileA(fileName.c_str(), FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
 
         Random rng;
-        for (int j=i; j<0x1'0000; j+=numThreads) {
+        for (int j=i; j<0x1'000; j+=numThreads) {
           rng._seed = j;
           Puzzle p = Puzzle::GeneratePolyominos(rng);
           auto solutions = Solver(p).Solve(1);
