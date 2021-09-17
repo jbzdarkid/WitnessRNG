@@ -43,77 +43,53 @@ Puzzle::Puzzle(int width, int height, bool pillar) {
   }
 }
 
-Puzzle Puzzle::GeneratePolyominos(Random& rng) {
-  Puzzle p = Puzzle(4, 4);
-  p._name = "Random polyominos #" + std::to_string(rng._seed);
-  p._grid[0][8].type = "line";
-  p._grid[0][8].start = true;
-  p._grid[8][0].type = "line";
-  p._grid[8][0].end = "right"; p._numConnections++;
-
-  rng.Get();
-  vector<int> colors = {0, 1, 2, 3, 4};
-  vector<string> colorNames = {"orange", "purple", "green", "red", "teal"};
-  rng.ShuffleInt(colors);
-
-  while (true) {
-    auto [x1, y1] = p.GetEmptyCell(rng);
-    auto [x2, y2] = p.GetEmptyCell(rng);
-
-    // Manhattan Distance of 3 or more
-    if (abs(x1 - x2) + abs(y1 - y2) < 6) continue;
-
-    p._grid[x1][y1].type = "star";
-    p._grid[x1][y1].color = colorNames[colors[0]];
-    p._grid[x2][y2].type = "star";
-    p._grid[x2][y2].color = colorNames[colors[0]];
-    break;
-  }
-
-  p.CutRandomEdges(rng, 8);
-
-  unsigned short polyshape1 = rng.RandomPolyshape();
-  unsigned short polyshape2 = rng.RandomPolyshape();
-  auto [x1, y1] = p.GetEmptyCell(rng);
-  auto [x2, y2] = p.GetEmptyCell(rng);
-  p._grid[x1][y1].type = "poly";
-  p._grid[x1][y1].color = colorNames[colors[1]];
-  p._grid[x1][y1].polyshape = polyshape1;
-  p._grid[x2][y2].type = "poly";
-  p._grid[x2][y2].color = colorNames[colors[1]];
-  p._grid[x2][y2].polyshape = polyshape2;
-
-  return p;
-}
-
 /*
 void Puzzle::SetCell(int x, int y, Cell cell) {
   _grid[x][y] = cell;
 }
 */
 
-Cell* Puzzle::GetCell(int x, int y) {
+Cell* Puzzle::GetCell(int x, int y) const {
   x = _mod(x);
   if (!_safeCell(x, y)) return nullptr;
   return &_grid[x][y];
 }
 
-int Puzzle::_mod(int x) {
+int Puzzle::_mod(int x) const {
   if (_pillar == false) return x;
   return (x + 2 * _width * _height) % _width;
 }
 
-bool Puzzle::_safeCell(int x, int y) {
+bool Puzzle::_safeCell(int x, int y) const {
   if (x < 0 || x >= _width) return false;
   if (y < 0 || y >= _height) return false;
   return true;
 }
 
-int Puzzle::GetLine(int x, int y) {
+int Puzzle::GetLine(int x, int y) const {
   Cell* cell = GetCell(x, y);
   if (cell == nullptr) return LINE_NONE;
   if (cell->type != "line") return LINE_NONE;
   return cell->line;
+}
+
+void Puzzle::ClearGrid() {
+  for (int x=0; x<_width; x++) {
+    for (int y=0; y<_width; y++) {
+      Cell* cell = &_grid[x][y];
+      if (x%2 == 1 && y%2 == 1) cell->type.clear();
+      cell->dot = DOT_NONE;
+      cell->gap = GAP_NONE;
+      cell->line = LINE_NONE;
+      cell->color.clear();
+      cell->count = 0;
+      cell->polyshape = 0u;
+
+      cell->start = false;
+      cell->end.clear();
+    }
+  }
+  _numConnections = (_origWidth+1)*_origHeight + _origWidth*(_origHeight+1);
 }
 
 // The grid contains 5 colors:
@@ -228,7 +204,7 @@ vector<Region> Puzzle::GetRegions() {
   }
 
   for (int x=0; x<_width; x++) delete maskedGrid[x];
-  delete maskedGrid;
+  delete[] maskedGrid;
 
   return regions;
 }
@@ -247,11 +223,10 @@ Region Puzzle::GetRegion(int x, int y) {
   }
 
   for (int x = 0; x < _width; x++) delete maskedGrid[x];
-  delete maskedGrid;
+  delete[] maskedGrid;
 
   return region;
 }
-
 
 void Puzzle::CutRandomEdges(Random& rng, int numCuts) {
   int numConnections = _numConnections; // TW stores the value of this before making cuts.
@@ -269,14 +244,15 @@ void Puzzle::CutRandomEdges(Random& rng, int numCuts) {
   }
 }
 
-tuple<int, int> Puzzle::GetEmptyCell(Random& rng) {
+Cell* Puzzle::GetEmptyCell(Random& rng) {
   while (true) {
     int rand = rng.Get() % (_origWidth * _origHeight);
 
     // This is a guess at converting to WitnessPuzzles grid reference.
     int x = (rand % _origWidth)*2 + 1;
     int y = (_origHeight - rand/_origWidth)*2 - 1;
-    if (_grid[x][y].type.empty()) return {x, y};
+    Cell* cell = &_grid[x][y];
+    if (cell->type.empty()) return cell;
   }
 }
 

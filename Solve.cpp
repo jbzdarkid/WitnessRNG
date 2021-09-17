@@ -12,8 +12,8 @@ using namespace std;
 #define PATH_TOP    3
 #define PATH_BOTTOM 4
 
-Solver::Solver(Puzzle& puzzle_) {
-  puzzle = &puzzle_;
+Solver::Solver(Puzzle* puzzle_) {
+  puzzle = puzzle_;
 }
 
 vector<Path> Solver::Solve(int maxSolutions) {
@@ -93,6 +93,11 @@ void Solver::SolveLoop(int x, int y) {
   if (cell->gap > GAP_NONE) return;
   if (cell->line != LINE_NONE) return;
 
+  #define UU PATH_TOP, PATH_TOP,
+  #define RR PATH_RIGHT, PATH_RIGHT,
+  #define DD PATH_BOTTOM, PATH_BOTTOM,
+  #define LL PATH_LEFT, PATH_LEFT,
+
   if (puzzle->_symmetry == SYM_NONE) {
     cell->line = LINE_BLACK;
   } else {
@@ -106,6 +111,10 @@ void Solver::SolveLoop(int x, int y) {
   }
 
   if (!cell->end.empty()) {
+    if (path == Path{0, 8, UU  RR RR  DD  RR  UU UU UU  LL LL  UU  RR RR RR}) {
+      int k = 1;
+    }
+
     path.push_back(PATH_NONE);
     puzzle->_endPoint = cell;
     Validator::Validate(*puzzle, true);

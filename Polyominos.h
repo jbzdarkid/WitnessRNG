@@ -18,7 +18,7 @@ public:
   // * -1 represents a square that needs to be covered once (inside the region, or outside but covered by an onimoylop)
   // * -2 represents a square that needs to be covered twice (inside the region & covered by an onimoylop)
   // * And etc, for additional layers of polyominos/onimoylops.
-  static bool PolyFit(const Region& region, Puzzle& puzzle);
+  static bool PolyFit(const Region& region, const Puzzle& puzzle);
 
 private:
   static int GetPolySize(int polyshape);
@@ -30,14 +30,14 @@ private:
   static std::vector<std::tuple<int, int>> PolyominoFromPolyshape(unsigned short polyshape, bool ylop=false, bool precise=false);
   // If false, poly doesn"t fit and grid is unmodified
   // If true, poly fits and grid is modified (with the placement)
-  static bool TryPlacePolyshape(const std::vector<std::tuple<int, int>>& cells, int x, int y, Puzzle& puzzle, int** polyGrid, int sign);
+  static bool TryPlacePolyshape(const std::vector<std::tuple<int, int>>& cells, int x, int y, const Puzzle& puzzle, int** polyGrid, int sign);
   // Places the ylops such that they are inside of the grid, then checks if the polys
   // zero the region.
-  static bool PlaceYlops(const std::vector<Cell*>& ylops, int i, std::vector<Cell*>& polys, Puzzle& puzzle, int** polyGrid);
+  static bool PlaceYlops(const std::vector<Cell*>& ylops, int i, std::vector<Cell*>& polys, const Puzzle& puzzle, int** polyGrid);
   // Returns whether or not a set of polyominos fit into a region.
   // Solves via recursive backtracking: Some piece must fill the top left square,
   // so try every piece to fill it, then recurse.
-  static bool PlacePolys(std::vector<Cell*>& polys, Puzzle& puzzle, int** polyGrid);
+  static bool PlacePolys(std::vector<Cell*>& polys, const Puzzle& puzzle, int** polyGrid);
 
   static inline int Mask(int x, int y) {
     return 1 << (x * 4 + y);

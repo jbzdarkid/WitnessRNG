@@ -27,12 +27,12 @@ public:
   // This function applies negations to all "very invalid elements", i.e. elements which cannot become
   // valid by another element being negated. Then, it passes off to regionCheckNegations2,
   // which attempts to apply any remaining negations to any other invalid elements.
-  static RegionData ValidateRegion(Puzzle& puzzle, const Region& region, bool quick = false);
+  static RegionData ValidateRegion(const Puzzle& puzzle, const Region& region, bool quick = false);
 
 private:
   // Recursively matches negations and invalid elements from the grid. Note that this function
   // doesn't actually modify the two lists, it just iterates through them with index/index2.
-  static RegionData RegionCheckNegations2(Puzzle& puzzle, const Region& region, const std::vector<Cell*>& negationSymbols, const std::vector<Cell*>& invalidElements, int index = 0, int index2 = 0) {
+  static RegionData RegionCheckNegations2(const Puzzle& puzzle, const Region& region, const std::vector<Cell*>& negationSymbols, const std::vector<Cell*>& invalidElements, int index = 0, int index2 = 0) {
     return RegionData();
   }
 
@@ -40,5 +40,5 @@ private:
   // Note that this function needs to always ask the puzzle for the current contents of the cell,
   // since the region is only coordinate locations, and might be modified by regionCheckNegations2
   // @Performance: This is a pretty core function to the solve loop.
-  static RegionData RegionCheck(Puzzle& puzzle, const Region& region, bool quick = false);
+  static RegionData RegionCheck(const Puzzle& puzzle, const Region& region, bool quick = false);
 };

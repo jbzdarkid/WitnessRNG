@@ -107,27 +107,24 @@ auto rng = Random();
 int main(int argc, char* argv[]) {
   if (argc > 1 && strcmp(argv[1], "test") == 0) {
     for (const auto [key, value] : tests) {
-      rng._seed = key;
-      int actual = rng.Get();
-      if (actual != value) {
-        cout << "Actual:   " << actual << "\nExpected: " << value << endl;
-      }
+      rng.Set(key);
+      assert(rng.Peek() == value);
     }
     for (const auto [initRng, endRng, shuffled] : tests2) {
-      rng._seed = initRng;
+      rng.Set(initRng);
       vector<int> test = {0, 1, 2, 3};
       rng.ShuffleIntegers(test);
-      assert(rng._seed == endRng);
+      assert(rng.Peek() == endRng);
       assert(test == shuffled);
     }
 
     cout << "Done" << endl;
 
   } else if (argc > 1 && strcmp(argv[1], "rand") == 0) {
-    rng._seed = 0x0BB63EB7;
-    Puzzle p = Puzzle::GeneratePolyominos(rng);
+    rng.Set(0x5C64B474);
+    Puzzle p = rng.GeneratePolyominos(true);
     cout << p << endl;
-    auto solutions = Solver(p).Solve();
+    auto solutions = Solver(&p).Solve();
     int k = 1;
 
   } else if (argc > 1 && strcmp(argv[1], "thrd") == 0) {
@@ -144,12 +141,12 @@ int main(int argc, char* argv[]) {
 
         Random rng;
         for (int j=i; j<0x1'000; j+=numThreads) {
-          rng._seed = j;
-          Puzzle p = Puzzle::GeneratePolyominos(rng);
-          auto solutions = Solver(p).Solve(1);
+          rng.Set(j);
+          Puzzle p = rng.GeneratePolyominos(false);
+          auto solutions = Solver(&p).Solve(1);
           stringstream output;
           output << "0x" << hex << uppercase << setfill('0') << j << '\t'; // RNG
-          output << "0x" << hex << uppercase << setfill('0') << rng._seed << '\t'; // Ending RNG (used to deduplicate puzzles)
+          output << "0x" << hex << uppercase << setfill('0') << rng.Peek() << '\t'; // Ending RNG (used to deduplicate puzzles)
           output << solutions.size() << '\t'; // # Solutions
           if (solutions.size() > 0) output << p << '\t'; // Puzzle, if solvable
           output << '\n';

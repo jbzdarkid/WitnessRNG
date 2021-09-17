@@ -90,7 +90,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec) {
   bool first = true;
   for (const T& it : vec) {
     if (!first) {
-      os << ', ';
+      os << ", ";
     }
     first = false;
     os << it;

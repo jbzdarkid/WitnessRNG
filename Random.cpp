@@ -1,4 +1,7 @@
 #include "Random.h"
+#include "Puzzle.h"
+#include "Solve.h"
+
 using namespace std;
 
 constexpr int m_prime = 0x7FFFFFFF; // 2^31 - 1, a mersenne prime
@@ -20,6 +23,14 @@ int Random::Get() {
   }
   _seed = nextRng;
   return nextRng;
+}
+
+int Random::Peek() {
+  return _seed;
+}
+
+void Random::Set(int seed) {
+  _seed = seed;
 }
 
 void Random::ShuffleInt(std::vector<int>& arr) {
@@ -76,4 +87,57 @@ unsigned int Random::RandomPolyshape() {
   }
 
   return polyshape;
+}
+
+Puzzle Random::GeneratePolyominos(bool rerollOnImpossible) {
+  Puzzle p = Puzzle(4, 4);
+  p._name = "Random polyominos #" + std::to_string(_seed);
+
+  // This only happens once per random generation -- an invalid puzzle will still use the same colors
+  Get();
+  vector<int> colors = {0, 1, 2, 3, 4};
+  vector<string> colorNames = {"orange", "purple", "green", "red", "teal"};
+  ShuffleInt(colors);
+
+  rerollPuzzle:
+  {
+    p._grid[0][8].start = true;
+    p._grid[8][0].end = "right"; p._numConnections++;
+
+    rerollStars:
+    Cell* star1 = p.GetEmptyCell(*this);
+    Cell* star2 = p.GetEmptyCell(*this);
+
+    // Manhattan Distance of 3 or more
+    if (abs(star1->x - star2->x) + abs(star1->y - star2->y) < 6) goto rerollStars;
+
+    star1->type = "star";
+    star1->color = colorNames[colors[0]];
+    star2->type = "star";
+    star2->color = colorNames[colors[0]];
+
+    p.CutRandomEdges(*this, 8);
+
+    unsigned short polyshape1 = RandomPolyshape();
+    unsigned short polyshape2 = RandomPolyshape();
+    Cell* poly1 = p.GetEmptyCell(*this);
+    poly1->type = "poly";
+    poly1->color = colorNames[colors[1]];
+    poly1->polyshape = polyshape1;
+
+    Cell* poly2 = p.GetEmptyCell(*this);
+    poly2->type = "poly";
+    poly2->color = colorNames[colors[1]];
+    poly2->polyshape = polyshape2;
+
+    if (rerollOnImpossible) {
+      auto solutions = Solver(&p).Solve(1);
+      if (solutions.size() == 0) {
+        p.ClearGrid();
+        goto rerollPuzzle;
+      }
+    }
+  }
+
+  return p;
 }

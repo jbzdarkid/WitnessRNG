@@ -1,9 +1,13 @@
 #pragma once
 #include <vector>
 
-struct Random {
-  int _seed = 0;
+class Puzzle;
+
+class Random {
+public:
   int Get();
+  int Peek();
+  void Set(int rng);
 
   // The bad shuffle
   void ShuffleInt(std::vector<int>& array);
@@ -12,4 +16,9 @@ struct Random {
   void ShuffleIntegers(std::vector<int>& arr);
 
   unsigned int RandomPolyshape();
+
+  Puzzle GeneratePolyominos(bool rerollOnImpossible);
+
+private:
+  int _seed = 0;
 };

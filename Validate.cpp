@@ -66,7 +66,7 @@ void Validator::Validate(Puzzle& puzzle, bool quick) {
   console.log("Puzzle has", puzzle._invalidElements.size(), "invalid elements");
 }
 
-RegionData Validator::ValidateRegion(Puzzle& puzzle, const Region& region, bool quick) {
+RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region, bool quick) {
   if (!puzzle._hasNegations) return RegionCheck(puzzle, region, quick);
 
   // Get a list of negation symbols in the grid, and set them to "nonce"
@@ -130,7 +130,7 @@ RegionData Validator::ValidateRegion(Puzzle& puzzle, const Region& region, bool 
   return regionData;
 }
 
-RegionData Validator::RegionCheck(Puzzle& puzzle, const Region& region, bool quick) {
+RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bool quick) {
   console.log("Validating region of size", region.cells.size(), region);
   RegionData regionData;
 

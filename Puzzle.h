@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
-struct Random;
+class Random;
 
 struct Cell {
   std::string type;
@@ -67,27 +67,27 @@ public:
   Puzzle(int width, int height, bool pillar=false);
 
   // void SetCell(int x, int y, Cell cell);
-  Cell* GetCell(int x, int y);
+  Cell* GetCell(int x, int y) const;
   Cell* GetSymmetricalCell(Cell* cell) { return nullptr; }
   bool MatchesSymmetricalPos(int x, int y, int symX, int symY) { return false; }
   // A variant of getCell which specifically returns line values,
   // and treats objects as being out-of-bounds
-  int GetLine(int x, int y);
+  int GetLine(int x, int y) const;
+  void ClearGrid();
+
   void _floodFill(int x, int y, Region& region, int** maskedGrid);
   int** GenerateMaskedGrid();
   std::vector<Region> GetRegions();
   Region GetRegion(int x, int y);
 
   // RNG functions (from TW)
-  static Puzzle GeneratePolyominos(Random& rng);
-
   void CutRandomEdges(Random& rng, int numCuts);
   void AddRandomDots(Random& rng, int numDots);
-  std::tuple<int, int> GetEmptyCell(Random& rng);
+  Cell* GetEmptyCell(Random& rng);
 
 // private:
-  int _mod(int x);
-  bool _safeCell(int x, int y);
+  int _mod(int x) const;
+  bool _safeCell(int x, int y) const;
 };
 
 std::ostream& operator<<(std::ostream& os, const Puzzle& p);

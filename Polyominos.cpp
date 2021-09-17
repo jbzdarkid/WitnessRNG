@@ -62,11 +62,17 @@ vector<tuple<int, int>> Polyominos::PolyominoFromPolyshape(unsigned short polysh
       }
     }
   }
+
+  for (auto [x, y] : polyomino) {
+    if (x < 0 || y < 0) {
+      int k = 1;
+    }
+  }
+
   return polyomino;
 }
 
-
-bool Polyominos::PolyFit(const Region& region, Puzzle& puzzle) {
+bool Polyominos::PolyFit(const Region& region, const Puzzle& puzzle) {
   vector<Cell*> polys;
   vector<Cell*> ylops;
   int polyCount = 0;
@@ -105,7 +111,13 @@ bool Polyominos::PolyFit(const Region& region, Puzzle& puzzle) {
   // For polyominos, we clear the grid to mark it up again:
   // First, we mark all cells as 0: Cells outside the target region should be unaffected.
   int** polyGrid = new int*[puzzle._width];
-  for (int x=0; x<puzzle._width; x++) polyGrid[x] = new int[puzzle._height];
+  for (int x=0; x<puzzle._width; x++) {
+    int* col = new int[puzzle._height];
+    for (int y=0; y<puzzle._height; y++) {
+      col[y] = 0;
+    }
+    polyGrid[x] = col;
+  }
 
   // In the normal case, we mark every cell as -1: It needs to be covered by one poly
   if (polyCount > 0) {
@@ -116,19 +128,18 @@ bool Polyominos::PolyFit(const Region& region, Puzzle& puzzle) {
   bool ret = PlaceYlops(ylops, 0, polys, puzzle, polyGrid);
 
   for (int x=0; x<puzzle._width; x++) delete polyGrid[x];
-  delete polyGrid;
+  delete[] polyGrid;
 
   return ret;
 }
 
-bool Polyominos::TryPlacePolyshape(const vector<tuple<int, int>>& cells, int x, int y, Puzzle& puzzle, int** polyGrid, int sign) {
+bool Polyominos::TryPlacePolyshape(const vector<tuple<int, int>>& cells, int x, int y, const Puzzle& puzzle, int** polyGrid, int sign) {
   console.spam("Placing at", x, y, "with sign", sign);
   vector<int> values(cells.size(), 0);
   for (int i=0; i<cells.size(); i++) {
     auto [cellX, cellY] = cells[i];
+    if (!puzzle._safeCell(puzzle._mod(cellX + x), cellY + y)) return false; // Hackity hack.
     int puzzleCell = polyGrid[cellX + x][cellY + y];
-    // Hackity hack.
-    if (!puzzle._safeCell(puzzle._mod(x), y)) return false;
     values[i] = puzzleCell;
   }
   for (int i=0; i<cells.size(); i++) {
@@ -138,7 +149,7 @@ bool Polyominos::TryPlacePolyshape(const vector<tuple<int, int>>& cells, int x, 
   return true;
 }
 
-bool Polyominos::PlaceYlops(const vector<Cell*>& ylops, int i, vector<Cell*>& polys, Puzzle& puzzle, int** polyGrid) {
+bool Polyominos::PlaceYlops(const vector<Cell*>& ylops, int i, vector<Cell*>& polys, const Puzzle& puzzle, int** polyGrid) {
   // Base case: No more ylops to place, start placing polys
   if (i == ylops.size()) return PlacePolys(polys, puzzle, polyGrid);
 
@@ -146,7 +157,7 @@ bool Polyominos::PlaceYlops(const vector<Cell*>& ylops, int i, vector<Cell*>& po
   return false;
 }
 
-bool Polyominos::PlacePolys(std::vector<Cell*>& polys, Puzzle& puzzle, int** polyGrid) {
+bool Polyominos::PlacePolys(std::vector<Cell*>& polys, const Puzzle& puzzle, int** polyGrid) {
   // Check for overlapping polyominos, and handle exit cases for all polyominos placed.
   bool allPolysPlaced = (polys.size() == 0);
   for (int x=0; x<puzzle._width; x++) {

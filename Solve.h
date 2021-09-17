@@ -7,7 +7,7 @@ class Puzzle;
 using Path = std::vector<int>;
 class Solver {
 public:
-  Solver(Puzzle& puzzle_);
+  Solver(Puzzle* puzzle_);
 
   // Generates a solution via DFS recursive backtracking
   std::vector<Path> Solve(int maxSolutions = 10'000);
