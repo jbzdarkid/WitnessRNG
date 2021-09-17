@@ -11,7 +11,7 @@
 #include "Random.h"
 #include "Puzzle.h"
 #include "Utilities.h"
-#include "Validate.h"
+#include "Solve.h"
 
 using namespace std;
 
@@ -127,9 +127,8 @@ int main(int argc, char* argv[]) {
     rng._seed = 0x0BB63EB7;
     Puzzle p = Puzzle::GeneratePolyominos(rng);
     cout << p << endl;
-    for (int x = 0; x < p._width; x++) p._grid[x][0].line = LINE_BLACK;
-    for (int y = 0; y < p._height; y++) p._grid[0][y].line = LINE_BLACK;
-    Validator::Validate(p);
+    auto solutions = Solver(p).Solve();
+    int k = 1;
 
   } else if (argc > 1 && strcmp(argv[1], "thrd") == 0) {
     vector<thread> threads;
@@ -147,11 +146,11 @@ int main(int argc, char* argv[]) {
         for (int j=i; j<0x1'0000; j+=numThreads) {
           rng._seed = j;
           Puzzle p = Puzzle::GeneratePolyominos(rng);
+          auto solutions = Solver(p).Solve(1);
           stringstream output;
           output << "0x" << hex << uppercase << setfill('0') << j << '\t'; // RNG
           output << "0x" << hex << uppercase << setfill('0') << rng._seed << '\t'; // Ending RNG (used to deduplicate puzzles)
-          output << "unevaluated" << '\t'; // State (will be updated by other systems)
-          output << p << '\t'; // Contents
+          output << solutions.size() << '\t'; // # Solutions
           output << '\n';
           string outputStr = output.str();
           DWORD unused;

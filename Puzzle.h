@@ -7,6 +7,7 @@ struct Cell {
   std::string type;
   int x = 0;
   int y = 0;
+
   int dot = 0;
   int gap = 0;
   int line = 0;
@@ -47,6 +48,7 @@ public:
   int _width = 0;
   bool _pillar = false;
   int _numConnections = 0;
+  int _symmetry = 0;
   std::string _name;
   std::vector<std::tuple<int, int>> _connections;
   Cell** _grid;
@@ -66,6 +68,8 @@ public:
 
   // void SetCell(int x, int y, Cell cell);
   Cell* GetCell(int x, int y);
+  Cell* GetSymmetricalCell(Cell* cell) { return nullptr; }
+  bool MatchesSymmetricalPos(int x, int y, int symX, int symY) { return false; }
   // A variant of getCell which specifically returns line values,
   // and treats objects as being out-of-bounds
   int GetLine(int x, int y);

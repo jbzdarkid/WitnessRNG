@@ -10,7 +10,7 @@ public:
   Solver(Puzzle& puzzle_);
 
   // Generates a solution via DFS recursive backtracking
-  std::vector<Path> Solve(int MAX_SOLUTIONS = 10'000);
+  std::vector<Path> Solve(int maxSolutions = 10'000);
 
 private:
   void TailRecurse(Cell* cell);

@@ -17,8 +17,10 @@ Puzzle::Puzzle(int width, int height, bool pillar) {
   for (int x=0; x<_width; x++) {
     _grid[x] = new Cell[_height];
     for (int y = 0; y < _height; y++) {
-      _grid[x][y].x = x;
-      _grid[x][y].y = y;
+      Cell* cell = &_grid[x][y];
+      cell->x = x;
+      cell->y = y;
+      if (x%2 != 1 || y%2 != 1) cell->type = "line";
     }
   }
   _connections.resize(_numConnections);
@@ -262,7 +264,6 @@ void Puzzle::CutRandomEdges(Random& rng, int numCuts) {
     auto [x, y] = _connections[rand];
     if (_grid[x][y].gap == 0) {
       _numConnections++;
-      _grid[x][y].type = "line";
       _grid[x][y].gap = 1;
     }
   }
@@ -346,7 +347,7 @@ std::string Cell::ToString(int x, int y) {
   char polyshapeStr[sizeof(R"("polyshape":65535,)")] = {'\0'};
   if (polyshape != 0) sprintf_s(&polyshapeStr[0], sizeof(polyshapeStr), ",\"polyshape\":%hu", polyshape);
 
-  PRINTF("{\"type\":\"%s\",\"line\":0"
+  PRINTF("{\"type\":\"%s\",\"line\":%d"
     "%s%s" // dot
     "%s%s" // gap
     "%s" // start
@@ -354,7 +355,8 @@ std::string Cell::ToString(int x, int y) {
     "%s%s%s" // color
     "%s" // polyshape
     "}",
-    type.empty() ? "line" : type.c_str(),
+    type.empty() ? "null" : type.c_str(),
+    line,
     (dot != 0 ? ",\"dot\":" : ""), IntToString(dot),
     (gap != 0 ? ",\"gap\":" : ""), IntToString(gap),
     (start != 0 ? ",\"start\":true" : ""),

@@ -16,10 +16,7 @@ Solver::Solver(Puzzle& puzzle_) {
   puzzle = &puzzle_;
 }
 
-vector<Path> Solver::Solve(int MAX_SOLUTIONS) {
-  path.clear(); // @Redundant
-  doPruning = false;
-
+vector<Path> Solver::Solve(int maxSolutions) {
   vector<Cell*> startPoints;
   numEndpoints = 0;
 
@@ -41,7 +38,7 @@ vector<Path> Solver::Solve(int MAX_SOLUTIONS) {
   solutionPaths.clear();
   // Some reasonable default data, which will avoid crashes during the solveLoop.
   // var earlyExitData = [false, {"isEdge": false}, {"isEdge": false}]
-  if (MAX_SOLUTIONS == 0) MAX_SOLUTIONS = 10000;
+  if (maxSolutions > 0) MAX_SOLUTIONS = maxSolutions;
 
   // Large pruning optimization -- Attempt to early exit once we cut out a region.
   // Inspired by https://github.com/Overv/TheWitnessSolver
@@ -66,7 +63,7 @@ vector<Path> Solver::Solve(int MAX_SOLUTIONS) {
   // Unfortunately, this optimization doesn"t work for pillars, since the two regions are still connected.
   // Additionally, this optimization doesn"t work when custom mechanics are active, as many custom mechanics
   // depend on the path through the entire puzzle
-  // doPruning = (puzzle->_pillar == false)
+  // doPruning = (puzzle->_pillar == false); // Disabled for now. Too complicated and not worth on a 4x4
 
   for (Cell* startPoint : startPoints) {
     // NOTE: This is subtly different from WitnessPuzzles, which starts the path with [[x, y]] instead of [x, y]!
@@ -80,14 +77,11 @@ vector<Path> Solver::Solve(int MAX_SOLUTIONS) {
 
 void Solver::TailRecurse(Cell* cell) {
   cell->line = LINE_NONE;
-  /*
-  if (puzzle->symmetry != null) {
-    Cell* sym = puzzle->GetSymmetricalCell(cell->x, cell->y);
-    sym->line = LINE_NONE;
+  if (puzzle->_symmetry != SYM_NONE) {
+    Cell* symCell = puzzle->GetSymmetricalCell(cell);
+    symCell->line = LINE_NONE;
   }
-  */
 }
-
 
 void Solver::SolveLoop(int x, int y) {
   // Stop trying to solve once we reach our goal
@@ -99,18 +93,17 @@ void Solver::SolveLoop(int x, int y) {
   if (cell->gap > GAP_NONE) return;
   if (cell->line != LINE_NONE) return;
 
-  // if (puzzle->symmetry == null) {
+  if (puzzle->_symmetry == SYM_NONE) {
     cell->line = LINE_BLACK;
-  /*} else {
-    var sym = puzzle->getSymmetricalPos(x, y)
-    if (puzzle->matchesSymmetricalPos(x, y, sym.x, sym.y)) return // Would collide with our reflection
+  } else {
+    Cell* symCell = puzzle->GetSymmetricalCell(cell);
+    if (puzzle->MatchesSymmetricalPos(x, y, symCell->x, symCell->y)) return; // Would collide with our reflection
 
-    var symCell = puzzle->getCell(sym.x, sym.y)
-    if (symCell.gap > window.GAP_NONE) return
+    if (symCell->gap > GAP_NONE) return;
 
-    puzzle->updateCell2(x, y, 'line', window.LINE_BLUE)
-    puzzle->updateCell2(sym.x, sym.y, 'line', window.LINE_YELLOW)
-  }*/
+    cell->line = LINE_BLUE;
+    symCell->line = LINE_YELLOW;
+  }
 
   if (!cell->end.empty()) {
     path.push_back(PATH_NONE);
@@ -164,18 +157,18 @@ void Solver::SolveLoop(int x, int y) {
 
   // Recursion order (LRUD) is optimized for BL->TR and mid-start puzzles
   if (y%2 == 0) {
-    *path.end() = PATH_LEFT;
+    path.back() = PATH_LEFT;
     SolveLoop(x - 1, y);
 
-    *path.end() = PATH_RIGHT;
+    path.back() = PATH_RIGHT;
     SolveLoop(x + 1, y);
   }
 
   if (x%2 == 0) {
-    *path.end() = PATH_TOP;
+    path.back() = PATH_TOP;
     SolveLoop(x, y - 1);
 
-    *path.end() = PATH_BOTTOM;
+    path.back() = PATH_BOTTOM;
     SolveLoop(x, y + 1);
   }
 

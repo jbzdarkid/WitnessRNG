@@ -14,6 +14,10 @@
 #define GAP_NONE 0
 #define GAP_BREAK 1
 #define GAP_FULL 2
+#define SYM_NONE 0
+#define SYM_X 1
+#define SYM_Y 2
+#define SYM_XY 3
 
 class Console {
   enum Level {
