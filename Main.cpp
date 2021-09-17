@@ -131,24 +131,26 @@ int main(int argc, char* argv[]) {
     vector<thread> threads;
     #if _DEBUG
     const int numThreads = 1;
+    const int maxSeed = 0x1000;
     #else
     const int numThreads = 8;
+    const int maxSeed = 0x100'0000;
     #endif
     for (int i=0; i<numThreads; i++) {
-      thread t([numThreads](int i) {
+      thread t([numThreads, maxSeed](int i) {
         string fileName = "thread_" + to_string(i) + ".txt";
         auto file = CreateFileA(fileName.c_str(), FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
 
         Random rng;
-        for (int j=i; j<0x1'000; j+=numThreads) {
+        for (int j=i; j<maxSeed; j+=numThreads) {
           rng.Set(j);
           Puzzle p = rng.GeneratePolyominos(false);
           auto solutions = Solver(&p).Solve(1);
+          if (solutions.size() == 0) continue; // No output for unsolvable puzzles!
           stringstream output;
           output << "0x" << hex << uppercase << setfill('0') << j << '\t'; // RNG
           output << "0x" << hex << uppercase << setfill('0') << rng.Peek() << '\t'; // Ending RNG (used to deduplicate puzzles)
           output << solutions.size() << '\t'; // # Solutions
-          if (solutions.size() > 0) output << p << '\t'; // Puzzle, if solvable
           output << '\n';
           string outputStr = output.str();
           DWORD unused;

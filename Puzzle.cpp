@@ -14,13 +14,17 @@ Puzzle::Puzzle(int width, int height, bool pillar) {
   _height = 2*height+1;
   _numConnections = (width+1)*height + width*(height+1);
   _grid = new Cell*[_width];
+
+  // Fast allocation for the grid
+  Cell* raw = (Cell*)malloc(sizeof(Cell) * _width * _height);
+
   for (int x=0; x<_width; x++) {
-    _grid[x] = new Cell[_height];
+    _grid[x] = (raw + _height * x);
     for (int y = 0; y < _height; y++) {
-      Cell* cell = &_grid[x][y];
+      Cell* cell = (raw + _height * x + y);
       cell->x = x;
       cell->y = y;
-      if (x%2 != 1 || y%2 != 1) cell->type = "line";
+      if (x%2 != 1 || y%2 != 1) cell->SetType("line");
     }
   }
   _connections.resize(_numConnections);
@@ -41,6 +45,10 @@ Puzzle::Puzzle(int width, int height, bool pillar) {
       _connections[i++] = {x+1, y};
     }
   }
+}
+
+Puzzle::~Puzzle() {
+  free(_grid);
 }
 
 /*
@@ -77,7 +85,7 @@ void Puzzle::ClearGrid() {
   for (int x=0; x<_width; x++) {
     for (int y=0; y<_width; y++) {
       Cell* cell = &_grid[x][y];
-      if (x%2 == 1 && y%2 == 1) cell->type.clear();
+      if (x%2 == 1 && y%2 == 1) cell->SetType("");
       cell->dot = DOT_NONE;
       cell->gap = GAP_NONE;
       cell->line = LINE_NONE;
@@ -199,7 +207,7 @@ vector<Region> Puzzle::GetRegions() {
       // This will also mark all lines inside the new region as used.
       Region region = Region(_width);
       _floodFill(x, y, region, maskedGrid);
-      regions.push_back(region);
+      regions.emplace_back(move(region));
     }
   }
 
@@ -252,12 +260,12 @@ Cell* Puzzle::GetEmptyCell(Random& rng) {
     int x = (rand % _origWidth)*2 + 1;
     int y = (_origHeight - rand/_origWidth)*2 - 1;
     Cell* cell = &_grid[x][y];
-    if (cell->type.empty()) return cell;
+    if (cell->TypeIs("")) return cell;
   }
 }
 
 ostream& operator<<(ostream& os, const Cell& c) {
-  if (c.type.empty()) {
+  if (c.TypeIs("")) {
     os << "null";
     return os;
   }
@@ -318,7 +326,7 @@ const char* IntToString(int i) {
 }
 
 std::string Cell::ToString(int x, int y) {
-  if (x%2 == 1 && y%2 == 1 && type.empty()) return "null";
+  if (x%2 == 1 && y%2 == 1 && TypeIs("")) return "null";
 
   char polyshapeStr[sizeof(R"("polyshape":65535,)")] = {'\0'};
   if (polyshape != 0) sprintf_s(&polyshapeStr[0], sizeof(polyshapeStr), ",\"polyshape\":%hu", polyshape);
@@ -331,7 +339,7 @@ std::string Cell::ToString(int x, int y) {
     "%s%s%s" // color
     "%s" // polyshape
     "}",
-    type.empty() ? "null" : type.c_str(),
+    type,
     line,
     (dot != 0 ? ",\"dot\":" : ""), IntToString(dot),
     (gap != 0 ? ",\"gap\":" : ""), IntToString(gap),

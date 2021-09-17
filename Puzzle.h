@@ -3,15 +3,24 @@
 #include <vector>
 class Random;
 
+#define RO3(clazz) \
+  clazz##(const clazz & other) = delete; /* Copy constructor */ \
+  clazz & operator=(const clazz & other) = delete; /* Copy assignment */
+
+#define RO5(clazz) \
+  RO3(clazz) \
+
+using u8 = unsigned char;
+
 struct Cell {
-  std::string type;
+  char type[10]; // triangle + 1
   int x = 0;
   int y = 0;
 
-  int dot = 0;
-  int gap = 0;
-  int line = 0;
-  int count = 0;
+  u8 dot = 0;
+  u8 gap = 0;
+  u8 line = 0;
+  u8 count = 0;
   unsigned short polyshape = 0u;
   bool start = false;
 
@@ -19,25 +28,51 @@ struct Cell {
   std::string color;
 
   std::string ToString(int x, int y);
+  inline bool TypeIs(const char* type_) const {
+    return strncmp(type, type_, sizeof(type)) == 0;
+  }
+  inline void SetType(const char* type_) {
+    strncpy_s(type, type_, sizeof(type));
+  }
 };
 
 struct Region {
+public:
   std::vector<std::tuple<int, int>> cells;
-  std::vector<int> grid;
 
   Region(int length) {
-    grid = std::vector<int>(length, 0);
+    _grid = new int[length]; // std::vector<int>(length, 0);
+    memset(_grid, 0, length);
   }
 
-  inline bool GetCell(int x, int y) {
-    return ((grid[x] & (1 << y)) != 0);
+  ~Region() {
+    delete[] _grid;
   }
 
-  inline void SetCell(int x, int y) {
+  RO3(Region)
+  // RO5
+  Region(Region&& other) noexcept {
+    _grid = other._grid;
+    other._grid = nullptr;
+  }
+  Region& operator=(Region&& other) noexcept {
+    _grid = other._grid;
+    other._grid = nullptr;
+    return *this;
+  }
+
+  bool GetCell(int x, int y) {
+    return ((_grid[x] & (1 << y)) != 0);
+  }
+
+  void SetCell(int x, int y) {
     if (GetCell(x, y)) return;
-    grid[x] |= (1 << y);
+    _grid[x] |= (1 << y);
     cells.emplace_back(x, y);
   }
+
+private:
+  int* _grid;
 };
 
 class Puzzle {
@@ -57,14 +92,26 @@ public:
   bool _valid = false;
   bool _hasNegations = false;
   bool _hasPolyominos = false;
-  Cell* _startPoint;
-  Cell* _endPoint;
+  Cell* _startPoint = nullptr;
+  Cell* _endPoint = nullptr;
   std::vector<std::tuple<Cell*, Cell*>> _negations;
   std::vector<Cell*> _invalidElements;
   std::vector<Cell*> _veryInvalidElements;
 
-  // Non-RNG functions from WP
+  // Non-RNG functions from WP... ish
   Puzzle(int width, int height, bool pillar=false);
+  ~Puzzle();
+  RO3(Puzzle);
+  // RO5
+  Puzzle(Puzzle&& other) noexcept {
+    _grid = other._grid;
+    other._grid = nullptr;
+  }
+  Puzzle& operator=(Puzzle&& other) noexcept {
+    _grid = other._grid;
+    other._grid = nullptr;
+    return *this;
+  }
 
   // void SetCell(int x, int y, Cell cell);
   Cell* GetCell(int x, int y) const;

@@ -81,10 +81,10 @@ bool Polyominos::PolyFit(const Region& region, const Puzzle& puzzle) {
     if (x%2 == 1 && y%2 == 1) regionSize++;
     Cell* cell = &puzzle._grid[x][y];
     if (cell->polyshape == 0) continue;
-    if (cell->type == "poly") {
+    if (cell->TypeIs("poly")) {
       polys.push_back(cell);
       polyCount += GetPolySize(cell->polyshape);
-    } else if (cell->type == "ylop") {
+    } else if (cell->TypeIs("ylop")) {
       ylops.push_back(cell);
       polyCount -= GetPolySize(cell->polyshape);
     }
@@ -112,11 +112,8 @@ bool Polyominos::PolyFit(const Region& region, const Puzzle& puzzle) {
   // First, we mark all cells as 0: Cells outside the target region should be unaffected.
   int** polyGrid = new int*[puzzle._width];
   for (int x=0; x<puzzle._width; x++) {
-    int* col = new int[puzzle._height];
-    for (int y=0; y<puzzle._height; y++) {
-      col[y] = 0;
-    }
-    polyGrid[x] = col;
+    polyGrid[x] = new int[puzzle._height];
+    memset(polyGrid[x], 0, puzzle._height);
   }
 
   // In the normal case, we mark every cell as -1: It needs to be covered by one poly

@@ -25,13 +25,13 @@ vector<Path> Solver::Solve(int maxSolutions) {
   for (int x=0; x<puzzle->_width; x++) {
     for (int y=0; y<puzzle->_height; y++) {
       Cell* cell = &puzzle->_grid[x][y];
-      if (cell->type.empty()) continue;
+      if (cell->TypeIs("")) continue;
       if (cell->start == true) {
         startPoints.push_back(cell);
       }
       if (!cell->end.empty()) numEndpoints++;
-      if (cell->type == "nega") puzzle->_hasNegations = true;
-      if (cell->type == "poly" || cell->type == "ylop") puzzle->_hasPolyominos = true;
+      if (cell->TypeIs("nega")) puzzle->_hasNegations = true;
+      if (cell->TypeIs("poly") || cell->TypeIs("ylop")) puzzle->_hasPolyominos = true;
     }
   }
 
@@ -89,7 +89,7 @@ void Solver::SolveLoop(int x, int y) {
 
   // Check for collisions (outside, gap, self, other)
   Cell* cell = puzzle->GetCell(x, y);
-  if (cell == nullptr || cell->type.empty()) return;
+  if (cell == nullptr || cell->TypeIs("")) return;
   if (cell->gap > GAP_NONE) return;
   if (cell->line != LINE_NONE) return;
 

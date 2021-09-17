@@ -111,9 +111,9 @@ Puzzle Random::GeneratePolyominos(bool rerollOnImpossible) {
     // Manhattan Distance of 3 or more
     if (abs(star1->x - star2->x) + abs(star1->y - star2->y) < 6) goto rerollStars;
 
-    star1->type = "star";
+    star1->SetType("star");
     star1->color = colorNames[colors[0]];
-    star2->type = "star";
+    star2->SetType("star");
     star2->color = colorNames[colors[0]];
 
     p.CutRandomEdges(*this, 8);
@@ -121,12 +121,12 @@ Puzzle Random::GeneratePolyominos(bool rerollOnImpossible) {
     unsigned short polyshape1 = RandomPolyshape();
     unsigned short polyshape2 = RandomPolyshape();
     Cell* poly1 = p.GetEmptyCell(*this);
-    poly1->type = "poly";
+    poly1->SetType("poly");
     poly1->color = colorNames[colors[1]];
     poly1->polyshape = polyshape1;
 
     Cell* poly2 = p.GetEmptyCell(*this);
-    poly2->type = "poly";
+    poly2->SetType("poly");
     poly2->color = colorNames[colors[1]];
     poly2->polyshape = polyshape2;
 

@@ -8,7 +8,7 @@
 using namespace std;
 
 void Validator::Validate(Puzzle& puzzle, bool quick) {
-  console.log("Validating", puzzle);
+  console.log("Validating", puzzle._name);
   puzzle._valid = true; // Assume valid until we find an invalid element
 
   bool needsRegions = false;
@@ -49,12 +49,12 @@ void Validator::Validate(Puzzle& puzzle, bool quick) {
   if (needsRegions) {
     regions = puzzle.GetRegions();
   } else {
-    regions = { monoRegion };
+    regions.emplace_back(move(monoRegion));
   }
   console.log("Found", regions.size(), "region(s)");
-  console.debug(regions);
+  // console.debug(regions);
 
-  for (auto region : regions) {
+  for (const auto& region : regions) {
     auto regionData = ValidateRegion(puzzle, region, quick);
     console.log("Region valid:", regionData.Valid());
     Append(puzzle._negations, regionData.negations);
@@ -73,8 +73,8 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
   vector<Cell*> negationSymbols;
   for (const auto [x, y] : region.cells) {
     Cell* cell = &puzzle._grid[x][y];
-    if (cell->type == "nega") {
-      cell->type = "nonce";
+    if (cell->TypeIs("nega")) {
+      cell->SetType("nonce");
       negationSymbols.push_back(cell);
     }
   }
@@ -92,7 +92,7 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
 
   // Set "nonce" back to "nega" for the negation symbols
   for (Cell* cell : negationSymbols) {
-    cell->type = "nega";
+    cell->SetType("nega");
   }
 
   auto invalidElements = regionData.invalidElements;
@@ -114,16 +114,16 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
     Cell* source = Pop(negationSymbols);
     Cell* target = Pop(veryInvalidElements);
     baseCombination.emplace_back(source, target, source->type, target->type);
-    source->type.clear();
-    target->type.clear();
+    source->SetType("");
+    target->SetType("");
   }
 
   regionData = RegionCheckNegations2(puzzle, region, negationSymbols, invalidElements);
 
   // Restore required negations
   for (const auto& [source, target, sourceType, targetType] : baseCombination) {
-    source->type = sourceType;
-    target->type = targetType;
+    source->SetType(sourceType.c_str());
+    target->SetType(targetType.c_str());
     regionData.negations.emplace_back(source, target);
   }
 
@@ -131,7 +131,7 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
 }
 
 RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bool quick) {
-  console.log("Validating region of size", region.cells.size(), region);
+  console.log("Validating region of size", region.cells.size());
   RegionData regionData;
 
   vector<Cell*> squares;
@@ -141,7 +141,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
 
   for (auto& [x, y] : region.cells) {
     Cell* cell = &puzzle._grid[x][y];
-    if (cell->type.empty()) continue;
+    if (cell->TypeIs("")) continue;
 
     // Check for uncovered dots
     if (cell->dot > DOT_NONE) {
@@ -151,7 +151,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
     }
 
     // Check for triangles
-    if (cell->type == "triangle") {
+    if (cell->TypeIs("triangle")) {
       int count = 0;
       if (puzzle.GetLine(x - 1, y) > LINE_NONE) count++;
       if (puzzle.GetLine(x + 1, y) > LINE_NONE) count++;
@@ -169,7 +169,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
       int count = GetValueOrDefault(coloredObjects, cell->color, 0);
       coloredObjects[cell->color] = count + 1;
 
-      if (cell->type == "square") {
+      if (cell->TypeIs("square")) {
         squares.push_back(cell);
         if (squareColor.empty()) {
           squareColor = cell->color;
@@ -178,7 +178,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
         }
       }
 
-      if (cell->type == "star") {
+      if (cell->TypeIs("star")) {
         stars.push_back(cell);
       }
     }
