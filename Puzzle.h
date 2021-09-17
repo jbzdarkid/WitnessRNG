@@ -51,10 +51,12 @@ public:
   std::vector<std::tuple<int, int>> _connections;
   Cell** _grid;
 
-  // Properties set and read by Validate()
+  // Properties set and read by Validate() / Solve()
   bool _valid = false;
   bool _hasNegations = false;
   bool _hasPolyominos = false;
+  Cell* _startPoint;
+  Cell* _endPoint;
   std::vector<std::tuple<Cell*, Cell*>> _negations;
   std::vector<Cell*> _invalidElements;
   std::vector<Cell*> _veryInvalidElements;

@@ -146,11 +146,13 @@
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Puzzle.cpp" />
     <ClCompile Include="Random.cpp" />
+    <ClCompile Include="Solve.cpp" />
     <ClCompile Include="Validate.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Puzzle.h" />
     <ClInclude Include="Random.h" />
+    <ClInclude Include="Solve.h" />
     <ClInclude Include="Utilities.h" />
     <ClInclude Include="Validate.h" />
   </ItemGroup>

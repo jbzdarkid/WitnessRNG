@@ -171,37 +171,37 @@ int** Puzzle::GenerateMaskedGrid() {
     maskedGrid[x] = row;
   }
 
-  /*
   // Starting at a mid-segment startpoint
-  if (this.startPoint != null && this.startPoint.x%2 !== this.startPoint.y%2) {
-    if (this.settings.FAT_STARTPOINTS) {
+  if (_startPoint != nullptr && _startPoint->x%2 != _startPoint->y%2) {
+    if (false /* _settings.FAT_STARTPOINTS */) {
       // This segment is not in any region (acts as a barrier)
-      this.grid[this.startPoint.x][this.startPoint.y] = MASKED_OOB
+      maskedGrid[_startPoint->x][_startPoint->y] = MASKED_OOB;
     } else {
       // This segment is part of this region (acts as an empty cell)
-      this.grid[this.startPoint.x][this.startPoint.y] = MASKED_INB_NONCOUNT
+      maskedGrid[_startPoint->x][_startPoint->y] = MASKED_INB_NONCOUNT;
     }
   }
 
   // Ending at a mid-segment endpoint
-  if (this.endPoint != null && this.endPoint.x%2 !== this.endPoint.y%2) {
+  if (_endPoint != nullptr && _endPoint->x%2 != _endPoint->y%2) {
     // This segment is part of this region (acts as an empty cell)
-    this.grid[this.endPoint.x][this.endPoint.y] = MASKED_INB_NONCOUNT
+    maskedGrid[_endPoint->x][_endPoint->y] = MASKED_INB_NONCOUNT;
   }
 
   // Mark all outside cells as 'not in any region' (aka null)
 
+  /* (Not needed until we have non-square grids)
   // Top and bottom edges
-  for (var x=1; x<this.width; x+=2) {
-    this._floodFillOutside(x, 0, this.grid[x])
-    this._floodFillOutside(x, this.height - 1, this.grid[x])
+  for (var x=1; x<_width; x+=2) {
+    _floodFillOutside(x, 0, maskedGrid);
+    _floodFillOutside(x, _height - 1, maskedGrid);
   }
 
   // Left and right edges (only applies to non-pillars)
-  if (this.pillar === false) {
-    for (var y=1; y<this.height; y+=2) {
-      this._floodFillOutside(0, y, this.grid[0])
-      this._floodFillOutside(this.width - 1, y, this.grid[this.width-1])
+  if (_pillar == false) {
+    for (int y=1; y<_height; y+=2) {
+      _floodFillOutside(0, y, maskedGrid);
+      _floodFillOutside(_width - 1, y, maskedGrid);
     }
   }
   */
