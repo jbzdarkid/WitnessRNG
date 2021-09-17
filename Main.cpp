@@ -127,6 +127,8 @@ int main(int argc, char* argv[]) {
     rng._seed = 0x0BB63EB7;
     Puzzle p = Puzzle::GeneratePolyominos(rng);
     cout << p << endl;
+    for (int x = 0; x < p._width; x++) p._grid[x][0].line = LINE_BLACK;
+    for (int y = 0; y < p._height; y++) p._grid[0][y].line = LINE_BLACK;
     Validator::Validate(p);
 
   } else if (argc > 1 && strcmp(argv[1], "thrd") == 0) {

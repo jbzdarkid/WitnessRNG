@@ -62,12 +62,15 @@ public:
   // Non-RNG functions from WP
   Puzzle(int width, int height, bool pillar=false);
 
-  void SetCell(int x, int y, Cell cell);
+  // void SetCell(int x, int y, Cell cell);
   Cell* GetCell(int x, int y);
   // A variant of getCell which specifically returns line values,
   // and treats objects as being out-of-bounds
   int GetLine(int x, int y);
+  void _floodFill(int x, int y, Region& region, int** maskedGrid);
+  int** GenerateMaskedGrid();
   std::vector<Region> GetRegions();
+  Region GetRegion(int x, int y);
 
   // RNG functions (from TW)
   static Puzzle GeneratePolyominos(Random& rng);

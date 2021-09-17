@@ -19,7 +19,7 @@ void Validator::Validate(Puzzle& puzzle, bool quick) {
   // Validate gap failures as an early exit.
   for (int x=0; x<puzzle._width; x++) {
     for (int y=0; y<puzzle._height; y++) {
-      Cell cell = puzzle._grid[x][y];
+      Cell cell = puzzle._grid[x][y]; // Copy is probably cheaper here, since we reference some data more than once.
       // if (cell == nullptr) continue;
       if (!needsRegions && cell.type != "line" && cell.type != "triangle") needsRegions = true;
       if (cell.type == "nega") puzzle._hasNegations = true;
@@ -53,17 +53,14 @@ void Validator::Validate(Puzzle& puzzle, bool quick) {
   console.log("Found", regions.size(), "region(s)");
   console.debug(regions);
 
-  if (false /*puzzle.settings.CUSTOM_MECHANICS*/) {
-  } else {
-    for (auto region : regions) {
-      auto regionData = ValidateRegion(puzzle, region, quick);
-      console.log("Region valid:", regionData.Valid());
-      Append(puzzle._negations, regionData.negations);
-      Append(puzzle._invalidElements, regionData.invalidElements);
-      Append(puzzle._veryInvalidElements, regionData.veryInvalidElements);
-      puzzle._valid = puzzle._valid && regionData.Valid();
-      if (quick && !puzzle._valid) return;
-    }
+  for (auto region : regions) {
+    auto regionData = ValidateRegion(puzzle, region, quick);
+    console.log("Region valid:", regionData.Valid());
+    Append(puzzle._negations, regionData.negations);
+    Append(puzzle._invalidElements, regionData.invalidElements);
+    Append(puzzle._veryInvalidElements, regionData.veryInvalidElements);
+    puzzle._valid = puzzle._valid && regionData.Valid();
+    if (quick && !puzzle._valid) return;
   }
   console.log("Puzzle has", puzzle._invalidElements.size(), "invalid elements");
 }
@@ -100,7 +97,7 @@ RegionData Validator::ValidateRegion(Puzzle& puzzle, const Region& region, bool 
   auto invalidElements = regionData.invalidElements;
   auto veryInvalidElements = regionData.veryInvalidElements;
 
-  /* Shouldn"t need to do this, since I"m using Cell* instead of grid references. Hmm.
+  /* Shouldn"t need to do this, since I'm using Cell* instead of grid references. Hmm.
   for (int i=0; i<invalidElements.size(); i++) {
     invalidElements[i] = &puzzle._grid[invalidElements[i]->x][invalidElements[i]->y];
   }
@@ -110,23 +107,23 @@ RegionData Validator::ValidateRegion(Puzzle& puzzle, const Region& region, bool 
   */
 
   console.debug("Forcibly negating", veryInvalidElements.size(), "symbols");
-  vector<tuple<Cell, Cell>> baseCombination;
+
+  vector<tuple<Cell*, Cell*, string, string>> baseCombination;
   while (negationSymbols.size() > 0 && veryInvalidElements.size() > 0) {
     Cell* source = Pop(negationSymbols);
     Cell* target = Pop(veryInvalidElements);
-    source->type = "none";
-    target->type = "none";
-    baseCombination.emplace_back(*source, *target); // FIXME: Copying!
+    baseCombination.emplace_back(source, target, source->type, target->type);
+    source->type.clear();
+    target->type.clear();
   }
 
   regionData = RegionCheckNegations2(puzzle, region, negationSymbols, invalidElements);
 
   // Restore required negations
-  for (const auto& [source, target] : baseCombination) {
-    *puzzle._grid[source.x, source.y] = source;
-    *puzzle._grid[target.x, target.y] = target;
-    // FIXME: Gross! Might be simplified by removing copies.
-    regionData.negations.emplace_back(puzzle._grid[source.x, source.y], puzzle._grid[target.x, target.y]);
+  for (const auto& [source, target, sourceType, targetType] : baseCombination) {
+    source->type = sourceType;
+    target->type = targetType;
+    regionData.negations.emplace_back(source, target);
   }
 
   return regionData;
@@ -216,14 +213,6 @@ RegionData Validator::RegionCheck(Puzzle& puzzle, const Region& region, bool qui
       }
     }
   }
-
-  /*
-  if (puzzle.settings.CUSTOM_MECHANICS) {
-    window.validateBridges(puzzle, region, regionData)
-    window.validateArrows(puzzle, region, regionData)
-    window.validateSizers(puzzle, region, regionData)
-  }
-  */
 
   console.debug("Region has", regionData.veryInvalidElements.size(), "very invalid elements");
   console.debug("Region has", regionData.invalidElements.size(), "invalid elements");

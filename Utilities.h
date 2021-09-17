@@ -25,25 +25,27 @@ class Console {
     Spam,
     None,
   };
-  Level _level;
+  Level _level = Info; // Change this value from the Autos tab.
 
 public:
-  template <typename... Types> void error(Types... args)   { _log(Level::Error, args...); }
-  template <typename... Types> void warning(Types... args) { _log(Level::Warning, args...); }
-  template <typename... Types> void info(Types... args)    { _log(Level::Info, args...); }
-  template <typename... Types> void log(Types... args)     { _log(Level::Log, args...); }
-  template <typename... Types> void debug(Types... args)   { _log(Level::Debug, args...); }
-  template <typename... Types> void spam(Types... args)    { _log(Level::Spam, args...); }
+  template <typename... Types> void error(Types... args)   { _log(Error, args...); }
+  template <typename... Types> void warning(Types... args) { _log(Warning, args...); }
+  template <typename... Types> void info(Types... args)    { _log(Info, args...); }
+  template <typename... Types> void log(Types... args)     { _log(Log, args...); }
+  template <typename... Types> void debug(Types... args)   { _log(Debug, args...); }
+  template <typename... Types> void spam(Types... args)    { _log(Spam, args...); }
 
+  /*
   void SetLogLevel(const std::string& level) {
-    if (level == "none")  _level = Level::None;
-    if (level == "error") _level = Level::Error;
-    if (level == "warn")  _level = Level::Warning;
-    if (level == "info")  _level = Level::Info;
-    if (level == "log")   _level = Level::Log;
-    if (level == "debug") _level = Level::Debug;
-    if (level == "spam")  _level = Level::Spam;
+    if (level == "none")  _level = None;
+    if (level == "error") _level = Error;
+    if (level == "warn")  _level = Warning;
+    if (level == "info")  _level = Info;
+    if (level == "log")   _level = Log;
+    if (level == "debug") _level = Debug;
+    if (level == "spam")  _level = Spam;
   }
+  */
 
 private:
   template <typename T, typename... Types>
