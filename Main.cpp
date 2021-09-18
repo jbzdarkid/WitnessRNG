@@ -17,6 +17,10 @@ using namespace std;
 
 Console console;
 
+// Ideas to bring back to the javascript version:
+// - Try making a single maskedGrid (and polyGrid?) per puzzle. Then, instead of swapping out the puzzle, just write into that grid.
+// - Deprecate and remove Region, replace with just Region.cells (which is all anyone wants).
+
 unordered_map<int, int> tests = {
   {0x00000000, 0x6F4EE991},
   {0x7E9F198C, 0x7F467745},

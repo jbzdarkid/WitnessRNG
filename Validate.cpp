@@ -12,7 +12,7 @@ void Validator::Validate(Puzzle& puzzle, bool quick) {
   puzzle._valid = true; // Assume valid until we find an invalid element
 
   bool needsRegions = false;
-  Region monoRegion = Region(puzzle._width);
+  Region monoRegion;
   // These two are both used by validateRegion, so they are saved on the puzzle itself.
   puzzle._hasNegations = false;
   puzzle._hasPolyominos = false;
@@ -38,7 +38,7 @@ void Validator::Validate(Puzzle& puzzle, bool quick) {
           if (quick) return;
         }
       } else {
-        monoRegion.SetCell(x, y);
+        monoRegion.emplace_back(x, y);
       }
     }
   }
@@ -49,7 +49,7 @@ void Validator::Validate(Puzzle& puzzle, bool quick) {
   if (needsRegions) {
     regions = puzzle.GetRegions();
   } else {
-    regions.emplace_back(move(monoRegion));
+    regions.emplace_back(monoRegion);
   }
   console.log("Found", regions.size(), "region(s)");
   // console.debug(regions);
@@ -71,7 +71,7 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
 
   // Get a list of negation symbols in the grid, and set them to "nonce"
   vector<Cell*> negationSymbols;
-  for (const auto [x, y] : region.cells) {
+  for (const auto [x, y] : region) {
     Cell* cell = &puzzle._grid[x][y];
     if (cell->type == CELL_TYPE_NEGA) {
       cell->type = CELL_TYPE_NONCE;
@@ -131,7 +131,7 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
 }
 
 RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bool quick) {
-  // console.log("Validating region of size", region.cells.size());
+  // console.log("Validating region of size", region.size());
   RegionData regionData;
 
   vector<Cell*> squares;
@@ -139,7 +139,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
   unordered_map<int, int> coloredObjects;
   int squareColor = 0;
 
-  for (auto& [x, y] : region.cells) {
+  for (auto& [x, y] : region) {
     Cell* cell = &puzzle._grid[x][y];
     if (cell->type == CELL_TYPE_NULL) continue;
 
@@ -204,7 +204,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
 
   if (puzzle._hasPolyominos) {
     if (!Polyominos::PolyFit(region, puzzle)) {
-      for (const auto [x, y] : region.cells) {
+      for (const auto [x, y] : region) {
         Cell* cell = puzzle.GetCell(x, y);
         if (cell == nullptr) continue;
         if (cell->type == CELL_TYPE_POLY || cell->type == CELL_TYPE_YLOP) {

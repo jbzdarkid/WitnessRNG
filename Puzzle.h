@@ -25,44 +25,7 @@ struct Cell {
   std::string ToString(int x, int y);
 };
 
-struct Region {
-public:
-  std::vector<std::tuple<int, int>> cells;
-
-  Region(int length) {
-    _grid = new int[length]; // std::vector<int>(length, 0);
-    memset(_grid, 0, sizeof(int) * length);
-  }
-
-  ~Region() {
-    delete[] _grid;
-  }
-
-  DELETE_RO3(Region)
-  // RO5
-  Region(Region&& other) noexcept {
-    _grid = other._grid;
-    other._grid = nullptr;
-  }
-  Region& operator=(Region&& other) noexcept {
-    _grid = other._grid;
-    other._grid = nullptr;
-    return *this;
-  }
-
-  bool GetCell(int x, int y) const {
-    return ((_grid[x] & (1 << y)) != 0);
-  }
-
-  void SetCell(int x, int y) {
-    if (GetCell(x, y)) return;
-    _grid[x] |= (1 << y);
-    cells.emplace_back(x, y);
-  }
-
-private:
-  int* _grid;
-};
+using Region = std::vector<std::tuple<int, int>>;
 
 class Puzzle {
 public:
