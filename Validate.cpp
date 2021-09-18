@@ -114,8 +114,8 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
     Cell* source = Pop(negationSymbols);
     Cell* target = Pop(veryInvalidElements);
     baseCombination.emplace_back(source, target, source->type, target->type);
-    source->SetType("");
-    target->SetType("");
+    source->SetType(TYPELESS);
+    target->SetType(TYPELESS);
   }
 
   regionData = RegionCheckNegations2(puzzle, region, negationSymbols, invalidElements);
@@ -136,12 +136,12 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
 
   vector<Cell*> squares;
   vector<Cell*> stars;
-  unordered_map<string, int> coloredObjects;
-  string squareColor;
+  unordered_map<int, int> coloredObjects;
+  int squareColor = 0;
 
   for (auto& [x, y] : region.cells) {
     Cell* cell = &puzzle._grid[x][y];
-    if (cell->TypeIs("")) continue;
+    if (cell->TypeIs(TYPELESS)) continue;
 
     // Check for uncovered dots
     if (cell->dot > DOT_NONE) {
@@ -165,16 +165,16 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
     }
 
     // Count color-based elements
-    if (!cell->color.empty()) {
+    if (cell->color != 0) {
       int count = GetValueOrDefault(coloredObjects, cell->color, 0);
       coloredObjects[cell->color] = count + 1;
 
       if (cell->TypeIs("square")) {
         squares.push_back(cell);
-        if (squareColor.empty()) {
+        if (squareColor == 0) {
           squareColor = cell->color;
         } else if (squareColor != cell->color) {
-          squareColor = "collision"; // Signal value which indicates square color collision
+          squareColor = -1; // Signal value which indicates square color collision
         }
       }
 
@@ -184,7 +184,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
     }
   }
 
-  if (squareColor == "collision") {
+  if (squareColor == -1) {
     Append(regionData.invalidElements, squares);
     if (quick) return regionData;
   }

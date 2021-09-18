@@ -15,8 +15,9 @@ Puzzle::Puzzle(int width, int height, bool pillar) {
   _numConnections = (width+1)*height + width*(height+1);
   _grid = new Cell*[_width];
 
-  // Fast allocation for the grid
-  Cell* raw = (Cell*)malloc(sizeof(Cell) * _width * _height);
+  // Single allocation for the grid for perf reasons.
+  Cell* raw = new Cell[_width * _height];
+  memset(raw, 0, sizeof(Cell) * _width * _height);
 
   for (int x=0; x<_width; x++) {
     _grid[x] = (raw + _height * x);
@@ -48,7 +49,8 @@ Puzzle::Puzzle(int width, int height, bool pillar) {
 }
 
 Puzzle::~Puzzle() {
-  free(_grid);
+  delete _grid[0]; // The grid was allocated as one contiguous region.
+  delete[] _grid;
 }
 
 /*
@@ -85,11 +87,11 @@ void Puzzle::ClearGrid() {
   for (int x=0; x<_width; x++) {
     for (int y=0; y<_width; y++) {
       Cell* cell = &_grid[x][y];
-      if (x%2 == 1 && y%2 == 1) cell->SetType("");
+      if (x%2 == 1 && y%2 == 1) cell->SetType(TYPELESS);
       cell->dot = DOT_NONE;
       cell->gap = GAP_NONE;
       cell->line = LINE_NONE;
-      cell->color.clear();
+      cell->color = 0;
       cell->count = 0;
       cell->polyshape = 0u;
 
@@ -260,12 +262,12 @@ Cell* Puzzle::GetEmptyCell(Random& rng) {
     int x = (rand % _origWidth)*2 + 1;
     int y = (_origHeight - rand/_origWidth)*2 - 1;
     Cell* cell = &_grid[x][y];
-    if (cell->TypeIs("")) return cell;
+    if (cell->TypeIs(TYPELESS)) return cell;
   }
 }
 
 ostream& operator<<(ostream& os, const Cell& c) {
-  if (c.TypeIs("")) {
+  if (c.TypeIs(TYPELESS)) {
     os << "null";
     return os;
   }
@@ -276,7 +278,7 @@ ostream& operator<<(ostream& os, const Cell& c) {
     if (c.polyshape != 0) os << "\"polyshape\": " << dec << c.polyshape << ",";
     if (c.start) os << "\"start\": true,";
     if (c.end != END_NONE) os << "\"end\": \"" << c.end << "\",";
-    if (!c.color.empty()) os << "\"color\": \"" << c.color << "\",";
+    if (c.color != 0) os << "\"color\": \"" << c.color << "\",";
     os << "\"type\": \"" << c.type << "\"";
   os << '}';
   return os;
@@ -326,7 +328,7 @@ const char* IntToString(int i) {
 }
 
 std::string Cell::ToString(int x, int y) {
-  if (x%2 == 1 && y%2 == 1 && TypeIs("")) return "null";
+  if (x%2 == 1 && y%2 == 1 && TypeIs(TYPELESS)) return "null";
 
   char polyshapeStr[sizeof(R"("polyshape":65535,)")] = {'\0'};
   if (polyshape != 0) sprintf_s(&polyshapeStr[0], sizeof(polyshapeStr), ",\"polyshape\":%hu", polyshape);
@@ -336,12 +338,15 @@ std::string Cell::ToString(int x, int y) {
   if (end == END_RIGHT)  endDir = ",\"end\":\"right\"";
   if (end == END_BOTTOM) endDir = ",\"end\":\"bottom\"";
 
+  char colorStr[sizeof(R"("color":0xFF00FF,)")] = {'\0'};
+  if (color != 0) sprintf_s(&colorStr[0], sizeof(colorStr), ",\"color\":0x%06x", color);
+
   PRINTF("{\"type\":\"%s\",\"line\":%d"
     "%s%s" // dot
     "%s%s" // gap
     "%s" // start
     "%s" // end
-    "%s%s%s" // color
+    "%s" // color
     "%s" // polyshape
     "}",
     type,
@@ -350,7 +355,7 @@ std::string Cell::ToString(int x, int y) {
     (gap != 0 ? ",\"gap\":" : ""), IntToString(gap),
     (start != 0 ? ",\"start\":true" : ""),
     endDir,
-    (!color.empty() ? ",\"color\":\"" : ""), color.c_str(), (!color.empty() ? "\"" : ""),
+    colorStr,
     polyshapeStr
   );
   return output;

@@ -122,19 +122,19 @@ int main(int argc, char* argv[]) {
 
   } else if (argc > 1 && strcmp(argv[1], "rand") == 0) {
     rng.Set(0x5C64B474);
-    Puzzle p = rng.GeneratePolyominos(true);
-    cout << p << endl;
-    auto solutions = Solver(&p).Solve();
-    int k = 1;
+    Puzzle* p = rng.GeneratePolyominos(true);
+    cout << *p << endl;
+    auto solutions = Solver(p).Solve();
+    delete p;
 
   } else if (argc > 1 && strcmp(argv[1], "thrd") == 0) {
     vector<thread> threads;
     #if _DEBUG
     const int numThreads = 1;
-    const int maxSeed = 0x1000;
+    const int maxSeed = 0x10;
     #else
     const int numThreads = 8;
-    const int maxSeed = 0x100'0000;
+    const int maxSeed = 0x20'0000;
     #endif
     for (int i=0; i<numThreads; i++) {
       thread t([numThreads, maxSeed](int i) {
@@ -144,14 +144,13 @@ int main(int argc, char* argv[]) {
         Random rng;
         for (int j=i; j<maxSeed; j+=numThreads) {
           rng.Set(j);
-          Puzzle p = rng.GeneratePolyominos(false);
-          auto solutions = Solver(&p).Solve(1);
+          Puzzle* p = rng.GeneratePolyominos(false);
+          auto solutions = Solver(p).Solve(1);
+          delete p;
           if (solutions.size() == 0) continue; // No output for unsolvable puzzles!
           stringstream output;
-          output << "0x" << hex << uppercase << setfill('0') << j << '\t'; // RNG
-          output << "0x" << hex << uppercase << setfill('0') << rng.Peek() << '\t'; // Ending RNG (used to deduplicate puzzles)
-          output << solutions.size() << '\t'; // # Solutions
-          output << '\n';
+          output << "0x" << hex << uppercase << setfill('0') << setw(8) << j << ' '; // RNG
+          output << "0x" << hex << uppercase << setfill('0') << setw(8) << rng.Peek() << '\n'; // Ending RNG
           string outputStr = output.str();
           DWORD unused;
           WriteFile(file, &outputStr[0], outputStr.size(), &unused, nullptr);

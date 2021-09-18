@@ -90,51 +90,50 @@ unsigned int Random::RandomPolyshape() {
   return polyshape;
 }
 
-Puzzle Random::GeneratePolyominos(bool rerollOnImpossible) {
-  Puzzle p = Puzzle(4, 4);
-  p._name = "Random polyominos #" + std::to_string(_seed);
+Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible) {
+  Puzzle* p = new Puzzle(4, 4);
+  p->_name = "Random polyominos #" + std::to_string(_seed);
 
   // This only happens once per random generation -- an invalid puzzle will still use the same colors
   Get();
-  vector<int> colors = {0, 1, 2, 3, 4};
-  vector<string> colorNames = {"orange", "purple", "green", "red", "teal"};
+  vector<int> colors = {0xFFA800, 0x7F00FF, 0x69A957, 0xFF2DFF, 0x2DFFFF};
   ShuffleInt(colors);
 
   rerollPuzzle:
   {
-    p._grid[0][8].start = true;
-    p._grid[8][0].end = END_RIGHT; p._numConnections++;
+    p->_grid[0][8].start = true;
+    p->_grid[8][0].end = END_RIGHT; p->_numConnections++;
 
     rerollStars:
-    Cell* star1 = p.GetEmptyCell(*this);
-    Cell* star2 = p.GetEmptyCell(*this);
+    Cell* star1 = p->GetEmptyCell(*this);
+    Cell* star2 = p->GetEmptyCell(*this);
 
     // Manhattan Distance of 3 or more
     if (abs(star1->x - star2->x) + abs(star1->y - star2->y) < 6) goto rerollStars;
 
     star1->SetType("star");
-    star1->color = colorNames[colors[0]];
+    star1->color = colors[0];
     star2->SetType("star");
-    star2->color = colorNames[colors[0]];
+    star2->color = colors[0];
 
-    p.CutRandomEdges(*this, 8);
+    p->CutRandomEdges(*this, 8);
 
     unsigned short polyshape1 = RandomPolyshape();
     unsigned short polyshape2 = RandomPolyshape();
-    Cell* poly1 = p.GetEmptyCell(*this);
+    Cell* poly1 = p->GetEmptyCell(*this);
     poly1->SetType("poly");
-    poly1->color = colorNames[colors[1]];
+    poly1->color = colors[1];
     poly1->polyshape = polyshape1;
 
-    Cell* poly2 = p.GetEmptyCell(*this);
+    Cell* poly2 = p->GetEmptyCell(*this);
     poly2->SetType("poly");
-    poly2->color = colorNames[colors[1]];
+    poly2->color = colors[1];
     poly2->polyshape = polyshape2;
 
     if (rerollOnImpossible) {
-      auto solutions = Solver(&p).Solve(1);
+      auto solutions = Solver(p).Solve(1);
       if (solutions.size() == 0) {
-        p.ClearGrid();
+        p->ClearGrid();
         goto rerollPuzzle;
       }
     }

@@ -17,7 +17,7 @@ public:
 
   unsigned int RandomPolyshape();
 
-  Puzzle GeneratePolyominos(bool rerollOnImpossible);
+  Puzzle* GeneratePolyominos(bool rerollOnImpossible);
 
 private:
   int _seed = 0;

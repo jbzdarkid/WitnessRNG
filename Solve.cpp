@@ -25,7 +25,7 @@ vector<Path> Solver::Solve(int maxSolutions) {
   for (int x=0; x<puzzle->_width; x++) {
     for (int y=0; y<puzzle->_height; y++) {
       Cell* cell = &puzzle->_grid[x][y];
-      if (cell->TypeIs("")) continue;
+      if (cell->TypeIs(TYPELESS)) continue;
       if (cell->start == true) {
         startPoints.push_back(cell);
       }
@@ -89,7 +89,7 @@ void Solver::SolveLoop(int x, int y) {
 
   // Check for collisions (outside, gap, self, other)
   Cell* cell = puzzle->GetCell(x, y);
-  if (cell == nullptr || cell->TypeIs("")) return;
+  if (cell == nullptr || cell->TypeIs(TYPELESS)) return;
   if (cell->gap > GAP_NONE) return;
   if (cell->line != LINE_NONE) return;
 

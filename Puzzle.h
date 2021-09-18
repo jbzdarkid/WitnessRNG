@@ -12,6 +12,7 @@ class Random;
 
 using u8 = unsigned char;
 
+#define TYPELESS "\0"
 struct Cell {
   char type[10]; // triangle + 1
   int x = 0;
@@ -25,7 +26,7 @@ struct Cell {
   bool start = false;
 
   u8 end;
-  std::string color;
+  int color;
 
   std::string ToString(int x, int y);
   inline bool TypeIs(const char* type_) const {
@@ -103,6 +104,9 @@ public:
   ~Puzzle();
   RO3(Puzzle);
   // RO5
+  Puzzle(Puzzle&& other) noexcept = delete;
+  Puzzle& operator=(Puzzle&& other) noexcept = delete;\
+  /*
   Puzzle(Puzzle&& other) noexcept {
     _grid = other._grid;
     other._grid = nullptr;
@@ -112,6 +116,7 @@ public:
     other._grid = nullptr;
     return *this;
   }
+  */
 
   // void SetCell(int x, int y, Cell cell);
   Cell* GetCell(int x, int y) const;
