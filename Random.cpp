@@ -54,8 +54,8 @@ void Random::ShuffleIntegers(vector<int>& arr) {
   }
 }
 
-unsigned int RotatePolyshape(unsigned int polyshape) {
-  unsigned int newshape = 0;
+unsigned short RotatePolyshape(unsigned int polyshape) {
+  unsigned short newshape = 0;
   for (int x=0; x<4; x++) {
     for (int y=0; y<4; y++) {
       if (polyshape & (1 << (x*4 + y))) newshape |= 1 << (y*4 + 3-x);
@@ -64,7 +64,7 @@ unsigned int RotatePolyshape(unsigned int polyshape) {
   return newshape;
 }
 
-unsigned int Random::RandomPolyshape() {
+unsigned short Random::RandomPolyshape() {
   int cursor_x = 0;
   int cursor_y = 0;
   unsigned short polyshape = 1;
@@ -137,7 +137,7 @@ Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible, bool abortOnStarsFai
     poly2->polyshape = polyshape2;
 
     if (rerollOnImpossible) {
-      if (Solver(p).IsSolvable()) {
+      if (!Solver(p).IsSolvable()) {
         p->ClearGrid();
         goto rerollPuzzle;
       }

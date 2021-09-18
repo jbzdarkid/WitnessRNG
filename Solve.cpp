@@ -130,8 +130,8 @@ void Solver::SolveLoop(int x, int y) {
       solutionPaths.push_back(path);
       if (solutionPaths.size() >= MAX_SOLUTIONS) return;
 
-      // Make a new path, but only if we 
-      int pathSize = puzzle->_width * puzzle->_height;
+      // Make a new path, but only if there are more solutions to find.
+      pathSize = puzzle->_width * puzzle->_height;
       Path newPath = new u8[pathSize];
       memcpy_s(newPath, pathSize, path, pathSize);
     }

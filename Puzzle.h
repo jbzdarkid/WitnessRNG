@@ -22,7 +22,7 @@ struct Cell {
   u8 end;
   bool start = false;
 
-  std::string ToString(int x, int y);
+  std::string ToString();
 };
 
 using Region = std::vector<std::tuple<int, int>>;
@@ -59,8 +59,9 @@ public:
 
   // void SetCell(int x, int y, Cell cell);
   Cell* GetCell(int x, int y) const;
-  Cell* GetSymmetricalCell(Cell* cell) { return nullptr; }
-  bool MatchesSymmetricalPos(int x, int y, int symX, int symY) { return false; }
+  std::tuple<int, int> GetSymmetricalPos(int x, int y);
+  Cell* GetSymmetricalCell(Cell* cell);
+  bool MatchesSymmetricalPos(int x1, int y1, int x2, int y2);
   // A variant of getCell which specifically returns line values,
   // and treats objects as being out-of-bounds
   Line GetLine(int x, int y) const;

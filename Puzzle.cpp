@@ -34,8 +34,8 @@ Puzzle::Puzzle(int width, int height, bool pillar) {
   _grid = NewDoubleArray<Cell>(_width, _height);
   _maskedGrid = NewDoubleArray<u8>(_width, _height);
 
-  for (int x=0; x<_width; x++) {
-    for (int y = 0; y < _height; y++) {
+  for (u8 x=0; x<_width; x++) {
+    for (u8 y=0; y<_height; y++) {
       Cell* cell = &_grid[x][y];
       cell->x = x;
       cell->y = y;
@@ -77,6 +77,34 @@ Cell* Puzzle::GetCell(int x, int y) const {
   x = _mod(x);
   if (!_safeCell(x, y)) return nullptr;
   return &_grid[x][y];
+}
+
+tuple<int, int> Puzzle::GetSymmetricalPos(int x, int y) {
+  if (_symmetry != SYM_NONE) {
+    if (_pillar == true) {
+      x += _width/2;
+      if (_symmetry & SYM_X) {
+        x = _width - x;
+      }
+    } else {
+      if (_symmetry & SYM_X) {
+        x = (_width - 1) - x;
+      }
+    }
+    if (_symmetry & SYM_Y) {
+      y = (_height - 1) - y;
+    }
+  }
+  return {_mod(x), y};
+}
+
+Cell* Puzzle::GetSymmetricalCell(Cell* cell) {
+  auto [x, y] = GetSymmetricalPos(cell->x, cell->y);
+  return &_grid[x][y];
+}
+
+bool Puzzle::MatchesSymmetricalPos(int x1, int y1, int x2, int y2) {
+  return (_mod(x1) == x2 && y1 == y2);
 }
 
 int Puzzle::_mod(int x) const {
@@ -298,7 +326,7 @@ ostream& operator<<(ostream& os, const Puzzle& p) {
     for (int x=0; x<p._width; x++) {
       os << '[';
       for (int y=0; y<p._height; y++) {
-        os << dec << p._grid[x][y].ToString(x, y);
+        os << dec << p._grid[x][y].ToString();
         if (y < p._height-1) os << ',';
       }
       os << ']';
@@ -330,7 +358,7 @@ const char* IntToString(int i) {
   }
 }
 
-std::string Cell::ToString(int x, int y) {
+std::string Cell::ToString() {
   if (x%2 == 1 && y%2 == 1 && type == CELL_TYPE_NULL) return "null";
   
   const char* typeStr = "";

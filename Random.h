@@ -15,7 +15,7 @@ public:
   // The good shuffle
   void ShuffleIntegers(std::vector<int>& arr);
 
-  unsigned int RandomPolyshape();
+  unsigned short RandomPolyshape();
 
   Puzzle* GeneratePolyominos(bool rerollOnImpossible, bool abortOnStarsFailure=false);
 

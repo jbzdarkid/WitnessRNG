@@ -97,16 +97,7 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
 
   auto invalidElements = regionData.invalidElements;
   auto veryInvalidElements = regionData.veryInvalidElements;
-
-  /* Shouldn't need to do this, since I'm using Cell* instead of grid references. Hmm.
-  for (int i=0; i<invalidElements.size(); i++) {
-    invalidElements[i] = &puzzle._grid[invalidElements[i]->x][invalidElements[i]->y];
-  }
-  for (int i=0; i<veryInvalidElements.size(); i++) {
-    veryInvalidElements[i] = &puzzle._grid[veryInvalidElements[i]->x][veryInvalidElements[i]->y];
-  }
-  */
-
+  // We don't need to repopulate these, since we're using cell references.
   console.debug("Forcibly negating", veryInvalidElements.size(), "symbols");
 
   vector<tuple<Cell*, Cell*, u8, u8>> baseCombination;
@@ -128,6 +119,23 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
   }
 
   return regionData;
+}
+
+RegionData Validator::RegionCheckNegations2(
+  const Puzzle& puzzle,
+  const Region& region,
+  const vector<Cell*>& negationSymbols,
+  const vector<Cell*>& invalidElements,
+  int index,
+  int index2) {
+  (void)puzzle;
+  (void)region;
+  (void)negationSymbols;
+  (void)invalidElements;
+  (void)index;
+  (void)index2;
+
+  return RegionData();
 }
 
 RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bool quick) {

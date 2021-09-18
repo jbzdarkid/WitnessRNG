@@ -31,9 +31,13 @@ public:
 private:
   // Recursively matches negations and invalid elements from the grid. Note that this function
   // doesn't actually modify the two lists, it just iterates through them with index/index2.
-  static RegionData RegionCheckNegations2(const Puzzle& puzzle, const Region& region, const std::vector<Cell*>& negationSymbols, const std::vector<Cell*>& invalidElements, int index = 0, int index2 = 0) {
-    return RegionData();
-  }
+  static RegionData RegionCheckNegations2(
+    const Puzzle& puzzle,
+    const Region& region,
+    const std::vector<Cell*>& negationSymbols,
+    const std::vector<Cell*>& invalidElements,
+    int index = 0,
+    int index2 = 0);
 
   // Checks if a region is valid. This does not handle negations -- we assume that there are none.
   // Note that this function needs to always ask the puzzle for the current contents of the cell,

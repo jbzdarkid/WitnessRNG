@@ -108,10 +108,9 @@ vector<tuple<int, int, vector<int>>> tests2 = {
   {0x7039AE2E, 0x7999D9A3, {0, 3, 2, 1}},
   {0x54647333, 0x3FC55A34, {3, 0, 1, 2}},
 };
-auto rng = Random();
-
 int main(int argc, char* argv[]) {
   if (argc > 1 && strcmp(argv[1], "test") == 0) {
+    Random rng;
     for (const auto [key, value] : tests) {
       rng.Set(key);
       assert(rng.Peek() == value);
@@ -127,6 +126,7 @@ int main(int argc, char* argv[]) {
     cout << "Done" << endl;
 
   } else if (argc > 1 && strcmp(argv[1], "rand") == 0) {
+    Random rng;
     rng.Set(0x5C64B474);
     Puzzle* p = rng.GeneratePolyominos(true);
     cout << *p << endl;
