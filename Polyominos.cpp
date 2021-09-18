@@ -62,13 +62,6 @@ vector<tuple<int, int>> Polyominos::PolyominoFromPolyshape(unsigned short polysh
       }
     }
   }
-
-  for (auto [x, y] : polyomino) {
-    if (x < 0 || y < 0) {
-      int k = 1;
-    }
-  }
-
   return polyomino;
 }
 

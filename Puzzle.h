@@ -24,7 +24,7 @@ struct Cell {
   unsigned short polyshape = 0u;
   bool start = false;
 
-  std::string end;
+  u8 end;
   std::string color;
 
   std::string ToString(int x, int y);

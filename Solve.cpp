@@ -29,7 +29,7 @@ vector<Path> Solver::Solve(int maxSolutions) {
       if (cell->start == true) {
         startPoints.push_back(cell);
       }
-      if (!cell->end.empty()) numEndpoints++;
+      if (cell->end != END_NONE) numEndpoints++;
       if (cell->TypeIs("nega")) puzzle->_hasNegations = true;
       if (cell->TypeIs("poly") || cell->TypeIs("ylop")) puzzle->_hasPolyominos = true;
     }
@@ -110,11 +110,7 @@ void Solver::SolveLoop(int x, int y) {
     symCell->line = LINE_YELLOW;
   }
 
-  if (!cell->end.empty()) {
-    if (path == Path{0, 8, UU  RR RR  DD  RR  UU UU UU  LL LL  UU  RR RR RR}) {
-      int k = 1;
-    }
-
+  if (cell->end != END_NONE) {
     path.push_back(PATH_NONE);
     puzzle->_endPoint = cell;
     Validator::Validate(*puzzle, true);

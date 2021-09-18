@@ -1,6 +1,7 @@
-#include "Random.h"
 #include "Puzzle.h"
+#include "Random.h"
 #include "Solve.h"
+#include "Utilities.h"
 
 using namespace std;
 
@@ -102,7 +103,7 @@ Puzzle Random::GeneratePolyominos(bool rerollOnImpossible) {
   rerollPuzzle:
   {
     p._grid[0][8].start = true;
-    p._grid[8][0].end = "right"; p._numConnections++;
+    p._grid[8][0].end = END_RIGHT; p._numConnections++;
 
     rerollStars:
     Cell* star1 = p.GetEmptyCell(*this);

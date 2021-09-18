@@ -94,7 +94,7 @@ void Puzzle::ClearGrid() {
       cell->polyshape = 0u;
 
       cell->start = false;
-      cell->end.clear();
+      cell->end = END_NONE;
     }
   }
   _numConnections = (_origWidth+1)*_origHeight + _origWidth*(_origHeight+1);
@@ -275,7 +275,7 @@ ostream& operator<<(ostream& os, const Cell& c) {
     if (c.gap != 0) os << "\"gap\": " << dec << c.gap << ",";
     if (c.polyshape != 0) os << "\"polyshape\": " << dec << c.polyshape << ",";
     if (c.start) os << "\"start\": true,";
-    if (!c.end.empty()) os << "\"end\": \"" << c.end << "\",";
+    if (c.end != END_NONE) os << "\"end\": \"" << c.end << "\",";
     if (!c.color.empty()) os << "\"color\": \"" << c.color << "\",";
     os << "\"type\": \"" << c.type << "\"";
   os << '}';
@@ -330,12 +330,17 @@ std::string Cell::ToString(int x, int y) {
 
   char polyshapeStr[sizeof(R"("polyshape":65535,)")] = {'\0'};
   if (polyshape != 0) sprintf_s(&polyshapeStr[0], sizeof(polyshapeStr), ",\"polyshape\":%hu", polyshape);
+  const char* endDir = nullptr; // [sizeof(R"("end":"bottom",)"];
+  if (end == END_LEFT)   endDir = ",\"end\":\"left\"";
+  if (end == END_TOP)    endDir = ",\"end\":\"top\"";
+  if (end == END_RIGHT)  endDir = ",\"end\":\"right\"";
+  if (end == END_BOTTOM) endDir = ",\"end\":\"bottom\"";
 
   PRINTF("{\"type\":\"%s\",\"line\":%d"
     "%s%s" // dot
     "%s%s" // gap
     "%s" // start
-    "%s%s%s" // end
+    "%s" // end
     "%s%s%s" // color
     "%s" // polyshape
     "}",
@@ -344,7 +349,7 @@ std::string Cell::ToString(int x, int y) {
     (dot != 0 ? ",\"dot\":" : ""), IntToString(dot),
     (gap != 0 ? ",\"gap\":" : ""), IntToString(gap),
     (start != 0 ? ",\"start\":true" : ""),
-    (!end.empty() ? ",\"end\":\"" : ""), end.c_str(), (!end.empty() ? "\"" : ""),
+    endDir,
     (!color.empty() ? ",\"color\":\"" : ""), color.c_str(), (!color.empty() ? "\"" : ""),
     polyshapeStr
   );

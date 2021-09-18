@@ -3,22 +3,31 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#define LINE_NONE 0
-#define LINE_BLACK 1
-#define LINE_BLUE 2
+#define LINE_NONE   0
+#define LINE_BLACK  1
+#define LINE_BLUE   2
 #define LINE_YELLOW 3
-#define DOT_NONE 0
-#define DOT_BLACK 1
-#define DOT_BLUE 2
-#define DOT_YELLOW 3
-#define DOT_INVISIBLE 4
-#define GAP_NONE 0
-#define GAP_BREAK 1
-#define GAP_FULL 2
-#define SYM_NONE 0
-#define SYM_X 1
-#define SYM_Y 2
-#define SYM_XY 3
+
+#define DOT_NONE    0
+#define DOT_BLACK   1
+#define DOT_BLUE    2
+#define DOT_YELLOW  3
+#define DOT_INVIS   4
+
+#define GAP_NONE    0
+#define GAP_BREAK   1
+#define GAP_FULL    2
+
+#define SYM_NONE    0
+#define SYM_X       1
+#define SYM_Y       2
+#define SYM_XY      3
+
+#define END_NONE    0
+#define END_LEFT    1
+#define END_RIGHT   2
+#define END_TOP     3
+#define END_BOTTOM  4
 
 class Console {
   enum Level {
