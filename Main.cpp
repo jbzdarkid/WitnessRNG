@@ -21,7 +21,6 @@ Console console;
 
 // Ideas to bring back to the javascript version:
 // - Try making a single maskedGrid (and polyGrid?) per puzzle. Then, instead of swapping out the puzzle, just write into that grid.
-// - Deprecate and remove Region, replace with just Region.cells (which is all anyone wants).
 
 unordered_map<int, int> tests = {
   {0x00000000, 0x6F4EE991},
@@ -108,6 +107,7 @@ vector<tuple<int, int, vector<int>>> tests2 = {
   {0x7039AE2E, 0x7999D9A3, {0, 3, 2, 1}},
   {0x54647333, 0x3FC55A34, {3, 0, 1, 2}},
 };
+
 int main(int argc, char* argv[]) {
   if (argc > 1 && strcmp(argv[1], "test") == 0) {
     Random rng;

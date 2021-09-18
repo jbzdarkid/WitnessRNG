@@ -1,28 +1,12 @@
 #include <cstdarg>
 #include <sstream>
 
+#include "DoubleArray.h"
 #include "Puzzle.h"
 #include "Random.h"
 #include "Utilities.h"
 
 using namespace std;
-
-template <typename T>
-T** NewDoubleArray(int width, int height) {
-  // Single allocation for the grid for perf reasons.
-  T* raw = new T[width * height];
-  memset(raw, 0, sizeof(T) * width * height);
-
-  T** arr = new T*[width];
-  for (int x=0; x<width; x++) arr[x] = (raw + height * x);
-  return arr;
-}
-
-template <typename T>
-void DeleteDoubleArray(T** arr) {
-  delete arr[0]; // The grid was allocated as one contiguous region.
-  delete[] arr;
-}
 
 Puzzle::Puzzle(int width, int height, bool pillar) {
   _origWidth = width;
@@ -379,8 +363,8 @@ char polyshapeStr[sizeof(R"("polyshape":65535,)")] = {'\0'};
   if (end == END_RIGHT)  endDir = ",\"end\":\"right\"";
   if (end == END_BOTTOM) endDir = ",\"end\":\"bottom\"";
 
-  char colorStr[sizeof(R"("color":0xFF00FF,)")] = {'\0'};
-  if (color != 0) sprintf_s(&colorStr[0], sizeof(colorStr), ",\"color\":0x%06x", color);
+  char colorStr[sizeof(R"("color":"#FF00FF",)")] = {'\0'};
+  if (color != 0) sprintf_s(&colorStr[0], sizeof(colorStr), ",\"color\":\"#%06x\"", color);
 
   PRINTF("{\"line\":%d"
     "%s" // type

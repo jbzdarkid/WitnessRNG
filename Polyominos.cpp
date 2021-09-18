@@ -1,5 +1,6 @@
 #include <unordered_set>
 
+#include "DoubleArray.h"
 #include "Polyominos.h"
 #include "Puzzle.h"
 #include "Utilities.h"
@@ -103,11 +104,7 @@ bool Polyominos::PolyFit(const Region& region, const Puzzle& puzzle) {
 
   // For polyominos, we clear the grid to mark it up again:
   // First, we mark all cells as 0: Cells outside the target region should be unaffected.
-  int** polyGrid = new int*[puzzle._width];
-  for (int x=0; x<puzzle._width; x++) {
-    polyGrid[x] = new int[puzzle._height];
-    memset(polyGrid[x], 0, puzzle._height);
-  }
+  int** polyGrid = NewDoubleArray<int>(puzzle._width, puzzle._height);
 
   // In the normal case, we mark every cell as -1: It needs to be covered by one poly
   if (polyCount > 0) {
@@ -117,8 +114,7 @@ bool Polyominos::PolyFit(const Region& region, const Puzzle& puzzle) {
 
   bool ret = PlaceYlops(ylops, 0, polys, puzzle, polyGrid);
 
-  for (int x=0; x<puzzle._width; x++) delete polyGrid[x];
-  delete[] polyGrid;
+  DeleteDoubleArray(polyGrid);
 
   return ret;
 }
@@ -205,9 +201,9 @@ bool Polyominos::PlacePolys(std::vector<Cell*>& polys, const Puzzle& puzzle, int
           console.spam("Polyshape", polyshape, "does not fit into", openCellX, openCellY);
           continue;
         }
-        // console.group("");
+        console.group();
         if (PlacePolys(polys, puzzle, polyGrid)) return true;
-        // console.groupEnd("")
+        console.groupEnd();
         // Should not fail, as it"s an inversion of the above tryPlacePolyshape
         TryPlacePolyshape(cells, openCellX, openCellY, puzzle, polyGrid, -1);
       }

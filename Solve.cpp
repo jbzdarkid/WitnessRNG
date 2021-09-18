@@ -66,7 +66,7 @@ vector<Path> Solver::Solve(int maxSolutions) {
   // Unfortunately, this optimization doesn"t work for pillars, since the two regions are still connected.
   // Additionally, this optimization doesn"t work when custom mechanics are active, as many custom mechanics
   // depend on the path through the entire puzzle
-  // doPruning = (puzzle->_pillar == false); // Disabled for now. Too complicated and not worth on a 4x4
+  doPruning = (puzzle->_pillar == false);
 
   for (Cell* startPoint : startPoints) {
     // NOTE: This is subtly different from WitnessPuzzles, which starts the path with [[x, y]] instead of [x, y]!
@@ -76,7 +76,6 @@ vector<Path> Solver::Solve(int maxSolutions) {
     puzzle->_startPoint = startPoint;
     SolveLoop(startPoint->x, startPoint->y);
   }
-
   return solutionPaths;
 }
 
@@ -88,16 +87,19 @@ void Solver::TailRecurse(Cell* cell) {
   }
 }
 
+// {A, B, C, D} -> {A, B, C, D, E}
 void Solver::PushPath(u8 value) {
   path[pathSize++] = value;
 }
 
+// {A, B, C, D} -> {A, B, C, E}
 void Solver::SetLastPath(u8 value) {
-  path[pathSize] = value;
+  path[pathSize-1] = value;
 }
 
+// {A, B, C, D} -> {A, B, C}
 u8 Solver::PopPath() {
-  return path[pathSize--];
+  return path[--pathSize];
 }
 
 void Solver::SolveLoop(int x, int y) {
@@ -127,13 +129,12 @@ void Solver::SolveLoop(int x, int y) {
     puzzle->_endPoint = cell;
     Validator::Validate(*puzzle, true);
     if (puzzle->_valid) {
-      solutionPaths.push_back(path);
-      if (solutionPaths.size() >= MAX_SOLUTIONS) return;
-
-      // Make a new path, but only if there are more solutions to find.
-      pathSize = puzzle->_width * puzzle->_height;
-      Path newPath = new u8[pathSize];
-      memcpy_s(newPath, pathSize, path, pathSize);
+      if (solutionPaths.size() < MAX_SOLUTIONS) {
+        solutionPaths.push_back(path);
+        pathSize = puzzle->_width * puzzle->_height;
+        Path newPath = new u8[pathSize];
+        memcpy_s(newPath, pathSize, path, pathSize);
+      }
     }
     PopPath();
 
