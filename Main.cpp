@@ -1,6 +1,8 @@
+#include <algorithm>
 #include <cassert>
 #include <iostream>
 #include <iomanip>
+#include <numeric>
 #include <unordered_map>
 #include <unordered_set>
 #include <thread>
@@ -131,6 +133,52 @@ int main(int argc, char* argv[]) {
     auto solutions = Solver(p).Solve();
     delete p;
 
+  } else if (argc > 1 && strcmp(argv[1], "period") == 0) {
+    const int numThreads = 8;
+    vector<thread> threads;
+    string results[8];
+    int maxValues[8];
+    int minValues[8];
+    long numSteps[8];
+    for (int i=0; i<numThreads; i++) {
+      thread t([&](int i) {
+        Random rng;
+        rng.Set(111111 + i);
+        long count = 0;
+        int value = 0;
+        int maxValue = -0x7FFFFFFF;
+        int minValue = 0x7FFFFFFF;
+        do {
+          value = rng.Get();
+          count++;
+          maxValue = max(value, maxValue);
+          minValue = min(value, minValue);
+        } while (!(value >= 111111 && value < 111111 + numThreads));
+        stringstream result;
+        result << "From " << 111111 + i << " to " << value << " in " << count << " steps";
+        results[i] = result.str();
+        maxValues[i] = maxValue;
+        minValues[i] = minValue;
+        numSteps[i] = count;
+      }, i);
+      threads.push_back(std::move(t));
+    }
+    for (auto& thread : threads) {
+      if (thread.joinable()) thread.join();
+    }
+    cout << "The complete loop goes:" << endl;
+    cout << results[0] << endl;
+    cout << results[3] << endl;
+    cout << results[6] << endl;
+    cout << results[5] << endl;
+    cout << results[7] << endl;
+    cout << results[1] << endl;
+    cout << results[2] << endl;
+    cout << results[4] << endl;
+    cout << "(a total of " << accumulate(&numSteps[0], &numSteps[numThreads], 0) << " steps)" << endl;
+    cout << "The values ranged from 0x" << hex << uppercase << setfill('0') << setw(8) << *min_element(&minValues[0], &minValues[numThreads]);
+    cout << " to 0x" << hex << uppercase << setfill('0') << setw(8) << *max_element(&maxValues[0], &maxValues[numThreads]) << endl;
+
   } else if (argc > 1 && strcmp(argv[1], "thrd") == 0) {
     vector<thread> threads;
     #if _DEBUG
@@ -138,26 +186,25 @@ int main(int argc, char* argv[]) {
     const int maxSeed = 0x10;
     #else
     const int numThreads = 4;
-    const int maxSeed = 0x30'0000;
+    const int maxSeed = 0x30'0000; // Maximum of 0x7FFF'FFFE;
     #endif
     for (int i=0; i<numThreads; i++) {
       thread t([numThreads, maxSeed](int i) {
-        string fileName = "thread_" + to_string(i) + ".txt";
+        string fileName = "thread_" + to_string(i) + ".dat";
         auto file = CreateFileA(fileName.c_str(), FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
 
         Random rng;
-        for (int j=i; j<maxSeed; j+=numThreads) {
+        for (int j=i+1; j<maxSeed; j+=numThreads) {
           rng.Set(j);
-          Puzzle* p = rng.GeneratePolyominos(false);
+          Puzzle* p = rng.GeneratePolyominos(false, true);
+          if (!p) continue; // If stars fail, then we will hit this seed in another thread, and there's no reason to solve.
           auto solutions = Solver(p).Solve(1);
           delete p;
           if (solutions.size() == 0) continue; // No output for unsolvable puzzles!
-          stringstream output;
-          output << "0x" << hex << uppercase << setfill('0') << setw(8) << j << ' '; // RNG
-          output << "0x" << hex << uppercase << setfill('0') << setw(8) << rng.Peek() << '\n'; // Ending RNG
-          string outputStr = output.str();
+          int endingRng = rng.Peek();
           DWORD unused;
-          WriteFile(file, &outputStr[0], (DWORD)outputStr.size(), &unused, nullptr);
+          WriteFile(file, &endingRng, sizeof(endingRng), &unused, nullptr);
+          SetFilePointer(file, 0, nullptr, FILE_END);
         }
         CloseHandle(file);
       }, i);
@@ -168,22 +215,22 @@ int main(int argc, char* argv[]) {
       if (thread.joinable()) thread.join();
     }
 
-    auto outFile = CreateFileA("thread_merged.tsv", FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
-
-    string buffer(1024 * 1024, '\0');
-    for (int i=0; i<numThreads; i++) {
-      string fileName = "thread_" + to_string(i) + ".txt";
-      auto file = CreateFileA(fileName.c_str(), GENERIC_READ, NULL, nullptr, OPEN_EXISTING, NULL, nullptr);
-      DWORD bytesRead;
-      do {
-        ReadFile(file, &buffer[0], (DWORD)buffer.size(), &bytesRead, nullptr);
-        DWORD unused;
-        WriteFile(outFile, &buffer[0], bytesRead, &unused, nullptr);
-        SetFilePointer(outFile, 0, nullptr, FILE_END);
-      } while (bytesRead > 0);
-      CloseHandle(file);
-    }
-    CloseHandle(outFile);
+    // auto outFile = CreateFileA("thread_merged.tsv", FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
+    // 
+    // string buffer(1024 * 1024, '\0');
+    // for (int i=0; i<numThreads; i++) {
+    //   string fileName = "thread_" + to_string(i) + ".txt";
+    //   auto file = CreateFileA(fileName.c_str(), GENERIC_READ, NULL, nullptr, OPEN_EXISTING, NULL, nullptr);
+    //   DWORD bytesRead;
+    //   do {
+    //     ReadFile(file, &buffer[0], (DWORD)buffer.size(), &bytesRead, nullptr);
+    //     DWORD unused;
+    //     WriteFile(outFile, &buffer[0], bytesRead, &unused, nullptr);
+    //     SetFilePointer(outFile, 0, nullptr, FILE_END);
+    //   } while (bytesRead > 0);
+    //   CloseHandle(file);
+    // }
+    // CloseHandle(outFile);
   }
 
   return 0;

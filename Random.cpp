@@ -90,7 +90,7 @@ unsigned int Random::RandomPolyshape() {
   return polyshape;
 }
 
-Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible) {
+Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible, bool abortOnStarsFailure) {
   Puzzle* p = new Puzzle(4, 4);
   p->_name = "Random polyominos #" + std::to_string(_seed);
 
@@ -109,7 +109,13 @@ Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible) {
     Cell* star2 = p->GetEmptyCell(*this);
 
     // Manhattan Distance of 3 or more
-    if (abs(star1->x - star2->x) + abs(star1->y - star2->y) < 6) goto rerollStars;
+    if (abs(star1->x - star2->x) + abs(star1->y - star2->y) < 6) {
+      if (abortOnStarsFailure) {
+        delete p;
+        return nullptr;
+      }
+      goto rerollStars;
+    }
 
     star1->type = CELL_TYPE_STAR;
     star1->color = colors[0];
