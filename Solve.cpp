@@ -11,6 +11,14 @@ Solver::Solver(Puzzle* puzzle_) {
   path = new u8[puzzle->_width * puzzle->_height]; // A little overkill but whatever.
 }
 
+bool Solver::IsSolvable() {
+  auto solutions = Solve(1);
+  if (solutions.empty()) return false;
+
+  delete solutions[0];
+  return true;
+}
+
 vector<Path> Solver::Solve(int maxSolutions) {
   vector<Cell*> startPoints;
   numEndpoints = 0;
@@ -62,6 +70,7 @@ vector<Path> Solver::Solve(int maxSolutions) {
 
   for (Cell* startPoint : startPoints) {
     // NOTE: This is subtly different from WitnessPuzzles, which starts the path with [[x, y]] instead of [x, y]!
+    pathSize = 0;
     PushPath(startPoint->x);
     PushPath(startPoint->y);
     puzzle->_startPoint = startPoint;
@@ -117,7 +126,15 @@ void Solver::SolveLoop(int x, int y) {
     PushPath(PATH_NONE);
     puzzle->_endPoint = cell;
     Validator::Validate(*puzzle, true);
-    if (puzzle->_valid) solutionPaths.push_back(path);
+    if (puzzle->_valid) {
+      solutionPaths.push_back(path);
+      if (solutionPaths.size() >= MAX_SOLUTIONS) return;
+
+      // Make a new path, but only if we 
+      int pathSize = puzzle->_width * puzzle->_height;
+      Path newPath = new u8[pathSize];
+      memcpy_s(newPath, pathSize, path, pathSize);
+    }
     PopPath();
 
     // If there are no further endpoints, tail recurse.

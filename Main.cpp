@@ -198,9 +198,11 @@ int main(int argc, char* argv[]) {
           rng.Set(j);
           Puzzle* p = rng.GeneratePolyominos(false, true);
           if (!p) continue; // If stars fail, then we will hit this seed in another thread, and there's no reason to solve.
-          auto solutions = Solver(p).Solve(1);
+          bool solvable = Solver(p).IsSolvable();
           delete p;
-          if (solutions.size() == 0) continue; // No output for unsolvable puzzles!
+          if (!solvable) continue;
+
+          // Write all valid ending RNGs as contiguous bytes into the file. This is not designed to be human-readable.
           int endingRng = rng.Peek();
           DWORD unused;
           WriteFile(file, &endingRng, sizeof(endingRng), &unused, nullptr);

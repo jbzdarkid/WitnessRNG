@@ -137,8 +137,7 @@ Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible, bool abortOnStarsFai
     poly2->polyshape = polyshape2;
 
     if (rerollOnImpossible) {
-      auto solutions = Solver(p).Solve(1);
-      if (solutions.size() == 0) {
+      if (Solver(p).IsSolvable()) {
         p->ClearGrid();
         goto rerollPuzzle;
       }

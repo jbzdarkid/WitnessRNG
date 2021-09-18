@@ -11,6 +11,7 @@ class Solver {
 public:
   Solver(Puzzle* puzzle_);
 
+  bool IsSolvable();
   // Generates a solution via DFS recursive backtracking
   std::vector<Path> Solve(int maxSolutions = 10'000);
 
