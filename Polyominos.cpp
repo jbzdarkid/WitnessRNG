@@ -74,10 +74,10 @@ bool Polyominos::PolyFit(const Region& region, const Puzzle& puzzle) {
     if (x%2 == 1 && y%2 == 1) regionSize++;
     Cell* cell = &puzzle._grid[x][y];
     if (cell->polyshape == 0) continue;
-    if (cell->TypeIs("poly")) {
+    if (cell->type == CELL_TYPE_POLY) {
       polys.push_back(cell);
       polyCount += GetPolySize(cell->polyshape);
-    } else if (cell->TypeIs("ylop")) {
+    } else if (cell->type == CELL_TYPE_YLOP) {
       ylops.push_back(cell);
       polyCount -= GetPolySize(cell->polyshape);
     }

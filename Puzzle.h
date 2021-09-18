@@ -1,40 +1,27 @@
 #pragma once
 #include <string>
 #include <vector>
+#include "Utilities.h"
 class Random;
-
-#define RO3(clazz) \
-  clazz##(const clazz & other) = delete; /* Copy constructor */ \
-  clazz & operator=(const clazz & other) = delete; /* Copy assignment */
-
-#define RO5(clazz) \
-  RO3(clazz) \
 
 using u8 = unsigned char;
 
-#define TYPELESS "\0"
 struct Cell {
-  char type[10]; // triangle + 1
-  int x = 0;
-  int y = 0;
+  u8 type;
+  u8 x = 0;
+  u8 y = 0;
 
-  u8 dot = 0;
+  Dot dot = Dot::None;
   u8 gap = 0;
-  u8 line = 0;
   u8 count = 0;
+  Line line = Line::None;
   unsigned short polyshape = 0u;
-  bool start = false;
-
-  u8 end;
   int color;
 
+  u8 end;
+  bool start = false;
+
   std::string ToString(int x, int y);
-  inline bool TypeIs(const char* type_) const {
-    return strncmp(type, type_, sizeof(type)) == 0;
-  }
-  inline void SetType(const char* type_) {
-    strncpy_s(type, type_, sizeof(type));
-  }
 };
 
 struct Region {
@@ -50,7 +37,7 @@ public:
     delete[] _grid;
   }
 
-  RO3(Region)
+  DELETE_RO3(Region)
   // RO5
   Region(Region&& other) noexcept {
     _grid = other._grid;
@@ -88,6 +75,7 @@ public:
   std::string _name;
   std::vector<std::tuple<int, int>> _connections;
   Cell** _grid;
+  int** _maskedGrid;
 
   // Properties set and read by Validate() / Solve()
   bool _valid = false;
@@ -102,21 +90,8 @@ public:
   // Non-RNG functions from WP... ish
   Puzzle(int width, int height, bool pillar=false);
   ~Puzzle();
-  RO3(Puzzle);
-  // RO5
-  Puzzle(Puzzle&& other) noexcept = delete;
-  Puzzle& operator=(Puzzle&& other) noexcept = delete;\
-  /*
-  Puzzle(Puzzle&& other) noexcept {
-    _grid = other._grid;
-    other._grid = nullptr;
-  }
-  Puzzle& operator=(Puzzle&& other) noexcept {
-    _grid = other._grid;
-    other._grid = nullptr;
-    return *this;
-  }
-  */
+  DELETE_RO3(Puzzle)
+  DELETE_RO5(Puzzle)
 
   // void SetCell(int x, int y, Cell cell);
   Cell* GetCell(int x, int y) const;
@@ -124,17 +99,17 @@ public:
   bool MatchesSymmetricalPos(int x, int y, int symX, int symY) { return false; }
   // A variant of getCell which specifically returns line values,
   // and treats objects as being out-of-bounds
-  int GetLine(int x, int y) const;
+  Line GetLine(int x, int y) const;
   void ClearGrid();
 
-  void _floodFill(int x, int y, Region& region, int** maskedGrid);
-  int** GenerateMaskedGrid();
+  void _floodFill(int x, int y, Region& region);
+  void GenerateMaskedGrid();
   std::vector<Region> GetRegions();
   Region GetRegion(int x, int y);
 
   // RNG functions (from TW)
   void CutRandomEdges(Random& rng, int numCuts);
-  void AddRandomDots(Random& rng, int numDots);
+  // void AddRandomDots(Random& rng, int numDots);
   Cell* GetEmptyCell(Random& rng);
 
 // private:

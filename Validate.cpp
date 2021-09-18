@@ -22,18 +22,18 @@ void Validator::Validate(Puzzle& puzzle, bool quick) {
     for (int y=0; y<puzzle._height; y++) {
       Cell cell = puzzle._grid[x][y]; // Copy is probably cheaper here, since we reference some data more than once.
       // if (cell == nullptr) continue;
-      if (!needsRegions && cell.type != "line" && cell.type != "triangle") needsRegions = true;
-      if (cell.type == "nega") puzzle._hasNegations = true;
-      if (cell.type == "poly" || cell.type == "ylop") puzzle._hasPolyominos = true;
-      if (cell.line > LINE_NONE) {
+      if (!needsRegions && cell.type != CELL_TYPE_LINE && cell.type != CELL_TYPE_TRIANGLE) needsRegions = true;
+      if (cell.type == CELL_TYPE_NEGA) puzzle._hasNegations = true;
+      if (cell.type == CELL_TYPE_POLY || cell.type == CELL_TYPE_YLOP) puzzle._hasPolyominos = true;
+      if (cell.line > Line::None) {
         if (cell.gap > GAP_NONE) {
           console.log("Solution line goes over a gap at", x, y);
           puzzle._valid = false;
           if (quick) return;
         }
-        if ((cell.dot == DOT_BLUE && cell.line == LINE_YELLOW) ||
-            (cell.dot == DOT_YELLOW && cell.line == LINE_BLUE)) {
-          console.log("Incorrectly covered dot: Dot is", cell.dot, "but line is", cell.line);
+        if ((cell.dot == Dot::Blue && cell.line == Line::Yellow) ||
+            (cell.dot == Dot::Yellow && cell.line == Line::Blue)) {
+          console.log("Incorrectly covered dot: Dot is", (u8)cell.dot, "but line is", (u8)cell.line);
           puzzle._valid = false;
           if (quick) return;
         }
@@ -54,14 +54,14 @@ void Validator::Validate(Puzzle& puzzle, bool quick) {
   console.log("Found", regions.size(), "region(s)");
   // console.debug(regions);
 
-  for (const auto& region : regions) {
+  for (const Region& region : regions) {
     auto regionData = ValidateRegion(puzzle, region, quick);
     console.log("Region valid:", regionData.Valid());
     Append(puzzle._negations, regionData.negations);
     Append(puzzle._invalidElements, regionData.invalidElements);
     Append(puzzle._veryInvalidElements, regionData.veryInvalidElements);
     puzzle._valid = puzzle._valid && regionData.Valid();
-    if (quick && !puzzle._valid) return;
+    if (quick && !puzzle._valid) break;
   }
   console.log("Puzzle has", puzzle._invalidElements.size(), "invalid elements");
 }
@@ -73,8 +73,8 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
   vector<Cell*> negationSymbols;
   for (const auto [x, y] : region.cells) {
     Cell* cell = &puzzle._grid[x][y];
-    if (cell->TypeIs("nega")) {
-      cell->SetType("nonce");
+    if (cell->type == CELL_TYPE_NEGA) {
+      cell->type = CELL_TYPE_NONCE;
       negationSymbols.push_back(cell);
     }
   }
@@ -92,13 +92,13 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
 
   // Set "nonce" back to "nega" for the negation symbols
   for (Cell* cell : negationSymbols) {
-    cell->SetType("nega");
+    cell->type = CELL_TYPE_NEGA;
   }
 
   auto invalidElements = regionData.invalidElements;
   auto veryInvalidElements = regionData.veryInvalidElements;
 
-  /* Shouldn"t need to do this, since I'm using Cell* instead of grid references. Hmm.
+  /* Shouldn't need to do this, since I'm using Cell* instead of grid references. Hmm.
   for (int i=0; i<invalidElements.size(); i++) {
     invalidElements[i] = &puzzle._grid[invalidElements[i]->x][invalidElements[i]->y];
   }
@@ -109,21 +109,21 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
 
   console.debug("Forcibly negating", veryInvalidElements.size(), "symbols");
 
-  vector<tuple<Cell*, Cell*, string, string>> baseCombination;
+  vector<tuple<Cell*, Cell*, u8, u8>> baseCombination;
   while (negationSymbols.size() > 0 && veryInvalidElements.size() > 0) {
     Cell* source = Pop(negationSymbols);
     Cell* target = Pop(veryInvalidElements);
     baseCombination.emplace_back(source, target, source->type, target->type);
-    source->SetType(TYPELESS);
-    target->SetType(TYPELESS);
+    source->type = CELL_TYPE_NULL;
+    target->type = CELL_TYPE_NULL;
   }
 
   regionData = RegionCheckNegations2(puzzle, region, negationSymbols, invalidElements);
 
   // Restore required negations
   for (const auto& [source, target, sourceType, targetType] : baseCombination) {
-    source->SetType(sourceType.c_str());
-    target->SetType(targetType.c_str());
+    source->type = sourceType;
+    target->type = targetType;
     regionData.negations.emplace_back(source, target);
   }
 
@@ -141,22 +141,22 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
 
   for (auto& [x, y] : region.cells) {
     Cell* cell = &puzzle._grid[x][y];
-    if (cell->TypeIs(TYPELESS)) continue;
+    if (cell->type == CELL_TYPE_NULL) continue;
 
     // Check for uncovered dots
-    if (cell->dot > DOT_NONE) {
+    if (cell->dot > Dot::None) {
       console.log("Dot at", x, y, "is not covered");
       regionData.veryInvalidElements.push_back(cell);
       if (quick) return regionData;
     }
 
     // Check for triangles
-    if (cell->TypeIs("triangle")) {
+    if (cell->type == CELL_TYPE_TRIANGLE) {
       int count = 0;
-      if (puzzle.GetLine(x - 1, y) > LINE_NONE) count++;
-      if (puzzle.GetLine(x + 1, y) > LINE_NONE) count++;
-      if (puzzle.GetLine(x, y - 1) > LINE_NONE) count++;
-      if (puzzle.GetLine(x, y + 1) > LINE_NONE) count++;
+      if (puzzle.GetLine(x - 1, y) > Line::None) count++;
+      if (puzzle.GetLine(x + 1, y) > Line::None) count++;
+      if (puzzle.GetLine(x, y - 1) > Line::None) count++;
+      if (puzzle.GetLine(x, y + 1) > Line::None) count++;
       if (cell->count != count) {
         console.log("Triangle at grid[" + to_string(x) + "][" + to_string(y) + "] has", count, "borders");
         regionData.veryInvalidElements.push_back(cell);
@@ -169,7 +169,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
       int count = GetValueOrDefault(coloredObjects, cell->color, 0);
       coloredObjects[cell->color] = count + 1;
 
-      if (cell->TypeIs("square")) {
+      if (cell->type == CELL_TYPE_SQUARE) {
         squares.push_back(cell);
         if (squareColor == 0) {
           squareColor = cell->color;
@@ -178,7 +178,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
         }
       }
 
-      if (cell->TypeIs("star")) {
+      if (cell->type == CELL_TYPE_STAR) {
         stars.push_back(cell);
       }
     }
@@ -207,7 +207,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
       for (const auto [x, y] : region.cells) {
         Cell* cell = puzzle.GetCell(x, y);
         if (cell == nullptr) continue;
-        if (cell->type == "poly" || cell->type == "ylop") {
+        if (cell->type == CELL_TYPE_POLY || cell->type == CELL_TYPE_YLOP) {
           regionData.invalidElements.push_back(cell);
           if (quick) return regionData;
         }

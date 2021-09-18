@@ -5,15 +5,10 @@
 
 using namespace std;
 
-// @Volatile -- must match order of MOVE_* in trace2
-#define PATH_NONE   0
-#define PATH_LEFT   1
-#define PATH_RIGHT  2
-#define PATH_TOP    3
-#define PATH_BOTTOM 4
-
 Solver::Solver(Puzzle* puzzle_) {
   puzzle = puzzle_;
+  pathSize = 0;
+  path = new u8[puzzle->_width * puzzle->_height]; // A little overkill but whatever.
 }
 
 vector<Path> Solver::Solve(int maxSolutions) {
@@ -25,13 +20,13 @@ vector<Path> Solver::Solve(int maxSolutions) {
   for (int x=0; x<puzzle->_width; x++) {
     for (int y=0; y<puzzle->_height; y++) {
       Cell* cell = &puzzle->_grid[x][y];
-      if (cell->TypeIs(TYPELESS)) continue;
+      if (cell->type == CELL_TYPE_NULL) continue;
       if (cell->start == true) {
         startPoints.push_back(cell);
       }
       if (cell->end != END_NONE) numEndpoints++;
-      if (cell->TypeIs("nega")) puzzle->_hasNegations = true;
-      if (cell->TypeIs("poly") || cell->TypeIs("ylop")) puzzle->_hasPolyominos = true;
+      if (cell->type == CELL_TYPE_NEGA) puzzle->_hasNegations = true;
+      if (cell->type == CELL_TYPE_POLY || cell->type == CELL_TYPE_YLOP) puzzle->_hasPolyominos = true;
     }
   }
 
@@ -67,7 +62,8 @@ vector<Path> Solver::Solve(int maxSolutions) {
 
   for (Cell* startPoint : startPoints) {
     // NOTE: This is subtly different from WitnessPuzzles, which starts the path with [[x, y]] instead of [x, y]!
-    path = { startPoint->x, startPoint->y };
+    PushPath(startPoint->x);
+    PushPath(startPoint->y);
     puzzle->_startPoint = startPoint;
     SolveLoop(startPoint->x, startPoint->y);
   }
@@ -76,11 +72,23 @@ vector<Path> Solver::Solve(int maxSolutions) {
 }
 
 void Solver::TailRecurse(Cell* cell) {
-  cell->line = LINE_NONE;
+  cell->line = Line::None;
   if (puzzle->_symmetry != SYM_NONE) {
     Cell* symCell = puzzle->GetSymmetricalCell(cell);
-    symCell->line = LINE_NONE;
+    symCell->line = Line::None;
   }
+}
+
+void Solver::PushPath(u8 value) {
+  path[pathSize++] = value;
+}
+
+void Solver::SetLastPath(u8 value) {
+  path[pathSize] = value;
+}
+
+u8 Solver::PopPath() {
+  return path[pathSize--];
 }
 
 void Solver::SolveLoop(int x, int y) {
@@ -89,9 +97,9 @@ void Solver::SolveLoop(int x, int y) {
 
   // Check for collisions (outside, gap, self, other)
   Cell* cell = puzzle->GetCell(x, y);
-  if (cell == nullptr || cell->TypeIs(TYPELESS)) return;
+  if (cell == nullptr || cell->type == CELL_TYPE_NULL) return;
   if (cell->gap > GAP_NONE) return;
-  if (cell->line != LINE_NONE) return;
+  if (cell->line != Line::None) return;
 
   #define UU PATH_TOP, PATH_TOP,
   #define RR PATH_RIGHT, PATH_RIGHT,
@@ -99,23 +107,23 @@ void Solver::SolveLoop(int x, int y) {
   #define LL PATH_LEFT, PATH_LEFT,
 
   if (puzzle->_symmetry == SYM_NONE) {
-    cell->line = LINE_BLACK;
+    cell->line = Line::Black;
   } else {
     Cell* symCell = puzzle->GetSymmetricalCell(cell);
     if (puzzle->MatchesSymmetricalPos(x, y, symCell->x, symCell->y)) return; // Would collide with our reflection
 
     if (symCell->gap > GAP_NONE) return;
 
-    cell->line = LINE_BLUE;
-    symCell->line = LINE_YELLOW;
+    cell->line = Line::Blue;
+    symCell->line = Line::Yellow;
   }
 
   if (cell->end != END_NONE) {
-    path.push_back(PATH_NONE);
+    PushPath(PATH_NONE);
     puzzle->_endPoint = cell;
     Validator::Validate(*puzzle, true);
     if (puzzle->_valid) solutionPaths.push_back(path);
-    path.pop_back();
+    PopPath();
 
     // If there are no further endpoints, tail recurse.
     // Otherwise, keep going -- we might be able to reach another endpoint.
@@ -158,25 +166,25 @@ void Solver::SolveLoop(int x, int y) {
   }
   */
 
-  path.push_back(PATH_NONE);
+  PushPath(PATH_NONE);
 
   // Recursion order (LRUD) is optimized for BL->TR and mid-start puzzles
   if (y%2 == 0) {
-    path.back() = PATH_LEFT;
+    SetLastPath(PATH_LEFT);
     SolveLoop(x - 1, y);
 
-    path.back() = PATH_RIGHT;
+    SetLastPath(PATH_RIGHT);
     SolveLoop(x + 1, y);
   }
 
   if (x%2 == 0) {
-    path.back() = PATH_TOP;
+    SetLastPath(PATH_TOP);
     SolveLoop(x, y - 1);
 
-    path.back() = PATH_BOTTOM;
+    SetLastPath(PATH_BOTTOM);
     SolveLoop(x, y + 1);
   }
 
-  path.pop_back();
+  PopPath();
   TailRecurse(cell);
 }

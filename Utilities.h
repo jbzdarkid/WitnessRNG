@@ -3,16 +3,21 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#define LINE_NONE   0
-#define LINE_BLACK  1
-#define LINE_BLUE   2
-#define LINE_YELLOW 3
+using u8 = unsigned char;
+enum class Line : u8 {
+  None = 0,
+  Black = 1,
+  Blue = 2,
+  Yellow = 3,
+};
 
-#define DOT_NONE    0
-#define DOT_BLACK   1
-#define DOT_BLUE    2
-#define DOT_YELLOW  3
-#define DOT_INVIS   4
+enum class Dot : u8 {
+  None = 0,
+  Black = 1,
+  Blue = 2,
+  Yellow = 3,
+  Invis = 4,
+};
 
 #define GAP_NONE    0
 #define GAP_BREAK   1
@@ -28,6 +33,22 @@
 #define END_RIGHT   2
 #define END_TOP     3
 #define END_BOTTOM  4
+
+#define PATH_NONE   0
+#define PATH_LEFT   1
+#define PATH_RIGHT  2
+#define PATH_TOP    3
+#define PATH_BOTTOM 4
+
+#define CELL_TYPE_NULL     0
+#define CELL_TYPE_LINE     1
+#define CELL_TYPE_SQUARE   2
+#define CELL_TYPE_STAR     3
+#define CELL_TYPE_NEGA     4
+#define CELL_TYPE_TRIANGLE 5
+#define CELL_TYPE_POLY     6
+#define CELL_TYPE_YLOP     7
+#define CELL_TYPE_NONCE    8
 
 class Console {
   enum Level {
@@ -77,6 +98,15 @@ private:
 };
 
 extern Console console;
+
+#define DELETE_RO3(clazz) \
+  clazz##(const clazz & other) = delete; /* Copy constructor */ \
+  clazz & operator=(const clazz & other) = delete; /* Copy assignment */
+
+#define DELETE_RO5(clazz) \
+  clazz##(clazz && other) noexcept = delete; /* Move constructor */ \
+  clazz & operator=(clazz && other) noexcept = delete; /* Move assignment */
+
 
 // Functions I wish std::vector had
 

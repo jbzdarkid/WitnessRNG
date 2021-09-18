@@ -133,8 +133,8 @@ int main(int argc, char* argv[]) {
     const int numThreads = 1;
     const int maxSeed = 0x10;
     #else
-    const int numThreads = 8;
-    const int maxSeed = 0x20'0000;
+    const int numThreads = 4;
+    const int maxSeed = 0x10'0000;
     #endif
     for (int i=0; i<numThreads; i++) {
       thread t([numThreads, maxSeed](int i) {
@@ -153,7 +153,7 @@ int main(int argc, char* argv[]) {
           output << "0x" << hex << uppercase << setfill('0') << setw(8) << rng.Peek() << '\n'; // Ending RNG
           string outputStr = output.str();
           DWORD unused;
-          WriteFile(file, &outputStr[0], outputStr.size(), &unused, nullptr);
+          WriteFile(file, &outputStr[0], (DWORD)outputStr.size(), &unused, nullptr);
         }
         CloseHandle(file);
       }, i);
@@ -172,7 +172,7 @@ int main(int argc, char* argv[]) {
       auto file = CreateFileA(fileName.c_str(), GENERIC_READ, NULL, nullptr, OPEN_EXISTING, NULL, nullptr);
       DWORD bytesRead;
       do {
-        ReadFile(file, &buffer[0], buffer.size(), &bytesRead, nullptr);
+        ReadFile(file, &buffer[0], (DWORD)buffer.size(), &bytesRead, nullptr);
         DWORD unused;
         WriteFile(outFile, &buffer[0], bytesRead, &unused, nullptr);
         SetFilePointer(outFile, 0, nullptr, FILE_END);

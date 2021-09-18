@@ -7,25 +7,39 @@
 
 using namespace std;
 
+template <typename T>
+T** NewDoubleArray(int width, int height) {
+  // Single allocation for the grid for perf reasons.
+  T* raw = new T[width * height];
+  memset(raw, 0, sizeof(T) * width * height);
+
+  T** arr = new T*[width];
+  for (int x=0; x<width; x++) arr[x] = (raw + height * x);
+  return arr;
+}
+
+template <typename T>
+void DeleteDoubleArray(T** arr) {
+  delete arr[0]; // The grid was allocated as one contiguous region.
+  delete[] arr;
+}
+
 Puzzle::Puzzle(int width, int height, bool pillar) {
   _origWidth = width;
   _origHeight = height;
   _width = 2*width + (pillar ? 0 : 1);
   _height = 2*height+1;
   _numConnections = (width+1)*height + width*(height+1);
-  _grid = new Cell*[_width];
 
-  // Single allocation for the grid for perf reasons.
-  Cell* raw = new Cell[_width * _height];
-  memset(raw, 0, sizeof(Cell) * _width * _height);
+  _grid = NewDoubleArray<Cell>(_width, _height);
+  _maskedGrid = NewDoubleArray<int>(_width, _height); // TODO: u8
 
   for (int x=0; x<_width; x++) {
-    _grid[x] = (raw + _height * x);
     for (int y = 0; y < _height; y++) {
-      Cell* cell = (raw + _height * x + y);
+      Cell* cell = &_grid[x][y];
       cell->x = x;
       cell->y = y;
-      if (x%2 != 1 || y%2 != 1) cell->SetType("line");
+      if (x%2 != 1 || y%2 != 1) cell->type = CELL_TYPE_LINE;
     }
   }
   _connections.resize(_numConnections);
@@ -49,8 +63,8 @@ Puzzle::Puzzle(int width, int height, bool pillar) {
 }
 
 Puzzle::~Puzzle() {
-  delete _grid[0]; // The grid was allocated as one contiguous region.
-  delete[] _grid;
+  DeleteDoubleArray(_grid);
+  DeleteDoubleArray(_maskedGrid);
 }
 
 /*
@@ -76,10 +90,10 @@ bool Puzzle::_safeCell(int x, int y) const {
   return true;
 }
 
-int Puzzle::GetLine(int x, int y) const {
+Line Puzzle::GetLine(int x, int y) const {
   Cell* cell = GetCell(x, y);
-  if (cell == nullptr) return LINE_NONE;
-  if (cell->type != "line") return LINE_NONE;
+  if (cell == nullptr) return Line::None;
+  if (cell->type != CELL_TYPE_LINE) return Line::None;
   return cell->line;
 }
 
@@ -87,10 +101,10 @@ void Puzzle::ClearGrid() {
   for (int x=0; x<_width; x++) {
     for (int y=0; y<_width; y++) {
       Cell* cell = &_grid[x][y];
-      if (x%2 == 1 && y%2 == 1) cell->SetType(TYPELESS);
-      cell->dot = DOT_NONE;
+      if (x%2 == 1 && y%2 == 1) cell->type = CELL_TYPE_NULL;
+      cell->dot = Dot::None;
       cell->gap = GAP_NONE;
-      cell->line = LINE_NONE;
+      cell->line = Line::None;
       cell->color = 0;
       cell->count = 0;
       cell->polyshape = 0u;
@@ -115,29 +129,27 @@ void Puzzle::ClearGrid() {
 // 3: Dot (of any kind), otherwise identical to 1. Should not be flood-filled through (why the f do we need this)
 #define MASKED_DOT 3
 
-void Puzzle::_floodFill(int x, int y, Region& region, int** maskedGrid) {
-  int cell = maskedGrid[x][y];
+void Puzzle::_floodFill(int x, int y, Region& region) {
+  int cell = _maskedGrid[x][y];
   if (cell == MASKED_PROCESSED) return;
   if (cell != MASKED_INB_NONCOUNT) {
     region.SetCell(x, y);
   }
-  maskedGrid[x][y] = MASKED_PROCESSED;
+  _maskedGrid[x][y] = MASKED_PROCESSED;
 
-  if (y < _height - 1)       _floodFill(x,        y + 1, region, maskedGrid);
-  if (y > 0)                 _floodFill(x,        y - 1, region, maskedGrid);
-  if (x < _width - 1)        _floodFill(x + 1,        y, region, maskedGrid);
-  else if (_pillar != false) _floodFill(0,            y, region, maskedGrid);
-  if (x > 0)                 _floodFill(x - 1,        y, region, maskedGrid);
-  else if (_pillar != false) _floodFill(_width-1,     y, region, maskedGrid);
+  if (y < _height - 1)       _floodFill(x,        y + 1, region);
+  if (y > 0)                 _floodFill(x,        y - 1, region);
+  if (x < _width - 1)        _floodFill(x + 1,        y, region);
+  else if (_pillar != false) _floodFill(0,            y, region);
+  if (x > 0)                 _floodFill(x - 1,        y, region);
+  else if (_pillar != false) _floodFill(_width-1,     y, region);
 }
 
-int** Puzzle::GenerateMaskedGrid() {
-  int** maskedGrid = new int* [_width];
-
+void Puzzle::GenerateMaskedGrid() {
   // Override all elements with empty lines -- this means that flood fill is just
   // looking for lines with line=0.
   for (int x=0; x<_width; x++) {
-    int* row = new int[_height];
+    int* row = _maskedGrid[x];
     int skip = 1;
     if (x%2 == 1) { // Cells are always part of the region
       for (int y = 1; y < _height; y += 2) row[y] = MASKED_INB_COUNT;
@@ -146,34 +158,33 @@ int** Puzzle::GenerateMaskedGrid() {
 
     for (int y=0; y<_height; y+=skip) {
       Cell* cell = &_grid[x][y];
-      if (cell->line > LINE_NONE) {
+      if (cell->line > Line::None) {
         row[y] = MASKED_PROCESSED; // Traced lines should not be a part of the region
       } else if (cell->gap == GAP_FULL) {
         row[y] = MASKED_GAP2;
-      } else if (cell->dot > DOT_NONE) {
+      } else if (cell->dot > Dot::None) {
         row[y] = MASKED_DOT;
       } else {
         row[y] = MASKED_INB_COUNT;
       }
     }
-    maskedGrid[x] = row;
   }
 
   // Starting at a mid-segment startpoint
   if (_startPoint != nullptr && _startPoint->x%2 != _startPoint->y%2) {
     if (false /* _settings.FAT_STARTPOINTS */) {
       // This segment is not in any region (acts as a barrier)
-      maskedGrid[_startPoint->x][_startPoint->y] = MASKED_OOB;
+      _maskedGrid[_startPoint->x][_startPoint->y] = MASKED_OOB;
     } else {
       // This segment is part of this region (acts as an empty cell)
-      maskedGrid[_startPoint->x][_startPoint->y] = MASKED_INB_NONCOUNT;
+      _maskedGrid[_startPoint->x][_startPoint->y] = MASKED_INB_NONCOUNT;
     }
   }
 
   // Ending at a mid-segment endpoint
   if (_endPoint != nullptr && _endPoint->x%2 != _endPoint->y%2) {
     // This segment is part of this region (acts as an empty cell)
-    maskedGrid[_endPoint->x][_endPoint->y] = MASKED_INB_NONCOUNT;
+    _maskedGrid[_endPoint->x][_endPoint->y] = MASKED_INB_NONCOUNT;
   }
 
   // Mark all outside cells as 'not in any region' (aka null)
@@ -181,40 +192,35 @@ int** Puzzle::GenerateMaskedGrid() {
   /* (Not needed until we have non-square grids)
   // Top and bottom edges
   for (var x=1; x<_width; x+=2) {
-    _floodFillOutside(x, 0, maskedGrid);
-    _floodFillOutside(x, _height - 1, maskedGrid);
+    _floodFillOutside(x, 0);
+    _floodFillOutside(x, _height - 1);
   }
 
   // Left and right edges (only applies to non-pillars)
   if (_pillar == false) {
     for (int y=1; y<_height; y+=2) {
-      _floodFillOutside(0, y, maskedGrid);
-      _floodFillOutside(_width - 1, y, maskedGrid);
+      _floodFillOutside(0, y);
+      _floodFillOutside(_width - 1, y);
     }
   }
   */
-
-  return maskedGrid;
 }
 
 vector<Region> Puzzle::GetRegions() {
   vector<Region> regions;
-  int** maskedGrid = GenerateMaskedGrid();
+  GenerateMaskedGrid();
 
   for (int x=0; x<_width; x++) {
     for (int y=0; y<_height; y++) {
-      if (maskedGrid[x][y] == MASKED_PROCESSED) continue;
+      if (_maskedGrid[x][y] == MASKED_PROCESSED) continue;
 
       // If this cell is empty (aka hasn't already been used by a region), then create a new one
       // This will also mark all lines inside the new region as used.
       Region region = Region(_width);
-      _floodFill(x, y, region, maskedGrid);
+      _floodFill(x, y, region);
       regions.emplace_back(move(region));
     }
   }
-
-  for (int x=0; x<_width; x++) delete maskedGrid[x];
-  delete[] maskedGrid;
 
   return regions;
 }
@@ -225,15 +231,12 @@ Region Puzzle::GetRegion(int x, int y) {
   x = _mod(x);
   if (!_safeCell(x, y)) return region;
 
-  int** maskedGrid = GenerateMaskedGrid();
-  if (maskedGrid[x][y] != MASKED_PROCESSED) {
+  GenerateMaskedGrid();
+  if (_maskedGrid[x][y] != MASKED_PROCESSED) {
     // If the masked grid hasn't been used at this point, then create a new region.
     // This will also mark all lines inside the new region as used.
-    _floodFill(x, y, region, maskedGrid);
+    _floodFill(x, y, region);
   }
-
-  for (int x = 0; x < _width; x++) delete maskedGrid[x];
-  delete[] maskedGrid;
 
   return region;
 }
@@ -262,18 +265,18 @@ Cell* Puzzle::GetEmptyCell(Random& rng) {
     int x = (rand % _origWidth)*2 + 1;
     int y = (_origHeight - rand/_origWidth)*2 - 1;
     Cell* cell = &_grid[x][y];
-    if (cell->TypeIs(TYPELESS)) return cell;
+    if (cell->type == CELL_TYPE_NULL) return cell;
   }
 }
 
 ostream& operator<<(ostream& os, const Cell& c) {
-  if (c.TypeIs(TYPELESS)) {
+  if (c.type == CELL_TYPE_NULL) {
     os << "null";
     return os;
   }
 
   os << '{';
-    if (c.dot != 0) os << "\"dot\": " << dec << c.dot << ",";
+    if (c.dot != Dot::None) os << "\"dot\": " << dec << (u8)c.dot << ",";
     if (c.gap != 0) os << "\"gap\": " << dec << c.gap << ",";
     if (c.polyshape != 0) os << "\"polyshape\": " << dec << c.polyshape << ",";
     if (c.start) os << "\"start\": true,";
@@ -328,11 +331,21 @@ const char* IntToString(int i) {
 }
 
 std::string Cell::ToString(int x, int y) {
-  if (x%2 == 1 && y%2 == 1 && TypeIs(TYPELESS)) return "null";
+  if (x%2 == 1 && y%2 == 1 && type == CELL_TYPE_NULL) return "null";
+  
+  const char* typeStr = "";
+  if (type == CELL_TYPE_NULL    ) typeStr = ",\"type\":null";
+  if (type == CELL_TYPE_LINE    ) typeStr = ",\"type\":\"line\"";
+  if (type == CELL_TYPE_SQUARE  ) typeStr = ",\"type\":\"square\"";
+  if (type == CELL_TYPE_STAR    ) typeStr = ",\"type\":\"star\"";
+  if (type == CELL_TYPE_NEGA    ) typeStr = ",\"type\":\"nega\"";
+  if (type == CELL_TYPE_TRIANGLE) typeStr = ",\"type\":\"triangle\"";
+  if (type == CELL_TYPE_POLY    ) typeStr = ",\"type\":\"poly\"";
+  if (type == CELL_TYPE_YLOP    ) typeStr = ",\"type\":\"ylop\"";
 
-  char polyshapeStr[sizeof(R"("polyshape":65535,)")] = {'\0'};
+char polyshapeStr[sizeof(R"("polyshape":65535,)")] = {'\0'};
   if (polyshape != 0) sprintf_s(&polyshapeStr[0], sizeof(polyshapeStr), ",\"polyshape\":%hu", polyshape);
-  const char* endDir = nullptr; // [sizeof(R"("end":"bottom",)"];
+  const char* endDir = "";
   if (end == END_LEFT)   endDir = ",\"end\":\"left\"";
   if (end == END_TOP)    endDir = ",\"end\":\"top\"";
   if (end == END_RIGHT)  endDir = ",\"end\":\"right\"";
@@ -341,7 +354,8 @@ std::string Cell::ToString(int x, int y) {
   char colorStr[sizeof(R"("color":0xFF00FF,)")] = {'\0'};
   if (color != 0) sprintf_s(&colorStr[0], sizeof(colorStr), ",\"color\":0x%06x", color);
 
-  PRINTF("{\"type\":\"%s\",\"line\":%d"
+  PRINTF("{\"line\":%d"
+    "%s" // type
     "%s%s" // dot
     "%s%s" // gap
     "%s" // start
@@ -349,9 +363,9 @@ std::string Cell::ToString(int x, int y) {
     "%s" // color
     "%s" // polyshape
     "}",
-    type,
     line,
-    (dot != 0 ? ",\"dot\":" : ""), IntToString(dot),
+    typeStr,
+    (dot != Dot::None ? ",\"dot\":" : ""), IntToString((u8)dot),
     (gap != 0 ? ",\"gap\":" : ""), IntToString(gap),
     (start != 0 ? ",\"start\":true" : ""),
     endDir,
