@@ -134,7 +134,7 @@ int main(int argc, char* argv[]) {
     const int maxSeed = 0x10;
     #else
     const int numThreads = 4;
-    const int maxSeed = 0x10'0000;
+    const int maxSeed = 0x30'0000;
     #endif
     for (int i=0; i<numThreads; i++) {
       thread t([numThreads, maxSeed](int i) {

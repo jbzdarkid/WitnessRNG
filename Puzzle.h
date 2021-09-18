@@ -2,9 +2,10 @@
 #include <string>
 #include <vector>
 #include "Utilities.h"
-class Random;
 
 using u8 = unsigned char;
+
+class Random;
 
 struct Cell {
   u8 type;
@@ -30,7 +31,7 @@ public:
 
   Region(int length) {
     _grid = new int[length]; // std::vector<int>(length, 0);
-    memset(_grid, 0, length);
+    memset(_grid, 0, sizeof(int) * length);
   }
 
   ~Region() {
@@ -49,7 +50,7 @@ public:
     return *this;
   }
 
-  bool GetCell(int x, int y) {
+  bool GetCell(int x, int y) const {
     return ((_grid[x] & (1 << y)) != 0);
   }
 

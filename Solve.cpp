@@ -101,11 +101,6 @@ void Solver::SolveLoop(int x, int y) {
   if (cell->gap > GAP_NONE) return;
   if (cell->line != Line::None) return;
 
-  #define UU PATH_TOP, PATH_TOP,
-  #define RR PATH_RIGHT, PATH_RIGHT,
-  #define DD PATH_BOTTOM, PATH_BOTTOM,
-  #define LL PATH_LEFT, PATH_LEFT,
-
   if (puzzle->_symmetry == SYM_NONE) {
     cell->line = Line::Black;
   } else {

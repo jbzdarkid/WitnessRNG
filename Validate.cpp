@@ -131,7 +131,7 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
 }
 
 RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bool quick) {
-  console.log("Validating region of size", region.cells.size());
+  // console.log("Validating region of size", region.cells.size());
   RegionData regionData;
 
   vector<Cell*> squares;
