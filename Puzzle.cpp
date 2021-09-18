@@ -133,7 +133,7 @@ void Puzzle::_floodFill(int x, int y, Region& region) {
   u8 cell = _maskedGrid[x][y];
   if (cell == MASKED_PROCESSED) return;
   if (cell != MASKED_INB_NONCOUNT) {
-    region.SetCell(x, y);
+    region.emplace_back(x, y);
   }
   _maskedGrid[x][y] = MASKED_PROCESSED;
 
@@ -216,9 +216,9 @@ vector<Region> Puzzle::GetRegions() {
 
       // If this cell is empty (aka hasn't already been used by a region), then create a new one
       // This will also mark all lines inside the new region as used.
-      Region region = Region(_width);
+      Region region;
       _floodFill(x, y, region);
-      regions.emplace_back(move(region));
+      regions.emplace_back(region);
     }
   }
 
@@ -226,10 +226,10 @@ vector<Region> Puzzle::GetRegions() {
 }
 
 Region Puzzle::GetRegion(int x, int y) {
-  Region region = Region(_width);
+  Region region;
 
   x = _mod(x);
-  if (!_safeCell(x, y)) return region;
+  if (!_safeCell(x, y)) return Region();
 
   GenerateMaskedGrid();
   if (_maskedGrid[x][y] != MASKED_PROCESSED) {

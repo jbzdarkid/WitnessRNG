@@ -1,8 +1,9 @@
 #pragma once
 #include <vector>
 
+using Region = std::vector<std::tuple<int, int>>;
+
 struct Cell;
-struct Region;
 class Puzzle;
 
 class Polyominos {

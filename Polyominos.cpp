@@ -70,7 +70,7 @@ bool Polyominos::PolyFit(const Region& region, const Puzzle& puzzle) {
   vector<Cell*> ylops;
   int polyCount = 0;
   int regionSize = 0;
-  for (auto [x, y] : region.cells) {
+  for (auto [x, y] : region) {
     if (x%2 == 1 && y%2 == 1) regionSize++;
     Cell* cell = &puzzle._grid[x][y];
     if (cell->polyshape == 0) continue;
@@ -111,7 +111,7 @@ bool Polyominos::PolyFit(const Region& region, const Puzzle& puzzle) {
 
   // In the normal case, we mark every cell as -1: It needs to be covered by one poly
   if (polyCount > 0) {
-    for (auto [x, y] : region.cells) polyGrid[x][y] = -1;
+    for (auto [x, y] : region) polyGrid[x][y] = -1;
   }
   // In the exact match case, we leave every cell marked 0: Polys and ylops need to cancel.
 

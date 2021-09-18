@@ -1,7 +1,6 @@
 #pragma once
 #include <vector>
 struct Cell;
-struct Region;
 class Puzzle;
 
 struct RegionData {
