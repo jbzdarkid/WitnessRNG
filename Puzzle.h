@@ -76,7 +76,7 @@ public:
   std::string _name;
   std::vector<std::tuple<int, int>> _connections;
   Cell** _grid;
-  int** _maskedGrid;
+  u8** _maskedGrid;
 
   // Properties set and read by Validate() / Solve()
   bool _valid = false;

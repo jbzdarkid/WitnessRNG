@@ -32,7 +32,7 @@ Puzzle::Puzzle(int width, int height, bool pillar) {
   _numConnections = (width+1)*height + width*(height+1);
 
   _grid = NewDoubleArray<Cell>(_width, _height);
-  _maskedGrid = NewDoubleArray<int>(_width, _height); // TODO: u8
+  _maskedGrid = NewDoubleArray<u8>(_width, _height);
 
   for (int x=0; x<_width; x++) {
     for (int y = 0; y < _height; y++) {
@@ -118,8 +118,8 @@ void Puzzle::ClearGrid() {
 
 // The grid contains 5 colors:
 // null: Out of bounds or already processed
-#define MASKED_OOB -1
-#define MASKED_PROCESSED -1
+#define MASKED_OOB 0xFF
+#define MASKED_PROCESSED 0xFF
 // 0: In bounds, awaiting processing, but should not be part of the final region.
 #define MASKED_INB_NONCOUNT 0
 // 1: In bounds, awaiting processing
@@ -130,7 +130,7 @@ void Puzzle::ClearGrid() {
 #define MASKED_DOT 3
 
 void Puzzle::_floodFill(int x, int y, Region& region) {
-  int cell = _maskedGrid[x][y];
+  u8 cell = _maskedGrid[x][y];
   if (cell == MASKED_PROCESSED) return;
   if (cell != MASKED_INB_NONCOUNT) {
     region.SetCell(x, y);
@@ -149,7 +149,7 @@ void Puzzle::GenerateMaskedGrid() {
   // Override all elements with empty lines -- this means that flood fill is just
   // looking for lines with line=0.
   for (int x=0; x<_width; x++) {
-    int* row = _maskedGrid[x];
+    u8* row = _maskedGrid[x];
     int skip = 1;
     if (x%2 == 1) { // Cells are always part of the region
       for (int y = 1; y < _height; y += 2) row[y] = MASKED_INB_COUNT;
