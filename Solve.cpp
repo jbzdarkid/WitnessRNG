@@ -2,7 +2,7 @@
 
 Solver::Solver(Puzzle* puzzle_) {
   puzzle = puzzle_;
-  path = new Vector<u8>(puzzle->_width * puzzle->_height); // A little overkill but whatever.
+  path = new Path(puzzle->_width * puzzle->_height); // A little overkill but whatever.
 }
 
 Solver::~Solver() {
@@ -10,12 +10,12 @@ Solver::~Solver() {
 }
 
 bool Solver::IsSolvable() {
-  Vector<Vector<u8>> solutions = Solve(1);
+  Vector<Path> solutions = Solve(1);
   if (solutions.Size() == 0) return false;
   return true;
 }
 
-Vector<Vector<u8>> Solver::Solve(int maxSolutions) {
+Vector<Path> Solver::Solve(int maxSolutions) {
   Vector<Cell*> startPoints(puzzle->_width);
   numEndpoints = 0;
 
@@ -37,7 +37,7 @@ Vector<Vector<u8>> Solver::Solve(int maxSolutions) {
   // Some reasonable default data, which will avoid crashes during the solveLoop.
   // var earlyExitData = [false, {"isEdge": false}, {"isEdge": false}]
   if (maxSolutions > 0) MAX_SOLUTIONS = maxSolutions;
-  Vector<Vector<u8>> solutionPaths(MAX_SOLUTIONS);
+  Vector<Path> solutionPaths(MAX_SOLUTIONS);
 
   // Large pruning optimization -- Attempt to early exit once we cut out a region.
   // Inspired by https://github.com/Overv/TheWitnessSolver
@@ -83,7 +83,7 @@ void Solver::TailRecurse(Cell* cell) {
   }
 }
 
-void Solver::SolveLoop(int x, int y, Vector<Vector<u8>>& solutionPaths) {
+void Solver::SolveLoop(int x, int y, Vector<Path>& solutionPaths) {
   // Stop trying to solve once we reach our goal
   if (solutionPaths.Size() >= MAX_SOLUTIONS) return;
 
