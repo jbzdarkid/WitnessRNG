@@ -18,7 +18,6 @@ private:
 
   Puzzle* puzzle;
   Path* path;
-  int pathSize = 0;
   int MAX_SOLUTIONS = 0;
   int numEndpoints = 0;
   bool doPruning = false;

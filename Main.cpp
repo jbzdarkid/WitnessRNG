@@ -1,18 +1,17 @@
 #include "stdafx.h"
 #include <algorithm>
-#include <cassert>
 #include <iostream>
 #include <iomanip>
 #include <numeric>
-#include <unordered_map>
-#include <unordered_set>
-#include <thread>
 #include <sstream>
+#include <thread>
+#include <unordered_map>
 
 Console console;
 
 // Ideas to bring back to the javascript version:
 // - Try making a single maskedGrid (and polyGrid?) per puzzle. Then, instead of swapping out the puzzle, just write into that grid.
+// - Clean up parameters passed through solveLoop.
 
 unordered_map<int, int> tests = {
   {0x00000000, 0x6F4EE991},
@@ -101,11 +100,15 @@ vector<tuple<int, int, vector<int>>> tests2 = {
 };
 
 int main(int argc, char* argv[]) {
+#ifdef _DEBUG
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+
   if (argc > 1 && strcmp(argv[1], "test") == 0) {
     Random rng;
     for (const auto [key, value] : tests) {
       rng.Set(key);
-      assert(rng.Peek() == value);
+      assert(rng.Get() == value);
     }
     for (const auto [initRng, endRng, shuffled] : tests2) {
       rng.Set(initRng);
@@ -114,6 +117,9 @@ int main(int argc, char* argv[]) {
       assert(rng.Peek() == endRng);
       assert(test == shuffled);
     }
+    rng.GeneratePolyominos(true);
+    rng.GeneratePolyominos(true);
+    rng.GeneratePolyominos(true);
 
     cout << "Done" << endl;
 

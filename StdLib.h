@@ -24,22 +24,24 @@ public:
   // Constructors, etc
   Vector() { } // Leave all values at default (empty)
   Vector(int size) {
-    _data = new T[size];
-    _maxPos = size;
     _pos = 0;
+    _maxPos = size;
+    _data = new T[size];
   }
   ~Vector() {
     if (_data != nullptr) delete[] _data;
   }
   DELETE_RO3(Vector); // Copying should be done with .Copy(), to discourage accidental copying.
   Vector(Vector&& other) noexcept { /* Move constructor */
-    _data = other._data;
     _pos = other._pos;
+    _maxPos = other._maxPos;
+    _data = other._data;
     other._data = nullptr;
   }
   Vector& operator=(Vector&& other) noexcept { /* Move assignment */
-    _data = other._data;
     _pos = other._pos;
+    _maxPos = other._maxPos;
+    _data = other._data;
     other._data = nullptr;
     return *this;
    }
@@ -59,14 +61,22 @@ public:
   }
 
   // Functions I use
-  void PushBack(const T& obj) {
+  void Push(const T& obj, bool expand = false) {
+    if (_pos == _maxPos) {
+      assert(expand);
+      Expand(_maxPos + 1);
+    }
+
     _data[_pos++] = obj;
-    assert(_pos <= _maxPos);
   }
 
-  void EmplaceBack(T&& obj) {
+  void Emplace(T&& obj, bool expand = false) {
+    if (_pos == _maxPos) {
+      assert(expand);
+      Expand(_maxPos + 1);
+    }
+
     _data[_pos++] = std::move(obj);
-    assert(_pos <= _maxPos);
   }
 
   int Size() const {
@@ -92,33 +102,31 @@ public:
   }
 
   // Expensive functions
-  void Append(const Vector<T>& other) {
-    for (const T& it : other) PushBack(it);
-  }
-
-  void Append(Vector<T>&& other) {
-    for (const T& it : other) EmplaceBack(it);
+  void Append(const Vector<T>& other, bool expand = false) {
+    for (const T& it : other) Push(it, expand);
   }
 
   Vector<T> Copy() {
     Vector<T> newVector(_maxPos);
-    for (const T& it : *this) newVector.PushBack(it);
+    for (const T& it : *this) newVector.Push(it);
     return newVector;
   }
 
   void Expand(int size) {
     Vector<T> newVector(_maxPos + size);
-    for (const T& it : *this) newVector.PushBack(it);
 
-    // This is a replacement for the move operator, you shouldn't move this object.
-    if (_data != nullptr) free(_data);
+    // Move our data into the new vector, then claim the new vector's data as our own
+    if (_data != nullptr) {
+      for (T& it : *this) newVector.Emplace(std::move(it));
+      delete[] _data;
+    }
+    _maxPos = newVector._maxPos;
     _data = newVector._data;
     newVector._data = nullptr;
-    _maxPos = newVector._maxPos;
   }
 
 private:
-  T* _data = nullptr;
-  int _maxPos = 0;
   int _pos = 0;
+  int _maxPos = 0;
+  T* _data = nullptr;
 };

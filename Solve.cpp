@@ -2,7 +2,6 @@
 
 Solver::Solver(Puzzle* puzzle_) {
   puzzle = puzzle_;
-  pathSize = 0;
   path = new Vector<u8>(puzzle->_width * puzzle->_height); // A little overkill but whatever.
 }
 
@@ -11,13 +10,13 @@ Solver::~Solver() {
 }
 
 bool Solver::IsSolvable() {
-  auto solutions = Solve(1);
+  Vector<Path> solutions = Solve(1);
   if (solutions.Size() == 0) return false;
   return true;
 }
 
 Vector<Path> Solver::Solve(int maxSolutions) {
-  Vector<Cell*> startPoints(2);
+  Vector<Cell*> startPoints(puzzle->_width);
   numEndpoints = 0;
 
   puzzle->_hasNegations = false;
@@ -27,7 +26,7 @@ Vector<Path> Solver::Solve(int maxSolutions) {
       Cell* cell = &puzzle->_grid[x][y];
       if (cell->type == CELL_TYPE_NULL) continue;
       if (cell->start == true) {
-        startPoints.PushBack(cell);
+        startPoints.Push(cell, true);
       }
       if (cell->end != END_NONE) numEndpoints++;
       if (cell->type == CELL_TYPE_NEGA) puzzle->_hasNegations = true;
@@ -67,9 +66,8 @@ Vector<Path> Solver::Solve(int maxSolutions) {
 
   for (Cell* startPoint : startPoints) {
     // NOTE: This is subtly different from WitnessPuzzles, which starts the path with [[x, y]] instead of [x, y]!
-    pathSize = 0;
-    path->PushBack(startPoint->x);
-    path->PushBack(startPoint->y);
+    path->Push(startPoint->x);
+    path->Push(startPoint->y);
     puzzle->_startPoint = startPoint;
     SolveLoop(startPoint->x, startPoint->y, solutionPaths);
   }
@@ -108,11 +106,11 @@ void Solver::SolveLoop(int x, int y, Vector<Path>& solutionPaths) {
   }
 
   if (cell->end != END_NONE) {
-    path->PushBack(PATH_NONE);
+    path->Push(PATH_NONE);
     puzzle->_endPoint = cell;
     RegionData puzzleData = Validator::Validate(*puzzle, true);
     if (puzzleData.Valid()) {
-      solutionPaths.EmplaceBack(path->Copy());
+      solutionPaths.Emplace(path->Copy());
     }
     path->Pop();
 
@@ -157,7 +155,7 @@ void Solver::SolveLoop(int x, int y, Vector<Path>& solutionPaths) {
   }
   */
 
-  path->PushBack(PATH_NONE);
+  path->Push(PATH_NONE);
 
   // Recursion order (LRUD) is optimized for BL->TR and mid-start puzzles
   if (y%2 == 0) {

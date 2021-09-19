@@ -32,7 +32,7 @@ public:
   std::string _name;
   Vector<std::pair<int, int>>* _connections;
   Cell** _grid;
-  u8** _maskedGrid;
+  Masked** _maskedGrid;
 
   // Properties set and read by Validate() / Solve()
   bool _hasNegations = false;

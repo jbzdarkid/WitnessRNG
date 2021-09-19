@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <unordered_set>
 
 int Polyominos::GetPolySize(int polyshape) {
   int size = 0;

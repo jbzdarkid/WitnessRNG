@@ -11,7 +11,7 @@ Puzzle::Puzzle(int width, int height, bool pillar) {
   _numConnections = (width+1)*height + width*(height+1);
 
   _grid = NewDoubleArray<Cell>(_width, _height);
-  _maskedGrid = NewDoubleArray<u8>(_width, _height);
+  _maskedGrid = NewDoubleArray<Masked>(_width, _height);
 
   for (u8 x=0; x<_width; x++) {
     for (u8 y=0; y<_height; y++) {
@@ -31,11 +31,11 @@ Puzzle::Puzzle(int width, int height, bool pillar) {
 
     if (y < height*2) { // Do not add a vertical connection for the bottom row
       // _connections[i++] = {j-(width+1), j}; // (Original game reference)
-      _connections->EmplaceBack({x, y+1});
+      _connections->Emplace({x, y+1});
     }
     if (x < width*2) { // Do not add a horizontal connection for the last element in the row
       // _connections[i++] = {j, j+1}; // (Original game reference)
-      _connections->EmplaceBack({x+1, y});
+      _connections->Emplace({x+1, y});
     }
   }
 }
@@ -123,26 +123,13 @@ void Puzzle::ClearGrid() {
   _numConnections = (_origWidth+1)*_origHeight + _origWidth*(_origHeight+1);
 }
 
-// The grid contains 5 colors:
-// null: Out of bounds or already processed
-#define MASKED_OOB 0xFF
-#define MASKED_PROCESSED 0xFF
-// 0: In bounds, awaiting processing, but should not be part of the final region.
-#define MASKED_INB_NONCOUNT 0
-// 1: In bounds, awaiting processing
-#define MASKED_INB_COUNT 1
-// 2: Gap-2. After _floodFillOutside, this means "treat normally" (it will be null if oob)
-#define MASKED_GAP2 2
-// 3: Dot (of any kind), otherwise identical to 1. Should not be flood-filled through (why the f do we need this)
-#define MASKED_DOT 3
-
 void Puzzle::_floodFill(int x, int y, Region& region) {
-  u8 cell = _maskedGrid[x][y];
-  if (cell == MASKED_PROCESSED) return;
-  if (cell != MASKED_INB_NONCOUNT) {
-    region.EmplaceBack({ (u8)x, (u8)y });
+  Masked cell = _maskedGrid[x][y];
+  if (cell == Masked::Processed) return;
+  if (cell != Masked::Uncounted) {
+    region.Emplace({ (u8)x, (u8)y });
   }
-  _maskedGrid[x][y] = MASKED_PROCESSED;
+  _maskedGrid[x][y] = Masked::Processed;
 
   if (y < _height - 1)       _floodFill(x,        y + 1, region);
   if (y > 0)                 _floodFill(x,        y - 1, region);
@@ -156,23 +143,23 @@ void Puzzle::GenerateMaskedGrid() {
   // Override all elements with empty lines -- this means that flood fill is just
   // looking for lines with line=0.
   for (int x=0; x<_width; x++) {
-    u8* row = _maskedGrid[x];
+    Masked* row = _maskedGrid[x];
     int skip = 1;
     if (x%2 == 1) { // Cells are always part of the region
-      for (int y = 1; y < _height; y += 2) row[y] = MASKED_INB_COUNT;
+      for (int y = 1; y < _height; y += 2) row[y] = Masked::Counted;
       skip = 2; // Skip these cells during iteration
     }
 
     for (int y=0; y<_height; y+=skip) {
       Cell* cell = &_grid[x][y];
       if (cell->line > Line::None) {
-        row[y] = MASKED_PROCESSED; // Traced lines should not be a part of the region
+        row[y] = Masked::Processed; // Traced lines should not be a part of the region
       } else if (cell->gap == GAP_FULL) {
-        row[y] = MASKED_GAP2;
+        row[y] = Masked::Gap2;
       } else if (cell->dot > Dot::None) {
-        row[y] = MASKED_DOT;
+        row[y] = Masked::Dot;
       } else {
-        row[y] = MASKED_INB_COUNT;
+        row[y] = Masked::Counted;
       }
     }
   }
@@ -181,17 +168,17 @@ void Puzzle::GenerateMaskedGrid() {
   if (_startPoint != nullptr && _startPoint->x%2 != _startPoint->y%2) {
     if (false /* _settings.FAT_STARTPOINTS */) {
       // This segment is not in any region (acts as a barrier)
-      _maskedGrid[_startPoint->x][_startPoint->y] = MASKED_OOB;
+      _maskedGrid[_startPoint->x][_startPoint->y] = Masked::OutOfBounds;
     } else {
       // This segment is part of this region (acts as an empty cell)
-      _maskedGrid[_startPoint->x][_startPoint->y] = MASKED_INB_NONCOUNT;
+      _maskedGrid[_startPoint->x][_startPoint->y] = Masked::Uncounted;
     }
   }
 
   // Ending at a mid-segment endpoint
   if (_endPoint != nullptr && _endPoint->x%2 != _endPoint->y%2) {
     // This segment is part of this region (acts as an empty cell)
-    _maskedGrid[_endPoint->x][_endPoint->y] = MASKED_INB_NONCOUNT;
+    _maskedGrid[_endPoint->x][_endPoint->y] = Masked::Uncounted;
   }
 
   // Mark all outside cells as 'not in any region' (aka null)
@@ -214,18 +201,18 @@ void Puzzle::GenerateMaskedGrid() {
 }
 
 Vector<Region> Puzzle::GetRegions() {
-  Vector<Region> regions(5);
+  Vector<Region> regions(5); //  = VECTOR(5, Region);
   GenerateMaskedGrid();
 
   for (int x=0; x<_width; x++) {
     for (int y=0; y<_height; y++) {
-      if (_maskedGrid[x][y] == MASKED_PROCESSED) continue;
+      if (_maskedGrid[x][y] == Masked::Processed) continue;
 
       // If this cell is empty (aka hasn't already been used by a region), then create a new one
       // This will also mark all lines inside the new region as used.
       Region region(_width * _height);
       _floodFill(x, y, region);
-      regions.EmplaceBack(move(region));
+      regions.Emplace(move(region), true);
     }
   }
 
@@ -235,11 +222,12 @@ Vector<Region> Puzzle::GetRegions() {
 Region Puzzle::GetRegion(int x, int y) {
   Region region(_width * _height);
 
+  // Hacky. But this lets me use the masked grid instead of the puzzle, so.
   x = _mod(x);
   if (!_safeCell(x, y)) return region;
 
   GenerateMaskedGrid();
-  if (_maskedGrid[x][y] != MASKED_PROCESSED) {
+  if (_maskedGrid[x][y] != Masked::Processed) {
     // If the masked grid hasn't been used at this point, then create a new region.
     // This will also mark all lines inside the new region as used.
     _floodFill(x, y, region);

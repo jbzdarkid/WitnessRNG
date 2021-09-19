@@ -21,26 +21,26 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
       if (cell->line > Line::None) {
         if (cell->gap > GAP_NONE) {
           console.log("Solution line goes over a gap at", x, y);
-          puzzleData.veryInvalidElements.PushBack(cell);
+          puzzleData.veryInvalidElements.Push(cell);
           if (quick) return puzzleData;
         }
         if ((cell->dot == Dot::Blue && cell->line == Line::Yellow) ||
             (cell->dot == Dot::Yellow && cell->line == Line::Blue)) {
           console.log("Incorrectly covered dot: Dot is", (u8)cell->dot, "but line is", (u8)cell->line);
-          puzzleData.veryInvalidElements.PushBack(cell);
+          puzzleData.veryInvalidElements.Push(cell);
           if (quick) return puzzleData;
         }
       } else if (!needsRegions) { // We can stop building the monoRegion if we actually need regions.
-        monoRegion.EmplaceBack({ (u8)x, (u8)y });
+        monoRegion.Emplace({ (u8)x, (u8)y });
       }
     }
   }
 
-  Vector<Region> regions(5);
+  Vector<Region> regions;
   if (needsRegions) {
     regions = puzzle.GetRegions();
   } else {
-    regions.EmplaceBack(move(monoRegion));
+    regions.Emplace(move(monoRegion), true);
   }
   console.log("Found", regions.Size(), "region(s)");
   // console.debug(regions);
@@ -66,7 +66,7 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
     Cell* cell = &puzzle._grid[x][y];
     if (cell->type == CELL_TYPE_NEGA) {
       cell->type = CELL_TYPE_NONCE;
-      negationSymbols.PushBack(cell);
+      negationSymbols.Push(cell);
     }
   }
   console.debug("Found", negationSymbols.Size(), "negation symbols");
@@ -106,7 +106,7 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
   for (const auto& [source, target, sourceType, targetType] : baseCombination) {
     source->type = sourceType;
     target->type = targetType;
-    regionData.negations.EmplaceBack({ source, target });
+    regionData.negations.Emplace({ source, target });
   }
 
   return regionData;
@@ -144,7 +144,7 @@ void AddColoredObject(ColoredObjectArr& coloredObjects, int color_) {
       return;
     }
   }
-  coloredObjects.EmplaceBack({ color_, (u8)1 });
+  coloredObjects.Emplace({ color_, (u8)1 });
 }
 
 RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bool quick) {
@@ -167,7 +167,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
         // Check for uncovered dots
         if (cell->dot > Dot::None) {
           console.log("Dot at", x, y, "is not covered");
-          regionData.veryInvalidElements.PushBack(cell);
+          regionData.veryInvalidElements.Push(cell);
           if (quick) return regionData;
         }
         continue;
@@ -181,14 +181,14 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
           if (puzzle.GetLine(x, y + 1) > Line::None) count++;
           if (cell->count != count) {
             console.log("Triangle at grid[" + to_string(x) + "][" + to_string(y) + "] has", count, "borders");
-            regionData.veryInvalidElements.PushBack(cell);
+            regionData.veryInvalidElements.Push(cell);
             if (quick) return regionData;
           }
         }
         continue;
 
       case CELL_TYPE_SQUARE:
-        squares.PushBack(cell);
+        squares.Push(cell);
         AddColoredObject(coloredObjects, cell->color);
         if (squareColor == 0) {
           squareColor = cell->color;
@@ -198,7 +198,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
         continue;
 
       case CELL_TYPE_STAR:
-        stars.PushBack(cell);
+        stars.Push(cell);
         AddColoredObject(coloredObjects, cell->color);
         continue;
     }
@@ -206,7 +206,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
 
   if (squareColor == -1) {
     for (Cell* square : squares) {
-      regionData.invalidElements.PushBack(square);
+      regionData.invalidElements.Push(square);
       if (quick) return regionData;
     }
   }
@@ -215,11 +215,11 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
     int count = GetColoredObject(coloredObjects, star->color);
     if (count == 1) {
       console.log("Found a", star->color, "star in a region with 1", star->color, "object");
-      regionData.veryInvalidElements.PushBack(star);
+      regionData.veryInvalidElements.Push(star);
       if (quick) return regionData;
     } else if (count > 2) {
       console.log("Found a", star->color, "star in a region with", count, star->color, "objects");
-      regionData.invalidElements.PushBack(star);
+      regionData.invalidElements.Push(star);
       if (quick) return regionData;
     }
   }
@@ -230,7 +230,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
         Cell* cell = puzzle.GetCell(x, y);
         if (cell == nullptr) continue;
         if (cell->type == CELL_TYPE_POLY || cell->type == CELL_TYPE_YLOP) {
-          regionData.invalidElements.PushBack(cell);
+          regionData.invalidElements.Push(cell);
           if (quick) return regionData;
         }
       }

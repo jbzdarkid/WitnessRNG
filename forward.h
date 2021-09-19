@@ -5,6 +5,7 @@ using u8 = unsigned char;
 
 enum class Dot : u8;
 enum class Line : u8;
+enum class Masked : u8;
 struct Cell;
 class Puzzle;
 class Random;

@@ -1,7 +1,5 @@
 #pragma once
 #include <iostream>
-#include <unordered_map>
-#include <unordered_set>
 
 enum class Line : u8 {
   None = 0,
@@ -48,6 +46,22 @@ enum class Dot : u8 {
 #define CELL_TYPE_POLY     6
 #define CELL_TYPE_YLOP     7
 #define CELL_TYPE_NONCE    8
+
+// The masked grid contains 5 colors:
+enum class Masked : u8 {
+  // null: Out of bounds or already processed
+  OutOfBounds = 0xFF,
+  Processed = 0xFF,
+  // 0: In bounds, awaiting processing, but should not be part of the final region.
+  Uncounted = 0,
+  // 1: In bounds, awaiting processing
+  Counted = 1,
+  // 2: Gap-2. After _floodFillOutside, this means "treat normally" (it will be null if oob)
+  Gap2 = 2,
+  // 3: Dot (of any kind), otherwise identical to 1. Should not be flood-filled through (why the f do we need this)
+  Dot = 3,
+};
+
 
 class Console {
   enum Level {
@@ -140,16 +154,18 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec) {
 }
 
 // Functions I wish std::map had
-
+/*
+#include <unordered_map>
 template <typename K, typename V>
 V GetValueOrDefault(const std::unordered_map<K, V>& map, const K& key, V defaultValue) {
   auto search = map.find(key);
   if (search != map.end()) return search->second;
   return defaultValue;
 }
+*/
 
 // Functions I wish std::set had
-
+#include <unordered_set>
 template <typename T>
 bool Contains(const std::unordered_set<T>& set, const T& value) {
   return set.find(value) != set.end();
