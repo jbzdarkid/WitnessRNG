@@ -1,11 +1,4 @@
-#include <unordered_set>
-
-#include "DoubleArray.h"
-#include "Polyominos.h"
-#include "Puzzle.h"
-#include "Utilities.h"
-
-using namespace std;
+#include "stdafx.h"
 
 int Polyominos::GetPolySize(int polyshape) {
   int size = 0;

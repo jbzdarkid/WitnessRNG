@@ -1,11 +1,6 @@
 #pragma once
+#include "forward.h"
 #include <vector>
-
-struct Cell;
-class Puzzle;
-
-using u8 = unsigned char;
-using Path = u8*;
 
 class Solver {
 public:

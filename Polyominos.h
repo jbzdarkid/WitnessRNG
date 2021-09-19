@@ -1,11 +1,6 @@
 #pragma once
+#include "forward.h"
 #include <vector>
-
-using u8 = unsigned char;
-using Region = std::vector<std::pair<u8, u8>>;
-
-struct Cell;
-class Puzzle;
 
 class Polyominos {
 public:

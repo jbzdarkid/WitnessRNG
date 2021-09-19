@@ -1,9 +1,4 @@
-#include "Puzzle.h"
-#include "Random.h"
-#include "Solve.h"
-#include "Utilities.h"
-
-using namespace std;
+#include "stdafx.h"
 
 constexpr int m_prime = 0x7FFFFFFF; // 2^31 - 1, a mersenne prime
 

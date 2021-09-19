@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include <algorithm>
 #include <cassert>
 #include <iostream>
@@ -7,14 +8,6 @@
 #include <unordered_set>
 #include <thread>
 #include <sstream>
-
-#include "Random.h"
-#include "Puzzle.h"
-#include "Utilities.h"
-#include "Solve.h"
-#include "DoubleArray.h"
-
-using namespace std;
 
 Console console;
 

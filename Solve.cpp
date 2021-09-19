@@ -127,8 +127,8 @@ void Solver::SolveLoop(int x, int y) {
   if (cell->end != END_NONE) {
     PushPath(PATH_NONE);
     puzzle->_endPoint = cell;
-    Validator::Validate(*puzzle, true);
-    if (puzzle->_valid) {
+    RegionData puzzleData = Validator::Validate(*puzzle, true);
+    if (puzzleData.Valid()) {
       if (solutionPaths.size() < MAX_SOLUTIONS) {
         solutionPaths.push_back(path);
         pathSize = puzzle->_width * puzzle->_height;

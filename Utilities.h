@@ -3,7 +3,6 @@
 #include <unordered_map>
 #include <unordered_set>
 
-using u8 = unsigned char;
 enum class Line : u8 {
   None = 0,
   Black = 1,
@@ -109,15 +108,6 @@ private:
 };
 
 extern Console console;
-
-#define DELETE_RO3(clazz) \
-  clazz##(const clazz & other) = delete; /* Copy constructor */ \
-  clazz & operator=(const clazz & other) = delete; /* Copy assignment */
-
-#define DELETE_RO5(clazz) \
-  clazz##(clazz && other) noexcept = delete; /* Move constructor */ \
-  clazz & operator=(clazz && other) noexcept = delete; /* Move assignment */
-
 
 // Functions I wish std::vector had
 

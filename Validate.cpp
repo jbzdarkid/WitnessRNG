@@ -1,19 +1,13 @@
+#include "stdafx.h"
+
 #include <unordered_map>
 
-#include "Polyominos.h"
-#include "Puzzle.h"
-#include "Utilities.h"
-#include "Validate.h"
-
-using namespace std;
-
-void Validator::Validate(Puzzle& puzzle, bool quick) {
+RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
   // console.log("Validating", puzzle._name);
-  puzzle._valid = true; // Assume valid until we find an invalid element
+  RegionData puzzleData;
 
   bool needsRegions = false;
-  Region monoRegion;
-  monoRegion.reserve(puzzle._width * puzzle._height);
+  Region monoRegion(puzzle._width * puzzle._height);
   // These two are both used by validateRegion, so they are saved on the puzzle itself.
   puzzle._hasNegations = false;
   puzzle._hasPolyominos = false;
@@ -29,42 +23,40 @@ void Validator::Validate(Puzzle& puzzle, bool quick) {
       if (cell->line > Line::None) {
         if (cell->gap > GAP_NONE) {
           console.log("Solution line goes over a gap at", x, y);
-          puzzle._valid = false;
-          if (quick) return;
+          puzzleData.veryInvalidElements.push_back(cell);
+          if (quick) return puzzleData;
         }
         if ((cell->dot == Dot::Blue && cell->line == Line::Yellow) ||
             (cell->dot == Dot::Yellow && cell->line == Line::Blue)) {
           console.log("Incorrectly covered dot: Dot is", (u8)cell->dot, "but line is", (u8)cell->line);
-          puzzle._valid = false;
-          if (quick) return;
+          puzzleData.veryInvalidElements.push_back(cell);
+          if (quick) return puzzleData;
         }
       } else if (!needsRegions) { // We can stop building the monoRegion if we actually need regions.
-        monoRegion.emplace_back((u8)x, (u8)y);
+        monoRegion.EmplaceBack({ (u8)x, (u8)y });
       }
     }
   }
 
-  puzzle._invalidElements.clear();
-  puzzle._negations.clear();
-  vector<Region> regions;
+  Vector<Region> regions(5);
   if (needsRegions) {
     regions = puzzle.GetRegions();
   } else {
-    regions.emplace_back(monoRegion);
+    regions.EmplaceBack(move(monoRegion));
   }
-  console.log("Found", regions.size(), "region(s)");
+  console.log("Found", regions.Size(), "region(s)");
   // console.debug(regions);
 
   for (const Region& region : regions) {
     auto regionData = ValidateRegion(puzzle, region, quick);
     console.log("Region valid:", regionData.Valid());
-    Append(puzzle._negations, regionData.negations);
-    Append(puzzle._invalidElements, regionData.invalidElements);
-    Append(puzzle._veryInvalidElements, regionData.veryInvalidElements);
-    puzzle._valid = puzzle._valid && regionData.Valid();
-    if (quick && !puzzle._valid) break;
+    Append(puzzleData.negations, regionData.negations);
+    Append(puzzleData.invalidElements, regionData.invalidElements);
+    Append(puzzleData.veryInvalidElements, regionData.veryInvalidElements);
+    if (quick && !puzzleData.Valid()) break;
   }
-  console.log("Puzzle has", puzzle._invalidElements.size(), "invalid elements");
+  console.log("Puzzle has", puzzleData.invalidElements.size(), "invalid elements");
+  return puzzleData;
 }
 
 RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region, bool quick) {

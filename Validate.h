@@ -1,7 +1,5 @@
 #pragma once
 #include <vector>
-struct Cell;
-class Puzzle;
 
 struct RegionData {
   std::vector<Cell*> invalidElements;
@@ -19,7 +17,7 @@ public:
   // valid: Whether or not the puzzle is valid
   // invalidElements: Symbols which are invalid (for the purpose of negating / flashing)
   // negations: Negation pairs (for the purpose of darkening)
-  static void Validate(Puzzle& puzzle, bool quick = false);
+  static RegionData Validate(Puzzle& puzzle, bool quick = false);
 
   // Determines whether or not a particular region is valid or not, including negation symbols.
   // If quick is true, exits after the first invalid element is found (small performance gain)

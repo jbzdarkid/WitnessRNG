@@ -1,7 +1,6 @@
 #pragma once
+#include "forward.h"
 #include <vector>
-
-class Puzzle;
 
 class Random {
 public:

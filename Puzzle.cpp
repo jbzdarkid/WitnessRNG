@@ -1,12 +1,7 @@
+#include "stdafx.h"
+
 #include <cstdarg>
 #include <sstream>
-
-#include "DoubleArray.h"
-#include "Puzzle.h"
-#include "Random.h"
-#include "Utilities.h"
-
-using namespace std;
 
 Puzzle::Puzzle(int width, int height, bool pillar) {
   _origWidth = width;
@@ -26,9 +21,8 @@ Puzzle::Puzzle(int width, int height, bool pillar) {
       if (x%2 != 1 || y%2 != 1) cell->type = CELL_TYPE_LINE;
     }
   }
-  _connections.resize(_numConnections);
+  _connections = new Vector<pair<int, int>>(_numConnections);
 
-  int i = 0;
   // J is the dot index
   for (int j=0; j<(height+1) * (width+1); j++) {
     // WitnessPuzzles grid reference
@@ -37,11 +31,11 @@ Puzzle::Puzzle(int width, int height, bool pillar) {
 
     if (y < height*2) { // Do not add a vertical connection for the bottom row
       // _connections[i++] = {j-(width+1), j}; // (Original game reference)
-      _connections[i++] = {x, y+1};
+      _connections->EmplaceBack({x, y+1});
     }
     if (x < width*2) { // Do not add a horizontal connection for the last element in the row
       // _connections[i++] = {j, j+1}; // (Original game reference)
-      _connections[i++] = {x+1, y};
+      _connections->EmplaceBack({x+1, y});
     }
   }
 }
@@ -49,6 +43,7 @@ Puzzle::Puzzle(int width, int height, bool pillar) {
 Puzzle::~Puzzle() {
   DeleteDoubleArray(_grid);
   DeleteDoubleArray(_maskedGrid);
+  delete _connections;
 }
 
 /*
@@ -145,7 +140,7 @@ void Puzzle::_floodFill(int x, int y, Region& region) {
   u8 cell = _maskedGrid[x][y];
   if (cell == MASKED_PROCESSED) return;
   if (cell != MASKED_INB_NONCOUNT) {
-    region.emplace_back((u8)x, (u8)y);
+    region.EmplaceBack({ (u8)x, (u8)y });
   }
   _maskedGrid[x][y] = MASKED_PROCESSED;
 
@@ -218,9 +213,8 @@ void Puzzle::GenerateMaskedGrid() {
   */
 }
 
-vector<Region> Puzzle::GetRegions() {
-  vector<Region> regions;
-  regions.reserve(5);
+Vector<Region> Puzzle::GetRegions() {
+  Vector<Region> regions(5);
   GenerateMaskedGrid();
 
   for (int x=0; x<_width; x++) {
@@ -229,10 +223,9 @@ vector<Region> Puzzle::GetRegions() {
 
       // If this cell is empty (aka hasn't already been used by a region), then create a new one
       // This will also mark all lines inside the new region as used.
-      Region region;
-      region.reserve(_width * _height);
+      Region region(_width * _height);
       _floodFill(x, y, region);
-      regions.emplace_back(move(region));
+      regions.EmplaceBack(move(region));
     }
   }
 
@@ -240,10 +233,10 @@ vector<Region> Puzzle::GetRegions() {
 }
 
 Region Puzzle::GetRegion(int x, int y) {
-  Region region;
+  Region region(_width * _height);
 
   x = _mod(x);
-  if (!_safeCell(x, y)) return Region();
+  if (!_safeCell(x, y)) return region;
 
   GenerateMaskedGrid();
   if (_maskedGrid[x][y] != MASKED_PROCESSED) {
@@ -261,9 +254,9 @@ void Puzzle::CutRandomEdges(Random& rng, int numCuts) {
     int rand = rng.Get() % numConnections;
 
     // In TW, additional connections are added whenever a cut is made. So, we continue if the RNG is larger than the true connection size.
-    if (rand >= _connections.size()) continue;
+    if (rand >= _connections->Size()) continue;
 
-    auto [x, y] = _connections[rand];
+    auto [x, y] = _connections->At(rand);
     if (_grid[x][y].gap == 0) {
       _numConnections++;
       _grid[x][y].gap = 1;
