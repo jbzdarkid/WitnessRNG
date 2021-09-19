@@ -211,14 +211,13 @@ int main(int argc, char* argv[]) {
     for (auto& thread : threads) {
       if (thread.joinable()) thread.join();
     }
-    return 0;
+    return 0; /*
     // 0b0111 1111 1111 1111 ' 1111 1111 1111 1111
     // We know that the maximum seed value is 0x7FFF'FFFE
     // So we shift right by 7, which gets a maximum of 0xFF'FFFF (which is approximately the number of seeds)
     // Then we use the bottom byte for the bucket, and the remaining 2 bytes for the index.
     // FOR NOW, we are just counting the number of input RNGs which generate each output RNG. This may change.
     short** data2 = NewDoubleArray<short>(0xFF, 0xFFFF);
-    (void)data2;
 
     // ... I'm not sure what the hell to do here.
 
@@ -227,7 +226,7 @@ int main(int argc, char* argv[]) {
       rng.Set(i);
       rng.GeneratePolyominos(false);
       // ...
-    }
+    }*/
   }
 
   return 0;
