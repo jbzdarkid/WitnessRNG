@@ -4,7 +4,7 @@
 
 RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
   // console.log("Validating", puzzle._name);
-  RegionData puzzleData;
+  RegionData puzzleData(quick ? 1 : puzzle._width * puzzle._height);
 
   bool needsRegions = false;
   Region monoRegion(puzzle._width * puzzle._height);
@@ -23,13 +23,13 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
       if (cell->line > Line::None) {
         if (cell->gap > GAP_NONE) {
           console.log("Solution line goes over a gap at", x, y);
-          puzzleData.veryInvalidElements.push_back(cell);
+          puzzleData.veryInvalidElements.PushBack(cell);
           if (quick) return puzzleData;
         }
         if ((cell->dot == Dot::Blue && cell->line == Line::Yellow) ||
             (cell->dot == Dot::Yellow && cell->line == Line::Blue)) {
           console.log("Incorrectly covered dot: Dot is", (u8)cell->dot, "but line is", (u8)cell->line);
-          puzzleData.veryInvalidElements.push_back(cell);
+          puzzleData.veryInvalidElements.PushBack(cell);
           if (quick) return puzzleData;
         }
       } else if (!needsRegions) { // We can stop building the monoRegion if we actually need regions.
@@ -50,12 +50,12 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
   for (const Region& region : regions) {
     auto regionData = ValidateRegion(puzzle, region, quick);
     console.log("Region valid:", regionData.Valid());
-    Append(puzzleData.negations, regionData.negations);
-    Append(puzzleData.invalidElements, regionData.invalidElements);
-    Append(puzzleData.veryInvalidElements, regionData.veryInvalidElements);
+    puzzleData.negations.Append(regionData.negations);
+    puzzleData.invalidElements.Append(regionData.invalidElements);
+    puzzleData.veryInvalidElements.Append(regionData.veryInvalidElements);
     if (quick && !puzzleData.Valid()) break;
   }
-  console.log("Puzzle has", puzzleData.invalidElements.size(), "invalid elements");
+  console.log("Puzzle has", puzzleData.invalidElements.Size(), "invalid elements");
   return puzzleData;
 }
 
@@ -63,16 +63,16 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
   if (!puzzle._hasNegations) return RegionCheck(puzzle, region, quick);
 
   // Get a list of negation symbols in the grid, and set them to "nonce"
-  vector<Cell*> negationSymbols;
+  Vector<Cell*> negationSymbols;
   for (const auto [x, y] : region) {
     Cell* cell = &puzzle._grid[x][y];
     if (cell->type == CELL_TYPE_NEGA) {
       cell->type = CELL_TYPE_NONCE;
-      negationSymbols.push_back(cell);
+      negationSymbols.PushBack(cell);
     }
   }
-  console.debug("Found", negationSymbols.size(), "negation symbols");
-  if (negationSymbols.size() == 0) {
+  console.debug("Found", negationSymbols.Size(), "negation symbols");
+  if (negationSymbols.Size() == 0) {
     // No negation symbols in this region. Note that there must be negation symbols elsewhere
     // in the puzzle, since puzzle.hasNegations was true.
     return RegionCheck(puzzle, region, quick);
@@ -88,15 +88,15 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
     cell->type = CELL_TYPE_NEGA;
   }
 
-  auto invalidElements = regionData.invalidElements;
-  auto veryInvalidElements = regionData.veryInvalidElements;
+  auto& invalidElements = regionData.invalidElements;
+  auto& veryInvalidElements = regionData.veryInvalidElements;
   // We don't need to repopulate these, since we're using cell references.
-  console.debug("Forcibly negating", veryInvalidElements.size(), "symbols");
+  console.debug("Forcibly negating", veryInvalidElements.Size(), "symbols");
 
   vector<tuple<Cell*, Cell*, u8, u8>> baseCombination;
-  while (negationSymbols.size() > 0 && veryInvalidElements.size() > 0) {
-    Cell* source = Pop(negationSymbols);
-    Cell* target = Pop(veryInvalidElements);
+  while (negationSymbols.Size() > 0 && veryInvalidElements.Size() > 0) {
+    Cell* source = negationSymbols.Pop();
+    Cell* target = veryInvalidElements.Pop();
     baseCombination.emplace_back(source, target, source->type, target->type);
     source->type = CELL_TYPE_NULL;
     target->type = CELL_TYPE_NULL;
@@ -108,7 +108,7 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
   for (const auto& [source, target, sourceType, targetType] : baseCombination) {
     source->type = sourceType;
     target->type = targetType;
-    regionData.negations.emplace_back(source, target);
+    regionData.negations.EmplaceBack({ source, target });
   }
 
   return regionData;
@@ -117,8 +117,8 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
 RegionData Validator::RegionCheckNegations2(
   const Puzzle& puzzle,
   const Region& region,
-  const vector<Cell*>& negationSymbols,
-  const vector<Cell*>& invalidElements,
+  const Vector<Cell*>& negationSymbols,
+  const Vector<Cell*>& invalidElements,
   int index,
   int index2) {
   (void)puzzle;
@@ -128,7 +128,7 @@ RegionData Validator::RegionCheckNegations2(
   (void)index;
   (void)index2;
 
-  return RegionData();
+  return RegionData(0);
 }
 
 using ColoredObjectArr = vector<pair<int, u8>>;
@@ -151,7 +151,7 @@ void AddColoredObject(ColoredObjectArr& coloredObjects, int color_) {
 
 RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bool quick) {
   // console.log("Validating region of size", region.size());
-  RegionData regionData;
+  RegionData regionData(quick ? 1 : region.Size());
 
   vector<Cell*> squares;
   squares.reserve(4);
@@ -172,7 +172,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
         // Check for uncovered dots
         if (cell->dot > Dot::None) {
           console.log("Dot at", x, y, "is not covered");
-          regionData.veryInvalidElements.push_back(cell);
+          regionData.veryInvalidElements.PushBack(cell);
           if (quick) return regionData;
         }
         continue;
@@ -186,7 +186,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
           if (puzzle.GetLine(x, y + 1) > Line::None) count++;
           if (cell->count != count) {
             console.log("Triangle at grid[" + to_string(x) + "][" + to_string(y) + "] has", count, "borders");
-            regionData.veryInvalidElements.push_back(cell);
+            regionData.veryInvalidElements.PushBack(cell);
             if (quick) return regionData;
           }
         }
@@ -211,7 +211,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
 
   if (squareColor == -1) {
     for (Cell* square : squares) {
-      regionData.invalidElements.push_back(square);
+      regionData.invalidElements.PushBack(square);
       if (quick) return regionData;
     }
   }
@@ -220,11 +220,11 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
     int count = GetColoredObject(coloredObjects, star->color);
     if (count == 1) {
       console.log("Found a", star->color, "star in a region with 1", star->color, "object");
-      regionData.veryInvalidElements.push_back(star);
+      regionData.veryInvalidElements.PushBack(star);
       if (quick) return regionData;
     } else if (count > 2) {
       console.log("Found a", star->color, "star in a region with", count, star->color, "objects");
-      regionData.invalidElements.push_back(star);
+      regionData.invalidElements.PushBack(star);
       if (quick) return regionData;
     }
   }
@@ -235,14 +235,14 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
         Cell* cell = puzzle.GetCell(x, y);
         if (cell == nullptr) continue;
         if (cell->type == CELL_TYPE_POLY || cell->type == CELL_TYPE_YLOP) {
-          regionData.invalidElements.push_back(cell);
+          regionData.invalidElements.PushBack(cell);
           if (quick) return regionData;
         }
       }
     }
   }
 
-  console.debug("Region has", regionData.veryInvalidElements.size(), "very invalid elements");
-  console.debug("Region has", regionData.invalidElements.size(), "invalid elements");
+  console.debug("Region has", regionData.veryInvalidElements.Size(), "very invalid elements");
+  console.debug("Region has", regionData.invalidElements.Size(), "invalid elements");
   return regionData;
 }

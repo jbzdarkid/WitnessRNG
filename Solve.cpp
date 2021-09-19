@@ -1,9 +1,4 @@
-#include "Solve.h"
-#include "Puzzle.h"
-#include "Utilities.h"
-#include "Validate.h"
-
-using namespace std;
+#include "stdafx.h"
 
 Solver::Solver(Puzzle* puzzle_) {
   puzzle = puzzle_;

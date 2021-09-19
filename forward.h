@@ -8,6 +8,7 @@ enum class Line : u8;
 struct Cell;
 class Puzzle;
 class Random;
+struct RegionData;
 template <typename T> class Vector;
 
 

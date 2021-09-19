@@ -20,6 +20,7 @@ template <typename T>
 class Vector {
 public:
   // Constructors, etc
+  Vector() { } // Leave all values at default (empty)
   Vector(int size) {
     _data = (T*)malloc(sizeof(T) * size);
     _maxPos = size;
@@ -58,7 +59,8 @@ public:
 
   // Functions I use
   void PushBack(const T& obj) {
-    EmplaceBack(obj);
+    _data[_pos++] = obj;
+    assert(_pos < _maxPos);
   }
 
   void EmplaceBack(T&& obj) {
@@ -66,7 +68,7 @@ public:
     assert(_pos < _maxPos);
   }
 
-  int Size() {
+  int Size() const {
     return _pos;
   }
 
@@ -77,6 +79,19 @@ public:
     assert(index >= 0);
     assert(index < _pos);
     return _data[_pos];
+  }
+  
+  T Pop() {
+    assert(_pos >= 1);
+    return _data[--_pos];
+  }
+
+  void Append(const Vector<T>& other) {
+    for (const T& it : other) PushBack(it);
+  }
+
+  void Append(Vector<T>&& other) {
+    for (const T& it : other) EmplaceBack(it);
   }
 
 private:

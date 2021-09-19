@@ -1,15 +1,6 @@
 #pragma once
+#include "forward.h"
 #include <vector>
-
-struct RegionData {
-  std::vector<Cell*> invalidElements;
-  std::vector<Cell*> veryInvalidElements;
-  std::vector<std::pair<Cell*, Cell*>> negations;
-
-  inline bool Valid() {
-    return invalidElements.size() == 0 && veryInvalidElements.size() == 0;
-  }
-};
 
 class Validator {
 public:
@@ -32,8 +23,8 @@ private:
   static RegionData RegionCheckNegations2(
     const Puzzle& puzzle,
     const Region& region,
-    const std::vector<Cell*>& negationSymbols,
-    const std::vector<Cell*>& invalidElements,
+    const Vector<Cell*>& negationSymbols,
+    const Vector<Cell*>& invalidElements,
     int index = 0,
     int index2 = 0);
 
