@@ -80,15 +80,15 @@ class Console {
     None,
   };
   Level _level = Info; // Change this value from the Autos tab.
-  int _depth = 0;
+  u8 _depth = 0;
 
 public:
-  template <typename... Types> void error(Types... args)   { _logGroup(Error, args...); }
-  template <typename... Types> void warning(Types... args) { _logGroup(Warning, args...); }
-  template <typename... Types> void info(Types... args)    { _logGroup(Info, args...); }
-  template <typename... Types> void log(Types... args)     { _logGroup(Log, args...); }
-  template <typename... Types> void debug(Types... args)   { _logGroup(Debug, args...); }
-  template <typename... Types> void spam(Types... args)    { _logGroup(Spam, args...); }
+  template <typename... Types> void error  (const Types&... args) { _logGroup(Error, args...); }
+  template <typename... Types> void warning(const Types&... args) { _logGroup(Warning, args...); }
+  template <typename... Types> void info   (const Types&... args) { _logGroup(Info, args...); }
+  template <typename... Types> void log    (const Types&... args) { _logGroup(Log, args...); }
+  template <typename... Types> void debug  (const Types&... args) { _logGroup(Debug, args...); }
+  template <typename... Types> void spam   (const Types&... args) { _logGroup(Spam, args...); }
 
   void group() { _depth += 2; }
   void groupEnd() { _depth -= 2; }
@@ -107,21 +107,21 @@ public:
 
 private:
   template <typename... Types>
-  void _logGroup(Level level, Types... args) {
+  void _logGroup(Level level, const Types&... args) {
     if (level > _level) return;
     std::cout << std::string(_depth, ' ');
     _log(level, args...);
   }
 
   template <typename T, typename... Types>
-  void _log(Level level, T value, Types... args) {
+  void _log(Level level, const T& value, const Types&... args) {
     if (level > _level) return;
     std::cout << value << ' ';
     _log(level, args...);
   }
 
   template <typename T>
-  void _log(Level level, T value) {
+  void _log(Level level, const T& value) {
     if (level > _level) return;
     std::cout << value << std::endl;
   }

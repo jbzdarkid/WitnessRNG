@@ -182,7 +182,7 @@ int main(int argc, char* argv[]) {
     const int numThreads = 1;
     const int maxSeed = 0x1000;
 #else
-    const int numThreads = 4;
+    const int numThreads = 1;
     const int maxSeed = 0x10'0000; // Maximum of 0x7FFF'FFFE;
 #endif
     int** data = NewDoubleArray<int>(numThreads, maxSeed / numThreads);

@@ -49,35 +49,35 @@ void Random::ShuffleIntegers(Vector<int>& arr) {
   }
 }
 
-unsigned short RotatePolyshape(unsigned int polyshape) {
-  unsigned short newshape = 0;
-  for (int x=0; x<4; x++) {
-    for (int y=0; y<4; y++) {
+u16 RotatePolyshape(u16 polyshape) {
+  u16 newshape = 0;
+  for (u8 x=0; x<4; x++) {
+    for (u8 y=0; y<4; y++) {
       if (polyshape & (1 << (x*4 + y))) newshape |= 1 << (y*4 + 3-x);
     }
   }
   return newshape;
 }
 
-unsigned short Random::RandomPolyshape() {
-  int cursor_x = 0;
-  int cursor_y = 0;
-  unsigned short polyshape = 1;
+u16 Random::RandomPolyshape() {
+  u8 cursorX = 0;
+  u8 cursorY = 0;
+  u16 polyshape = 1;
 
-  for (int size = (Get() % 3) + 2; size > 0; size--) {
+  for (u8 size = (Get() % 3) + 2; size > 0; size--) {
     if (Get() % 2 == 0) {
-      cursor_y++;
+      cursorY++;
     } else {
-      cursor_x++;
+      cursorX++;
     }
 
     // Note: This can overflow if you roll the same cursor 5 times in a row.
     // This means that a 5-J or a 4-I is produced instead of a 5-I.
-    polyshape |= 1 << (cursor_x*4 + cursor_y);
+    polyshape |= 1 << (cursorX*4 + cursorY);
   }
 
   // Slight adjustment here due to differences in rotation between WitnessPuzzles and The Witness.
-  int rotation = (Get() + 1) % 4;
+  u8 rotation = (Get() + 1) % 4;
   for (; rotation > 0; rotation--) {
     polyshape = RotatePolyshape(polyshape);
   }
@@ -119,8 +119,8 @@ Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible, bool abortOnStarsFai
 
     p->CutRandomEdges(*this, 8);
 
-    unsigned short polyshape1 = RandomPolyshape();
-    unsigned short polyshape2 = RandomPolyshape();
+    u16 polyshape1 = RandomPolyshape();
+    u16 polyshape2 = RandomPolyshape();
     Cell* poly1 = p->GetEmptyCell(*this);
     poly1->type = Type::Poly;
     poly1->color = colors[1];

@@ -2,21 +2,21 @@
 #include <unordered_set>
 #include <utility> // For pair
 
-int Polyominos::GetPolySize(int polyshape) {
-  int size = 0;
-  for (int x=0; x<4; x++) {
-    for (int y=0; y<4; y++) {
+u8 Polyominos::GetPolySize(u16 polyshape) {
+  u8 size = 0;
+  for (u8 x=0; x<4; x++) {
+    for (u8 y=0; y<4; y++) {
       if (IsSet(polyshape, x, y)) size++;
     }
   }
   return size;
 }
 
-vector<pair<int, int>> Polyominos::PolyominoFromPolyshape(unsigned short polyshape, bool ylop, bool precise) {
-  int topLeftX = -1;
-  int topLeftY = -1;
-  for (int x=0; x<4; x++) {
-    for (int y=0; y<4; y++) {
+Polyomino Polyominos::PolyominoFromPolyshape(u16 polyshape) {
+  s8 topLeftX = -1;
+  s8 topLeftY = -1;
+  for (u8 x=0; x<4; x++) {
+    for (u8 y=0; y<4; y++) {
       if (IsSet(polyshape, x, y)) {
         topLeftX = x;
         topLeftY = y;
@@ -27,35 +27,11 @@ vector<pair<int, int>> Polyominos::PolyominoFromPolyshape(unsigned short polysha
   }
   if (topLeftX == -1) return {}; // Empty polyomino
 
-  vector<pair<int, int>> polyomino;
-  for (int x=0; x<4; x++) {
-    for (int y=0; y<4; y++) {
+  Polyomino polyomino;
+  for (u8 x=0; x<4; x++) {
+    for (u8 y=0; y<4; y++) {
       if (!IsSet(polyshape, x, y)) continue;
-      polyomino.emplace_back(2*(x - topLeftX), 2*(y - topLeftY));
-
-      // "Precise" polyominos adds cells in between the apparent squares in the polyomino.
-      // This prevents the solution line from going through polyominos in the solution.
-      if (precise) {
-        if (ylop) {
-          // Ylops fill up/left if no adjacent cell, and always fill bottom/right
-          if (!IsSet(polyshape, x - 1, y)) {
-            polyomino.emplace_back(2*(x - topLeftX) - 1, 2*(y - topLeftY));
-          }
-          if (!IsSet(polyshape, x, y - 1)) {
-            polyomino.emplace_back(2*(x - topLeftX), 2*(y - topLeftY) - 1);
-          }
-          polyomino.emplace_back(2*(x - topLeftX) + 1, 2*(y - topLeftY));
-          polyomino.emplace_back(2*(x - topLeftX), 2*(y - topLeftY) + 1);
-        } else {
-          // Normal polys only fill bottom/right if there is an adjacent cell.
-          if (IsSet(polyshape, x + 1, y)) {
-            polyomino.emplace_back(2*(x - topLeftX) + 1, 2*(y - topLeftY));
-          }
-          if (IsSet(polyshape, x, y + 1)) {
-            polyomino.emplace_back(2*(x - topLeftX), 2*(y - topLeftY) + 1);
-          }
-        }
-      }
+      polyomino.emplace_back(make_pair<s8, s8>(2*(x - topLeftX), 2*(y - topLeftY)));
     }
   }
   return polyomino;
@@ -64,8 +40,8 @@ vector<pair<int, int>> Polyominos::PolyominoFromPolyshape(unsigned short polysha
 bool Polyominos::PolyFit(const Region& region, const Puzzle& puzzle) {
   vector<Cell*> polys;
   vector<Cell*> ylops;
-  int polyCount = 0;
-  int regionSize = 0;
+  s8 polyCount = 0;
+  u8 regionSize = 0;
   for (Cell* cell : region) {
     if (cell->x%2 == 1 && cell->y%2 == 1) regionSize++;
     if (cell->polyshape == 0) continue;
@@ -90,15 +66,13 @@ bool Polyominos::PolyFit(const Region& region, const Puzzle& puzzle) {
     return false;
   }
   if (polyCount == 0) {
-    if (true /* puzzle.settings.SHAPELESS_ZERO_POLY */) {
-      console.log("Combined size of polyominos and onimoylops is zero");
-      return true;
-    }
+    console.log("Combined size of polyominos and onimoylops is zero");
+    return true;
   }
 
   // For polyominos, we clear the grid to mark it up again:
   // First, we mark all cells as 0: Cells outside the target region should be unaffected.
-  int** polyGrid = NewDoubleArray<int>(puzzle._width, puzzle._height);
+  s8** polyGrid = NewDoubleArray<s8>(puzzle._width, puzzle._height);
 
   // In the normal case, we mark every cell as -1: It needs to be covered by one poly
   if (polyCount > 0) {
@@ -113,36 +87,36 @@ bool Polyominos::PolyFit(const Region& region, const Puzzle& puzzle) {
   return ret;
 }
 
-bool Polyominos::TryPlacePolyshape(const vector<pair<int, int>>& cells, int x, int y, const Puzzle& puzzle, int** polyGrid, int sign) {
+bool Polyominos::TryPlacePolyshape(const Polyomino& cells, u8 x, u8 y, const Puzzle& puzzle, s8** polyGrid, s8 sign) {
   console.spam("Placing at", x, y, "with sign", sign);
-  vector<int> values(cells.size(), 0);
-  for (int i=0; i<cells.size(); i++) {
+  Vector<s8> values((int)cells.size());
+  for (u8 i=0; i<cells.size(); i++) {
     auto [cellX, cellY] = cells[i];
-    if (!puzzle._safeCell(puzzle._mod(cellX + x), cellY + y)) return false; // Hackity hack.
-    int puzzleCell = polyGrid[cellX + x][cellY + y];
+    if (puzzle.GetCell(cellX + x, cellY + y) == nullptr) return false;
+    s8 puzzleCell = polyGrid[cellX + x][cellY + y];
     values[i] = puzzleCell;
   }
-  for (int i=0; i<cells.size(); i++) {
+  for (u8 i=0; i<cells.size(); i++) {
     auto [cellX, cellY] = cells[i];
     polyGrid[cellX + x][cellY + y] = values[i] + sign;
   }
   return true;
 }
 
-bool Polyominos::PlaceYlops(const vector<Cell*>& ylops, int i, vector<Cell*>& polys, const Puzzle& puzzle, int** polyGrid) {
+bool Polyominos::PlaceYlops(const vector<Cell*>& ylops, u8 i, vector<Cell*>& polys, const Puzzle& puzzle, s8** polyGrid) {
   // Base case: No more ylops to place, start placing polys
   if (i == ylops.size()) return PlacePolys(polys, puzzle, polyGrid);
 
-  *static_cast<volatile int*>(nullptr) = 1; // assert(false)
+  assert(false);
   return false;
 }
 
-bool Polyominos::PlacePolys(std::vector<Cell*>& polys, const Puzzle& puzzle, int** polyGrid) {
+bool Polyominos::PlacePolys(std::vector<Cell*>& polys, const Puzzle& puzzle, s8** polyGrid) {
   // Check for overlapping polyominos, and handle exit cases for all polyominos placed.
   bool allPolysPlaced = (polys.size() == 0);
-  for (int x=0; x<puzzle._width; x++) {
-    for (int y=0; y<puzzle._height; y++) {
-      int cell = polyGrid[x][y];
+  for (u8 x=0; x<puzzle._width; x++) {
+    for (u8 y=0; y<puzzle._height; y++) {
+      s8 cell = polyGrid[x][y];
       if (cell > 0) {
         console.log("Cell", x, y, "has been overfilled and no ylops left to place");
         return false;
@@ -162,24 +136,24 @@ bool Polyominos::PlacePolys(std::vector<Cell*>& polys, const Puzzle& puzzle, int
   // The top-left (first open cell) must be filled by a polyomino.
   // However in the case of pillars, there is no top-left, so we try all open cells in the
   // top-most open row
-  vector<pair<int, int>> openCells;
-  for (int y=1; y<puzzle._height; y+=2) {
-    for (int x=1; x<puzzle._width; x+=2) {
+  Vector<pair<u8, u8>> openCells(puzzle._pillar ? puzzle._width : 0);
+  for (u8 y=1; y<puzzle._height; y+=2) {
+    for (u8 x=1; x<puzzle._width; x+=2) {
       if (polyGrid[x][y] >= 0) continue;
-      openCells.emplace_back(x, y);
+      openCells.Emplace({x, y});
       if (puzzle._pillar == false) break;
     }
-    if (openCells.size() > 0) break;
+    if (!openCells.Empty()) break;
   }
 
-  if (openCells.size() == 0) {
+  if (openCells.Empty()) {
     console.log("Polys remaining but grid full");
     return false;
   }
 
   for (auto [openCellX, openCellY] : openCells) {
-    unordered_set<unsigned short> attemptedPolyshapes;
-    for (int i=0; i<polys.size(); i++) {
+    unordered_set<u16> attemptedPolyshapes;
+    for (u8 i=0; i<polys.size(); i++) {
       Cell* poly = polys[i];
       console.spam("Selected poly", poly);
       if (Contains(attemptedPolyshapes, poly->polyshape)) {
@@ -190,7 +164,7 @@ bool Polyominos::PlacePolys(std::vector<Cell*>& polys, const Puzzle& puzzle, int
       polys.erase(polys.begin() + i); // polys.splice(i, 1)
       for (auto polyshape : GetRotations(poly->polyshape)) {
         console.spam("Selected polyshape", polyshape);
-        vector<pair<int, int>> cells = PolyominoFromPolyshape(polyshape, false, false /*puzzle.settings.PRECISE_POLYOMINOS*/);
+        Polyomino cells = PolyominoFromPolyshape(polyshape);
         if (!TryPlacePolyshape(cells, openCellX, openCellY, puzzle, polyGrid, +1)) {
           console.spam("Polyshape", polyshape, "does not fit into", openCellX, openCellY);
           continue;

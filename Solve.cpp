@@ -15,8 +15,8 @@ Vector<Path> Solver::Solve(int maxSolutions) {
 
   puzzle->_hasNegations = false;
   puzzle->_hasPolyominos = false;
-  for (int x=0; x<puzzle->_width; x++) {
-    for (int y=0; y<puzzle->_height; y++) {
+  for (u8 x=0; x<puzzle->_width; x++) {
+    for (u8 y=0; y<puzzle->_height; y++) {
       Cell* cell = &puzzle->_grid[x][y];
       if (cell->type == Type::Null) continue;
       if (cell->start == true) {
@@ -78,14 +78,14 @@ void Solver::TailRecurse(Cell* cell) {
   }
 }
 
-void Solver::SolveLoop(int x, int y, Vector<Path>& solutionPaths) {
+void Solver::SolveLoop(s8 x, s8 y, Vector<Path>& solutionPaths) {
   // Stop trying to solve once we reach our goal
   if (solutionPaths.Size() >= MAX_SOLUTIONS) return;
 
   // Check for collisions (outside, gap, self, other)
   Cell* cell = puzzle->GetCell(x, y);
   if (cell == nullptr || cell->type == Type::Null) return;
-  if (cell->gap > Gap::None) return;
+  if (cell->gap != Gap::None) return;
   if (cell->line != Line::None) return;
 
   if (puzzle->_symmetry == SYM_NONE) {
@@ -127,8 +127,8 @@ void Solver::SolveLoop(int x, int y, Vector<Path>& solutionPaths) {
     };
     if (earlyExitData.hasEverLeftEdge && !earlyExitData.isEdge1 && earlyExitData.isEdge2 && isEdge) {
       // See the above comment for an explanation of this math.
-      int floodX = earlyExitData.x2 + (earlyExitData.x1 - x);
-      int floodY = earlyExitData.y2 + (earlyExitData.y1 - y);
+      s8 floodX = earlyExitData.x2 + (earlyExitData.x1 - x);
+      s8 floodY = earlyExitData.y2 + (earlyExitData.y1 - y);
       Region region = puzzle->GetRegion(floodX, floodY);
       if (!region.Empty()) {
         RegionData regionData = Validator::ValidateRegion(*puzzle, region, true);

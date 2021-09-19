@@ -1,6 +1,10 @@
 #pragma once
+#include <vector>
+#include <utility>
 
 using u8 = unsigned char;
+using s8 = signed char;
+using u16 = unsigned short;
 
 enum class Dot    : u8;
 enum class Line   : u8;
@@ -16,6 +20,7 @@ template <typename T> class Vector;
 
 using Region = Vector<Cell*>;
 using Path = Vector<u8>;
+using Polyomino = std::vector<std::pair<s8, s8>>;
 
 #define DELETE_RO3(clazz) \
   clazz##(const clazz & other) = delete; /* Copy constructor */ \

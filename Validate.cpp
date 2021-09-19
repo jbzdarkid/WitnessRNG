@@ -1,33 +1,50 @@
 #include "stdafx.h"
 
 RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
-  // console.log("Validating", puzzle._name);
+  console.log("Validating", puzzle._name);
   RegionData puzzleData(quick ? 0 : puzzle._width * puzzle._height);
 
   bool needsRegions = false;
+  int monoRegionSize = 0;
   // These two are both used by validateRegion, so they are saved on the puzzle itself.
   puzzle._hasNegations = false;
   puzzle._hasPolyominos = false;
 
   // Validate gap failures as an early exit.
-  for (int x=0; x<puzzle._width; x++) {
-    for (int y=0; y<puzzle._height; y++) {
+  for (u8 x=0; x<puzzle._width; x++) {
+    for (u8 y=0; y<puzzle._height; y++) {
       Cell* cell = &puzzle._grid[x][y];
-      if (!needsRegions && cell->type != Type::Line && cell->type != Type::Triangle) needsRegions = true;
-      if (cell->type == Type::Nega) puzzle._hasNegations = true;
-      if (cell->type == Type::Poly || cell->type == Type::Ylop) puzzle._hasPolyominos = true;
-      if (cell->line > Line::None) {
-        if (cell->gap > Gap::None) {
-          console.log("Solution line goes over a gap at", x, y);
-          puzzleData.veryInvalidElements.Push(cell);
-          if (quick) return puzzleData;
-        }
-        if ((cell->dot == Dot::Blue && cell->line == Line::Yellow) ||
-            (cell->dot == Dot::Yellow && cell->line == Line::Blue)) {
-          console.log("Incorrectly covered dot: Dot is", (u8)cell->dot, "but line is", (u8)cell->line);
-          puzzleData.veryInvalidElements.Push(cell);
-          if (quick) return puzzleData;
-        }
+      switch (cell->type) {
+        case Type::Nega:
+          puzzle._hasNegations = true;
+          break;
+        case Type::Poly:
+        case Type::Ylop:
+          puzzle._hasPolyominos = true;
+          break;
+        case Type::Null:
+        case Type::Triangle:
+          break;
+        default:
+          needsRegions = true;
+          break;
+        case Type::Line:
+          if (cell->line != Line::None) {
+            if (cell->gap != Gap::None) {
+              console.log("Solution line goes over a gap at", x, y);
+              puzzleData.veryInvalidElements.Push(cell);
+              if (quick) return puzzleData;
+            }
+            if ((cell->dot == Dot::Blue && cell->line == Line::Yellow) ||
+                (cell->dot == Dot::Yellow && cell->line == Line::Blue)) {
+              console.log("Incorrectly covered dot: Dot is", (u8)cell->dot, "but line is", (u8)cell->line);
+              puzzleData.veryInvalidElements.Push(cell);
+              if (quick) return puzzleData;
+            }
+          } else {
+            monoRegionSize++;
+          }
+          break;
       }
     }
   }
@@ -36,9 +53,9 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
   if (needsRegions) {
     regions = puzzle.GetRegions();
   } else {
-    Region monoRegion(puzzle._width * puzzle._height);
-    for (int x=0; x<puzzle._width; x++) {
-      for (int y=0; y<puzzle._height; y++) {
+    Region monoRegion(monoRegionSize);
+    for (u8 x=0; x<puzzle._width; x++) {
+      for (u8 y=0; y<puzzle._height; y++) {
         Cell* cell = &puzzle._grid[x][y];
         if (cell->line == Line::None) monoRegion.Push(cell);
       }
@@ -46,7 +63,6 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
     regions.Emplace(move(monoRegion));
   }
   console.log("Found", regions.Size(), "region(s)");
-  // console.debug(regions);
 
   for (const Region& region : regions) {
     auto regionData = ValidateRegion(puzzle, region, quick);
@@ -119,8 +135,8 @@ RegionData Validator::RegionCheckNegations2(
   const Region& region,
   const Vector<Cell*>& negationSymbols,
   const Vector<Cell*>& invalidElements,
-  int index,
-  int index2) {
+  u8 index,
+  u8 index2) {
   (void)puzzle;
   (void)region;
   (void)negationSymbols;
@@ -150,7 +166,7 @@ void AddColoredObject(ColoredObjectArr& coloredObjects, int color_) {
 }
 
 RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bool quick) {
-  // console.log("Validating region of size", region.size());
+  console.log("Validating region of size", region.Size());
   RegionData regionData(quick ? 0 : region.Size());
 
   // We could re-use these! Just make a Validator class.
@@ -167,7 +183,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
 
       case Type::Line:
         // Check for uncovered dots
-        if (cell->dot > Dot::None) {
+        if (cell->dot != Dot::None) {
           console.log("Dot at", cell->x, cell->y, "is not covered");
           regionData.veryInvalidElements.Push(cell);
           if (quick) return regionData;
@@ -176,11 +192,11 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
 
       case Type::Triangle:
         {
-          int count = 0;
-          if (puzzle.GetLine(cell->x - 1, cell->y) > Line::None) count++;
-          if (puzzle.GetLine(cell->x + 1, cell->y) > Line::None) count++;
-          if (puzzle.GetLine(cell->x, cell->y - 1) > Line::None) count++;
-          if (puzzle.GetLine(cell->x, cell->y + 1) > Line::None) count++;
+          u8 count = 0;
+          if (puzzle.GetLine(cell->x - 1, cell->y) != Line::None) count++;
+          if (puzzle.GetLine(cell->x + 1, cell->y) != Line::None) count++;
+          if (puzzle.GetLine(cell->x, cell->y - 1) != Line::None) count++;
+          if (puzzle.GetLine(cell->x, cell->y + 1) != Line::None) count++;
           if (cell->count != count) {
             console.log("Cell ", cell, "has", count, "borders");
             regionData.veryInvalidElements.Push(cell);
@@ -214,7 +230,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
   }
 
   for (Cell* star : stars) {
-    int count = GetColoredObject(coloredObjects, star->color);
+    u8 count = GetColoredObject(coloredObjects, star->color);
     if (count == 1) {
       console.log("Found a", star->color, "star in a region with 1", star->color, "object");
       regionData.veryInvalidElements.Push(star);

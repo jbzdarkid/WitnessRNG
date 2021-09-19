@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-Puzzle::Puzzle(int width, int height, bool pillar) {
+Puzzle::Puzzle(u8 width, u8 height, bool pillar) {
   _origWidth = width;
   _origHeight = height;
   _width = 2*width + (pillar ? 0 : 1);
@@ -20,21 +20,21 @@ Puzzle::Puzzle(int width, int height, bool pillar) {
       if (x%2 != 1 || y%2 != 1) cell->type = Type::Line;
     }
   }
-  _connections = new Vector<pair<int, int>>(_numConnections);
+  _connections = new Vector<pair<u8, u8>>(_numConnections);
 
   // J is the dot index
-  for (int j=0; j<(height+1) * (width+1); j++) {
+  for (u8 j=0; j<(height+1) * (width+1); j++) {
     // WitnessPuzzles grid reference
-    int x = (j % (width+1))*2;
-    int y = (height - j/(width+1))*2;
+    u8 x = (j % (width+1))*2;
+    u8 y = (height - j/(width+1))*2;
 
     if (y < height*2) { // Do not add a vertical connection for the bottom row
       // _connections->Emplace({j-(width+1), j}); // (Original game reference)
-      _connections->Emplace({x, y+1});
+      _connections->Emplace({x, (u8)(y+1)});
     }
     if (x < width*2) { // Do not add a horizontal connection for the last element in the row
       // _connections->Emplace({j, j+1}); // (Original game reference)
-      _connections->Emplace({x+1, y});
+      _connections->Emplace({(u8)(x+1), y});
     }
   }
 }
@@ -45,19 +45,13 @@ Puzzle::~Puzzle() {
   delete _connections;
 }
 
-/*
-void Puzzle::SetCell(int x, int y, Cell cell) {
-  _grid[x][y] = cell;
-}
-*/
-
-Cell* Puzzle::GetCell(int x, int y) const {
+Cell* Puzzle::GetCell(s8 x, s8 y) const {
   x = _mod(x);
   if (!_safeCell(x, y)) return nullptr;
   return &_grid[x][y];
 }
 
-pair<int, int> Puzzle::GetSymmetricalPos(int x, int y) {
+pair<u8, u8> Puzzle::GetSymmetricalPos(s8 x, s8 y) {
   if (_symmetry != SYM_NONE) {
     if (_pillar == true) {
       x += _width/2;
@@ -81,22 +75,22 @@ Cell* Puzzle::GetSymmetricalCell(Cell* cell) {
   return &_grid[x][y];
 }
 
-bool Puzzle::MatchesSymmetricalPos(int x1, int y1, int x2, int y2) {
-  return (_mod(x1) == x2 && y1 == y2);
+bool Puzzle::MatchesSymmetricalPos(s8 x1, s8 y1, s8 x2, s8 y2) {
+  return (y1 == y2 && _mod(x1) == x2);
 }
 
-int Puzzle::_mod(int x) const {
+u8 Puzzle::_mod(s8 x) const {
   if (_pillar == false) return x;
   return (x + 2 * _width * _height) % _width;
 }
 
-bool Puzzle::_safeCell(int x, int y) const {
+bool Puzzle::_safeCell(s8 x, s8 y) const {
   if (x < 0 || x >= _width) return false;
   if (y < 0 || y >= _height) return false;
   return true;
 }
 
-Line Puzzle::GetLine(int x, int y) const {
+Line Puzzle::GetLine(s8 x, s8 y) const {
   Cell* cell = GetCell(x, y);
   if (cell == nullptr) return Line::None;
   if (cell->type != Type::Line) return Line::None;
@@ -104,8 +98,8 @@ Line Puzzle::GetLine(int x, int y) const {
 }
 
 void Puzzle::ClearGrid() {
-  for (int x=0; x<_width; x++) {
-    for (int y=0; y<_width; y++) {
+  for (u8 x=0; x<_width; x++) {
+    for (u8 y=0; y<_width; y++) {
       Cell* cell = &_grid[x][y];
       if (x%2 == 1 && y%2 == 1) cell->type = Type::Null;
       cell->dot = Dot::None;
@@ -122,7 +116,7 @@ void Puzzle::ClearGrid() {
   _numConnections = (_origWidth+1)*_origHeight + _origWidth*(_origHeight+1);
 }
 
-void Puzzle::_floodFill(int x, int y, Region& region) {
+void Puzzle::_floodFill(u8 x, u8 y, Region& region) {
   Masked cell = _maskedGrid[x][y];
   if (cell == Masked::Processed) return;
   if (cell != Masked::Uncounted) {
@@ -141,21 +135,21 @@ void Puzzle::_floodFill(int x, int y, Region& region) {
 void Puzzle::GenerateMaskedGrid() {
   // Override all elements with empty lines -- this means that flood fill is just
   // looking for lines with line=0.
-  for (int x=0; x<_width; x++) {
+  for (u8 x=0; x<_width; x++) {
     Masked* row = _maskedGrid[x];
-    int skip = 1;
+    u8 skip = 1;
     if (x%2 == 1) { // Cells are always part of the region
-      for (int y = 1; y < _height; y += 2) row[y] = Masked::Counted;
+      for (u8 y = 1; y < _height; y += 2) row[y] = Masked::Counted;
       skip = 2; // Skip these cells during iteration
     }
 
-    for (int y=0; y<_height; y+=skip) {
+    for (u8 y=0; y<_height; y+=skip) {
       Cell* cell = &_grid[x][y];
-      if (cell->line > Line::None) {
+      if (cell->line != Line::None) {
         row[y] = Masked::Processed; // Traced lines should not be a part of the region
       } else if (cell->gap == Gap::Full) {
         row[y] = Masked::Gap2;
-      } else if (cell->dot > Dot::None) {
+      } else if (cell->dot != Dot::None) {
         row[y] = Masked::Dot;
       } else {
         row[y] = Masked::Counted;
@@ -206,8 +200,8 @@ Vector<Region> Puzzle::GetRegions() {
   // A limit for the total size of all regions -- at least this way, we won't make all the regions as large as possible.
   int remainingRegionSize = _width * _height;
 
-  for (int x=0; x<_width; x++) {
-    for (int y=0; y<_height; y++) {
+  for (u8 x=0; x<_width; x++) {
+    for (u8 y=0; y<_height; y++) {
       if (_maskedGrid[x][y] == Masked::Processed) continue;
 
       // If this cell is empty (aka hasn't already been used by a region), then create a new one
@@ -222,12 +216,12 @@ Vector<Region> Puzzle::GetRegions() {
   return regions;
 }
 
-Region Puzzle::GetRegion(int x, int y) {
+Region Puzzle::GetRegion(s8 x, s8 y) {
   Region region(_width * _height);
 
-  // Hacky. But this lets me use the masked grid instead of the puzzle, so.
-  x = _mod(x);
-  if (!_safeCell(x, y)) return region;
+  Cell* cell = GetCell(x, y);
+  if (cell == nullptr) return region;
+  x = cell->x; // Hacky, substitute for calling _mod.
 
   GenerateMaskedGrid();
   if (_maskedGrid[x][y] != Masked::Processed) {
@@ -239,8 +233,8 @@ Region Puzzle::GetRegion(int x, int y) {
   return region;
 }
 
-void Puzzle::CutRandomEdges(Random& rng, int numCuts) {
-  int numConnections = _numConnections; // TW stores the value of this before making cuts.
+void Puzzle::CutRandomEdges(Random& rng, u8 numCuts) {
+  u8 numConnections = _numConnections; // TW stores the value of this before making cuts.
   for (int i=0; i<numCuts; i++) {
     int rand = rng.Get() % numConnections;
 
@@ -259,7 +253,7 @@ Cell* Puzzle::GetEmptyCell(Random& rng) {
   while (true) {
     int rand = rng.Get() % (_origWidth * _origHeight);
 
-    // This is a guess at converting to WitnessPuzzles grid reference.
+    // This converts to WitnessPuzzles grid references.
     int x = (rand % _origWidth)*2 + 1;
     int y = (_origHeight - rand/_origWidth)*2 - 1;
     Cell* cell = &_grid[x][y];

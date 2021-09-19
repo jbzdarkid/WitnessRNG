@@ -11,10 +11,10 @@ struct Cell {
   Gap gap = (Gap)0;
   u8 count = 0;
   Line line = (Line)0;
-  unsigned short polyshape = 0u;
-  int color;
+  u16 polyshape = 0u;
+  int color = 0;
 
-  End end;
+  End end = (End)0;
   bool start = false;
 
   std::string ToString();
@@ -22,17 +22,17 @@ struct Cell {
 
 class Puzzle {
 public:
-  int _origWidth = 0;
-  int _origHeight = 0;
-  int _height = 0;
-  int _width = 0;
-  bool _pillar = false;
-  int _numConnections = 0;
+  u8 _origWidth = 0;
+  u8 _origHeight = 0;
+  u8 _height = 0;
+  u8 _width = 0;
+  u8 _numConnections = 0;
   u8 _symmetry = 0;
-  std::string _name;
-  Vector<std::pair<int, int>>* _connections;
   Cell** _grid;
   Masked** _maskedGrid;
+  Vector<std::pair<u8, u8>>* _connections;
+  std::string _name;
+  bool _pillar = false;
 
   // Properties set and read by Validate() / Solve()
   bool _hasNegations = false;
@@ -41,34 +41,33 @@ public:
   Cell* _endPoint = nullptr;
 
   // Non-RNG functions from WP... ish
-  Puzzle(int width, int height, bool pillar=false);
+  Puzzle(u8 width, u8 height, bool pillar=false);
   ~Puzzle();
   DELETE_RO3(Puzzle)
   DELETE_RO5(Puzzle)
 
-  // void SetCell(int x, int y, Cell cell);
-  Cell* GetCell(int x, int y) const;
-  std::pair<int, int> GetSymmetricalPos(int x, int y);
+  Cell* GetCell(s8 x, s8 y) const;
+  std::pair<u8, u8> GetSymmetricalPos(s8 x, s8 y);
   Cell* GetSymmetricalCell(Cell* cell);
-  bool MatchesSymmetricalPos(int x1, int y1, int x2, int y2);
+  bool MatchesSymmetricalPos(s8 x1, s8 y1, s8 x2, s8 y2);
   // A variant of getCell which specifically returns line values,
   // and treats objects as being out-of-bounds
-  Line GetLine(int x, int y) const;
+  Line GetLine(s8 x, s8 y) const;
   void ClearGrid();
 
-  void _floodFill(int x, int y, Region& region);
+  void _floodFill(u8 x, u8 y, Region& region);
   void GenerateMaskedGrid();
   Vector<Region> GetRegions();
-  Region GetRegion(int x, int y);
+  Region GetRegion(s8 x, s8 y);
 
   // RNG functions (from TW)
-  void CutRandomEdges(Random& rng, int numCuts);
+  void CutRandomEdges(Random& rng, u8 numCuts);
   // void AddRandomDots(Random& rng, int numDots);
   Cell* GetEmptyCell(Random& rng);
 
-// private:
-  int _mod(int x) const;
-  bool _safeCell(int x, int y) const;
+private:
+  u8 _mod(s8 x) const;
+  bool _safeCell(s8 x, s8 y) const;
 };
 
 std::ostream& operator<<(std::ostream& os, const Puzzle& p);

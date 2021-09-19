@@ -24,8 +24,8 @@ private:
     const Region& region,
     const Vector<Cell*>& negationSymbols,
     const Vector<Cell*>& invalidElements,
-    int index = 0,
-    int index2 = 0);
+    u8 index = 0,
+    u8 index2 = 0);
 
   // Checks if a region is valid. This does not handle negations -- we assume that there are none.
   // Note that this function needs to always ask the puzzle for the current contents of the cell,

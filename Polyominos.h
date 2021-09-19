@@ -18,34 +18,34 @@ public:
   static bool PolyFit(const Region& region, const Puzzle& puzzle);
 
 private:
-  static int GetPolySize(int polyshape);
+  static u8 GetPolySize(u16 polyshape);
   // IMPORTANT NOTE: When formulating these, the top row must contain (0, 0)
   // That means there will never be any negative y values.
   // (0, 0) must also be a cell in the shape, so that
   // placing the shape at (x, y) will fill (x, y)
   // Ylops will have -1s on all adjacent cells, to break "overlaps" for polyominos.
-  static std::vector<std::pair<int, int>> PolyominoFromPolyshape(unsigned short polyshape, bool ylop=false, bool precise=false);
+  static Polyomino PolyominoFromPolyshape(u16 polyshape);
   // If false, poly doesn"t fit and grid is unmodified
   // If true, poly fits and grid is modified (with the placement)
-  static bool TryPlacePolyshape(const std::vector<std::pair<int, int>>& cells, int x, int y, const Puzzle& puzzle, int** polyGrid, int sign);
+  static bool TryPlacePolyshape(const Polyomino& cells, u8 x, u8 y, const Puzzle& puzzle, s8** polyGrid, s8 sign);
   // Places the ylops such that they are inside of the grid, then checks if the polys
   // zero the region.
-  static bool PlaceYlops(const std::vector<Cell*>& ylops, int i, std::vector<Cell*>& polys, const Puzzle& puzzle, int** polyGrid);
+  static bool PlaceYlops(const std::vector<Cell*>& ylops, u8 i, std::vector<Cell*>& polys, const Puzzle& puzzle, s8** polyGrid);
   // Returns whether or not a set of polyominos fit into a region.
   // Solves via recursive backtracking: Some piece must fill the top left square,
   // so try every piece to fill it, then recurse.
-  static bool PlacePolys(std::vector<Cell*>& polys, const Puzzle& puzzle, int** polyGrid);
+  static bool PlacePolys(std::vector<Cell*>& polys, const Puzzle& puzzle, s8** polyGrid);
 
-  static inline int Mask(int x, int y) {
+  static inline u8 Mask(u8 x, u8 y) {
     return 1 << (x * 4 + y);
   }
 
-  static inline bool IsSet(int polyshape, int x, int y) {
+  static inline bool IsSet(u16 polyshape, u8 x, u8 y) {
     if (x < 0 || y < 0) return false;
     if (x >= 4 || y >= 4) return false;
     return (polyshape & Mask(x, y)) != 0;
   }
-  static inline std::vector<unsigned short> GetRotations(unsigned short polyshape) {
+  static inline std::vector<u16> GetRotations(u16 polyshape) {
     return { polyshape }; // When we implement this for real, delete Random::RotatePolyshape.
   }
 

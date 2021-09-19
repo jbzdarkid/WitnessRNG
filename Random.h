@@ -13,7 +13,7 @@ public:
   // The good shuffle
   void ShuffleIntegers(Vector<int>& arr);
 
-  unsigned short RandomPolyshape();
+  u16 RandomPolyshape();
 
   Puzzle* GeneratePolyominos(bool rerollOnImpossible, bool abortOnStarsFailure=false);
 
