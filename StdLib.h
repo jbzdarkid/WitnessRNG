@@ -65,22 +65,30 @@ public:
   }
 
   // Functions I use
+  void UnsafePush(const T value) {
+    assert(_size < _capacity);
+    _data[_size++] = value;
+  }
+
   void Push(const T& obj) {
     if (_size == _capacity) {
-// #ifdef _DEBUG
-//       printf("Warning: Expanding Vector at %p from %d to %d\n", this, _capacity, 2 * _capacity + 1);
-// #endif
       Expand(_capacity + 1);
     }
 
     _data[_size++] = obj;
   }
 
+  void Pop() {
+    assert(_size >= 1);
+    _size--;
+  }
+  T PopValue() {
+    assert(_size >= 1);
+    return _data[--_size];
+  }
+
   void Emplace(T&& obj) {
     if (_size == _capacity) {
-// #ifdef _DEBUG
-//       printf("Warning: Expanding Vector at %p from %d to %d\n", this, _capacity, 2 * _capacity + 1);
-// #endif
       Expand(_capacity + 1);
     }
 
@@ -108,11 +116,6 @@ public:
     assert(index >= 0);
     assert(index < _size);
     return _data[index];
-  }
-
-  T Pop() {
-    assert(_size >= 1);
-    return _data[--_size];
   }
 
   // Expensive functions

@@ -95,8 +95,8 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
 
   Vector<tuple<Cell*, Cell*, Type, Type>> baseCombination;
   while (!negationSymbols.Empty() && !veryInvalidElements.Empty()) {
-    Cell* source = negationSymbols.Pop();
-    Cell* target = veryInvalidElements.Pop();
+    Cell* source = negationSymbols.PopValue();
+    Cell* target = veryInvalidElements.PopValue();
     baseCombination.Emplace({source, target, source->type, target->type});
     source->type = Type::Null;
     target->type = Type::Null;

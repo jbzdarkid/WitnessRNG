@@ -101,7 +101,7 @@ void Solver::SolveLoop(int x, int y, Vector<Path>& solutionPaths) {
   }
 
   if (cell->end != End::None) {
-    path->Push(PATH_NONE);
+    path->UnsafePush(PATH_NONE);
     puzzle->_endPoint = cell;
     RegionData puzzleData = Validator::Validate(*puzzle, true);
     if (puzzleData.Valid()) {
@@ -153,21 +153,21 @@ void Solver::SolveLoop(int x, int y, Vector<Path>& solutionPaths) {
 
   // Recursion order (LRUD) is optimized for BL->TR and mid-start puzzles
   if (y%2 == 0) {
-    path->Push(PATH_LEFT);
+    path->UnsafePush(PATH_LEFT);
     SolveLoop(x - 1, y, solutionPaths);
     path->Pop();
 
-    path->Push(PATH_RIGHT);
+    path->UnsafePush(PATH_RIGHT);
     SolveLoop(x + 1, y, solutionPaths);
     path->Pop();
   }
 
   if (x%2 == 0) {
-    path->Push(PATH_TOP);
+    path->UnsafePush(PATH_TOP);
     SolveLoop(x, y - 1, solutionPaths);
     path->Pop();
 
-    path->Push(PATH_BOTTOM);
+    path->UnsafePush(PATH_BOTTOM);
     SolveLoop(x, y + 1, solutionPaths);
     path->Pop();
   }
