@@ -153,7 +153,7 @@ void Puzzle::GenerateMaskedGrid() {
       Cell* cell = &_grid[x][y];
       if (cell->line > Line::None) {
         row[y] = Masked::Processed; // Traced lines should not be a part of the region
-      } else if (cell->gap == GAP_FULL) {
+      } else if (cell->gap == Gap::Full) {
         row[y] = Masked::Gap2;
       } else if (cell->dot > Dot::None) {
         row[y] = Masked::Dot;
@@ -244,9 +244,9 @@ void Puzzle::CutRandomEdges(Random& rng, int numCuts) {
     if (rand >= _connections->Size()) continue;
 
     auto [x, y] = _connections->At(rand);
-    if (_grid[x][y].gap == 0) {
+    if (_grid[x][y].gap == Gap::None) {
       _numConnections++;
-      _grid[x][y].gap = 1;
+      _grid[x][y].gap = Gap::Break;
     }
   }
 }
@@ -338,8 +338,8 @@ char polyshapeStr[sizeof(R"("polyshape":65535,)")] = {'\0'};
     line,
     typeStr,
     (dot != Dot::None ? ",\"dot\":" : ""), IntToString((u8)dot),
-    (gap != 0 ? ",\"gap\":" : ""), IntToString(gap),
-    (start != 0 ? ",\"start\":true" : ""),
+    (gap != Gap::None ? ",\"gap\":" : ""), IntToString((u8)gap),
+    (start != false ? ",\"start\":true" : ""),
     endDir,
     colorStr,
     polyshapeStr

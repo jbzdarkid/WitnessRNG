@@ -8,7 +8,7 @@ struct Cell {
   u8 y = 0;
 
   Dot dot = (Dot)0;
-  Gap gap = 0;
+  Gap gap = (Gap)0;
   u8 count = 0;
   Line line = (Line)0;
   unsigned short polyshape = 0u;

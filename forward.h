@@ -6,7 +6,6 @@ enum class Dot    : u8;
 enum class Line   : u8;
 enum class Gap    : u8;
 enum class End    : u8;
-enum class Path   : u8;
 enum class Type   : u8;
 enum class Masked : u8;
 struct Cell;
@@ -16,6 +15,7 @@ struct RegionData;
 template <typename T> class Vector;
 
 using Region = Vector<Cell*>;
+using Path = Vector<u8>;
 
 #define DELETE_RO3(clazz) \
   clazz##(const clazz & other) = delete; /* Copy constructor */ \

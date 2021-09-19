@@ -99,7 +99,7 @@ void Solver::SolveLoop(int x, int y, Vector<Vector<u8>>& solutionPaths) {
     Cell* symCell = puzzle->GetSymmetricalCell(cell);
     if (puzzle->MatchesSymmetricalPos(x, y, symCell->x, symCell->y)) return; // Would collide with our reflection
 
-    if (symCell->gap > GAP_NONE) return;
+    if (symCell->gap != Gap::None) return;
 
     cell->line = Line::Blue;
     symCell->line = Line::Yellow;

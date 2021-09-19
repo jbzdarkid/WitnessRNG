@@ -8,7 +8,7 @@ public:
 
   bool IsSolvable();
   // Generates a solution via DFS recursive backtracking
-  Vector<Vector<u8>> Solve(int maxSolutions = 10'000);
+  Vector<Path> Solve(int maxSolutions = 10'000);
 
 private:
   void TailRecurse(Cell* cell);
