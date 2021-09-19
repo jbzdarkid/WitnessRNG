@@ -1,6 +1,5 @@
 #pragma once
 #include "forward.h"
-#include <vector>
 
 class Random {
 public:
@@ -9,10 +8,10 @@ public:
   void Set(int rng);
 
   // The bad shuffle
-  void ShuffleInt(std::vector<int>& array);
+  void ShuffleInt(Vector<int>& array);
 
   // The good shuffle
-  void ShuffleIntegers(std::vector<int>& arr);
+  void ShuffleIntegers(Vector<int>& arr);
 
   unsigned short RandomPolyshape();
 

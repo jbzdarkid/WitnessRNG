@@ -16,9 +16,11 @@ enum class Dot : u8 {
   Invis =  4,
 };
 
-#define GAP_NONE    0
-#define GAP_BREAK   1
-#define GAP_FULL    2
+enum class Gap : u8 {
+  None  = 0,
+  Break = 1,
+  Full  = 2,
+};
 
 #define SYM_NONE    0
 #define SYM_X       1

@@ -112,12 +112,12 @@ int main(int argc, char* argv[]) {
       rng.Set(key);
       assert(rng.Get() == value);
     }
-    for (const auto [initRng, endRng, shuffled] : tests2) {
+    for (const auto& [initRng, endRng, shuffled] : tests2) {
       rng.Set(initRng);
-      vector<int> test = {0, 1, 2, 3};
+      Vector<int> test = {0, 1, 2, 3};
       rng.ShuffleIntegers(test);
       assert(rng.Peek() == endRng);
-      assert(test == shuffled);
+      for (int i=0; i<4; i++) assert(test[i] == shuffled[i]);
     }
     rng.GeneratePolyominos(true);
     rng.GeneratePolyominos(true);

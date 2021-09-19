@@ -90,7 +90,7 @@ void Solver::SolveLoop(int x, int y, Vector<Vector<u8>>& solutionPaths) {
   // Check for collisions (outside, gap, self, other)
   Cell* cell = puzzle->GetCell(x, y);
   if (cell == nullptr || cell->type == Type::Null) return;
-  if (cell->gap > GAP_NONE) return;
+  if (cell->gap > Gap::None) return;
   if (cell->line != Line::None) return;
 
   if (puzzle->_symmetry == SYM_NONE) {

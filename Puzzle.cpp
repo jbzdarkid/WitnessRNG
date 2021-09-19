@@ -1,6 +1,5 @@
 #include "stdafx.h"
 
-#include <cstdarg>
 #include <sstream>
 
 Puzzle::Puzzle(int width, int height, bool pillar) {
@@ -30,11 +29,11 @@ Puzzle::Puzzle(int width, int height, bool pillar) {
     int y = (height - j/(width+1))*2;
 
     if (y < height*2) { // Do not add a vertical connection for the bottom row
-      // _connections[i++] = {j-(width+1), j}; // (Original game reference)
+      // _connections->Emplace({j-(width+1), j}); // (Original game reference)
       _connections->Emplace({x, y+1});
     }
     if (x < width*2) { // Do not add a horizontal connection for the last element in the row
-      // _connections[i++] = {j, j+1}; // (Original game reference)
+      // _connections->Emplace({j, j+1}); // (Original game reference)
       _connections->Emplace({x+1, y});
     }
   }
@@ -110,7 +109,7 @@ void Puzzle::ClearGrid() {
       Cell* cell = &_grid[x][y];
       if (x%2 == 1 && y%2 == 1) cell->type = Type::Null;
       cell->dot = Dot::None;
-      cell->gap = GAP_NONE;
+      cell->gap = Gap::None;
       cell->line = Line::None;
       cell->color = 0;
       cell->count = 0;
@@ -264,6 +263,7 @@ Cell* Puzzle::GetEmptyCell(Random& rng) {
   }
 }
 
+[[deprecated]]
 ostream& operator<<(ostream& os, const Puzzle& p) {
   os << "{";
     os << "\"width\": " << dec << p._origWidth << ',';
@@ -284,11 +284,6 @@ ostream& operator<<(ostream& os, const Puzzle& p) {
     os << ']';
 
   os << "}";
-  return os;
-}
-
-ostream& operator<<(ostream& os, const Region& r) {
-  os << "Region@" << &r;
   return os;
 }
 

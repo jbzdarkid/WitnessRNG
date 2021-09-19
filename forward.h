@@ -1,12 +1,10 @@
 #pragma once
-#include <utility> // For pair, sadly
 
 using u8 = unsigned char;
 
 enum class Dot    : u8;
 enum class Line   : u8;
 enum class Gap    : u8;
-enum class Sym    : u8;
 enum class End    : u8;
 enum class Path   : u8;
 enum class Type   : u8;

@@ -8,7 +8,7 @@ struct Cell {
   u8 y = 0;
 
   Dot dot = (Dot)0;
-  u8 gap = 0;
+  Gap gap = 0;
   u8 count = 0;
   Line line = (Line)0;
   unsigned short polyshape = 0u;
@@ -28,7 +28,7 @@ public:
   int _width = 0;
   bool _pillar = false;
   int _numConnections = 0;
-  int _symmetry = 0;
+  u8 _symmetry = 0;
   std::string _name;
   Vector<std::pair<int, int>>* _connections;
   Cell** _grid;

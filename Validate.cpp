@@ -18,7 +18,7 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
       if (cell->type == Type::Nega) puzzle._hasNegations = true;
       if (cell->type == Type::Poly || cell->type == Type::Ylop) puzzle._hasPolyominos = true;
       if (cell->line > Line::None) {
-        if (cell->gap > GAP_NONE) {
+        if (cell->gap > Gap::None) {
           console.log("Solution line goes over a gap at", x, y);
           puzzleData.veryInvalidElements.Push(cell);
           if (quick) return puzzleData;
