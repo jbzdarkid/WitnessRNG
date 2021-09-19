@@ -1,7 +1,5 @@
 #include "stdafx.h"
 
-#include <unordered_map>
-
 RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
   // console.log("Validating", puzzle._name);
   RegionData puzzleData(quick ? 1 : puzzle._width * puzzle._height);
@@ -131,7 +129,7 @@ RegionData Validator::RegionCheckNegations2(
   return RegionData(0);
 }
 
-using ColoredObjectArr = vector<pair<int, u8>>;
+using ColoredObjectArr = Vector<pair<int, u8>>;
 u8 GetColoredObject(const ColoredObjectArr& coloredObjects, int color_) {
   for (auto [color, count] : coloredObjects) {
     if (color == color_) return count;
@@ -146,19 +144,16 @@ void AddColoredObject(ColoredObjectArr& coloredObjects, int color_) {
       return;
     }
   }
-  coloredObjects.emplace_back(color_, (u8)1);
+  coloredObjects.EmplaceBack({ color_, (u8)1 });
 }
 
 RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bool quick) {
   // console.log("Validating region of size", region.size());
   RegionData regionData(quick ? 1 : region.Size());
 
-  vector<Cell*> squares;
-  squares.reserve(4);
-  vector<Cell*> stars;
-  stars.reserve(4);
-  ColoredObjectArr coloredObjects;
-  coloredObjects.reserve(4);
+  Vector<Cell*> squares(4);
+  Vector<Cell*> stars(4);
+  ColoredObjectArr coloredObjects(4);
   int squareColor = 0;
 
   for (auto& [x, y] : region) {
@@ -193,7 +188,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
         continue;
 
       case CELL_TYPE_SQUARE:
-        squares.push_back(cell);
+        squares.PushBack(cell);
         AddColoredObject(coloredObjects, cell->color);
         if (squareColor == 0) {
           squareColor = cell->color;
@@ -203,7 +198,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
         continue;
 
       case CELL_TYPE_STAR:
-        stars.push_back(cell);
+        stars.PushBack(cell);
         AddColoredObject(coloredObjects, cell->color);
         continue;
     }

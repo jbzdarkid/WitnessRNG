@@ -6,16 +6,20 @@ Solver::Solver(Puzzle* puzzle_) {
   path = new u8[puzzle->_width * puzzle->_height]; // A little overkill but whatever.
 }
 
+Solver::~Solver() {
+  if (path != nullptr) delete path;
+}
+
 bool Solver::IsSolvable() {
   auto solutions = Solve(1);
-  if (solutions.empty()) return false;
+  if (solutions.Size() == 0) return false;
 
   delete solutions[0];
   return true;
 }
 
-vector<Path> Solver::Solve(int maxSolutions) {
-  vector<Cell*> startPoints;
+Vector<Path> Solver::Solve(int maxSolutions) {
+  Vector<Cell*> startPoints(2);
   numEndpoints = 0;
 
   puzzle->_hasNegations = false;
@@ -25,7 +29,7 @@ vector<Path> Solver::Solve(int maxSolutions) {
       Cell* cell = &puzzle->_grid[x][y];
       if (cell->type == CELL_TYPE_NULL) continue;
       if (cell->start == true) {
-        startPoints.push_back(cell);
+        startPoints.PushBack(cell);
       }
       if (cell->end != END_NONE) numEndpoints++;
       if (cell->type == CELL_TYPE_NEGA) puzzle->_hasNegations = true;
@@ -33,10 +37,10 @@ vector<Path> Solver::Solve(int maxSolutions) {
     }
   }
 
-  solutionPaths.clear();
   // Some reasonable default data, which will avoid crashes during the solveLoop.
   // var earlyExitData = [false, {"isEdge": false}, {"isEdge": false}]
   if (maxSolutions > 0) MAX_SOLUTIONS = maxSolutions;
+  Vector<Path> solutionPaths(MAX_SOLUTIONS);
 
   // Large pruning optimization -- Attempt to early exit once we cut out a region.
   // Inspired by https://github.com/Overv/TheWitnessSolver
@@ -69,8 +73,9 @@ vector<Path> Solver::Solve(int maxSolutions) {
     PushPath(startPoint->x);
     PushPath(startPoint->y);
     puzzle->_startPoint = startPoint;
-    SolveLoop(startPoint->x, startPoint->y);
+    SolveLoop(startPoint->x, startPoint->y, solutionPaths);
   }
+
   return solutionPaths;
 }
 
@@ -97,9 +102,9 @@ u8 Solver::PopPath() {
   return path[--pathSize];
 }
 
-void Solver::SolveLoop(int x, int y) {
+void Solver::SolveLoop(int x, int y, Vector<Path>& solutionPaths) {
   // Stop trying to solve once we reach our goal
-  if (solutionPaths.size() >= MAX_SOLUTIONS) return;
+  if (solutionPaths.Size() >= MAX_SOLUTIONS) return;
 
   // Check for collisions (outside, gap, self, other)
   Cell* cell = puzzle->GetCell(x, y);
@@ -124,8 +129,8 @@ void Solver::SolveLoop(int x, int y) {
     puzzle->_endPoint = cell;
     RegionData puzzleData = Validator::Validate(*puzzle, true);
     if (puzzleData.Valid()) {
-      if (solutionPaths.size() < MAX_SOLUTIONS) {
-        solutionPaths.push_back(path);
+      if (solutionPaths.Size() < MAX_SOLUTIONS) {
+        solutionPaths.PushBack(path);
         pathSize = puzzle->_width * puzzle->_height;
         Path newPath = new u8[pathSize];
         memcpy_s(newPath, pathSize, path, pathSize);
@@ -179,18 +184,18 @@ void Solver::SolveLoop(int x, int y) {
   // Recursion order (LRUD) is optimized for BL->TR and mid-start puzzles
   if (y%2 == 0) {
     SetLastPath(PATH_LEFT);
-    SolveLoop(x - 1, y);
+    SolveLoop(x - 1, y, solutionPaths);
 
     SetLastPath(PATH_RIGHT);
-    SolveLoop(x + 1, y);
+    SolveLoop(x + 1, y, solutionPaths);
   }
 
   if (x%2 == 0) {
     SetLastPath(PATH_TOP);
-    SolveLoop(x, y - 1);
+    SolveLoop(x, y - 1, solutionPaths);
 
     SetLastPath(PATH_BOTTOM);
-    SolveLoop(x, y + 1);
+    SolveLoop(x, y + 1, solutionPaths);
   }
 
   PopPath();
