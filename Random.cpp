@@ -131,7 +131,7 @@ Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible, bool abortOnStarsFai
     poly2->color = colors[1];
     poly2->polyshape = polyshape2;
 
-    if (rerollOnImpossible && !Solver(p).IsSolvable()) {
+    if (rerollOnImpossible && Solver(p).Solve(1).Empty()) {
       p->ClearGrid();
       goto rerollPuzzle;
     }

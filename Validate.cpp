@@ -68,7 +68,7 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
     }
   }
   console.debug("Found", negationSymbols.Size(), "negation symbols");
-  if (negationSymbols.Size() == 0) {
+  if (negationSymbols.Empty()) {
     // No negation symbols in this region. Note that there must be negation symbols elsewhere
     // in the puzzle, since puzzle.hasNegations was true.
     return RegionCheck(puzzle, region, quick);
@@ -90,7 +90,7 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
   console.debug("Forcibly negating", veryInvalidElements.Size(), "symbols");
 
   vector<tuple<Cell*, Cell*, Type, Type>> baseCombination;
-  while (negationSymbols.Size() > 0 && veryInvalidElements.Size() > 0) {
+  while (!negationSymbols.Empty() && !veryInvalidElements.Empty()) {
     Cell* source = negationSymbols.Pop();
     Cell* target = veryInvalidElements.Pop();
     baseCombination.emplace_back(source, target, source->type, target->type);

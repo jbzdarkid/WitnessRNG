@@ -9,12 +9,6 @@ Solver::~Solver() {
   delete path;
 }
 
-bool Solver::IsSolvable() {
-  Vector<Path> solutions = Solve(1);
-  if (solutions.Size() == 0) return false;
-  return true;
-}
-
 Vector<Path> Solver::Solve(int maxSolutions) {
   Vector<Cell*> startPoints(puzzle->_width);
   numEndpoints = 0;
@@ -135,7 +129,7 @@ void Solver::SolveLoop(int x, int y, Vector<Path>& solutionPaths) {
       int floodX = earlyExitData.x2 + (earlyExitData.x1 - x);
       int floodY = earlyExitData.y2 + (earlyExitData.y1 - y);
       Region region = puzzle->GetRegion(floodX, floodY);
-      if (region.Size() != 0) {
+      if (!region.Empty()) {
         RegionData regionData = Validator::ValidateRegion(*puzzle, region, true);
         if (!regionData.Valid()) {
           TailRecurse(cell);

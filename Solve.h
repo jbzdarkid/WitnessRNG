@@ -6,7 +6,6 @@ public:
   Solver(Puzzle* puzzle_);
   ~Solver();
 
-  bool IsSolvable();
   // Generates a solution via DFS recursive backtracking
   Vector<Path> Solve(int maxSolutions = 10'000);
 

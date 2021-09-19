@@ -14,7 +14,7 @@
   } \
 }
 #else
-#define assert(cond)
+#define assert(cond) (void)(cond)
 #endif
 
 #include "Polyominos.h"
@@ -38,6 +38,6 @@ struct RegionData {
   Vector<pair<Cell*, Cell*>> negations;
 
   bool Valid() {
-    return invalidElements.Size() == 0 && veryInvalidElements.Size() == 0;
+    return invalidElements.Empty() && veryInvalidElements.Empty();
   }
 };

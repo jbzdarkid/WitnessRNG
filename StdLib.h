@@ -30,7 +30,7 @@ public:
     _data = new T[size];
   }
   Vector(std::initializer_list<T> init) : Vector((int)init.size()) {
-    // for (T it : init) Push(it);
+    for (T it : init) Push(it);
   }
   ~Vector() {
     if (_data != nullptr) delete[] _data;
@@ -83,6 +83,9 @@ public:
     _data[_size++] = std::move(obj);
   }
 
+  bool Empty() const {
+    return _size == 0;
+  }
   int Size() const {
     return _size;
   }
