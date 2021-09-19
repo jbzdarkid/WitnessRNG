@@ -3,18 +3,16 @@
 Solver::Solver(Puzzle* puzzle_) {
   puzzle = puzzle_;
   pathSize = 0;
-  path = new u8[puzzle->_width * puzzle->_height]; // A little overkill but whatever.
+  path = new Vector<u8>(puzzle->_width * puzzle->_height); // A little overkill but whatever.
 }
 
 Solver::~Solver() {
-  if (path != nullptr) delete path;
+  delete path;
 }
 
 bool Solver::IsSolvable() {
   auto solutions = Solve(1);
   if (solutions.Size() == 0) return false;
-
-  delete solutions[0];
   return true;
 }
 
@@ -70,8 +68,8 @@ Vector<Path> Solver::Solve(int maxSolutions) {
   for (Cell* startPoint : startPoints) {
     // NOTE: This is subtly different from WitnessPuzzles, which starts the path with [[x, y]] instead of [x, y]!
     pathSize = 0;
-    PushPath(startPoint->x);
-    PushPath(startPoint->y);
+    path->PushBack(startPoint->x);
+    path->PushBack(startPoint->y);
     puzzle->_startPoint = startPoint;
     SolveLoop(startPoint->x, startPoint->y, solutionPaths);
   }
@@ -85,21 +83,6 @@ void Solver::TailRecurse(Cell* cell) {
     Cell* symCell = puzzle->GetSymmetricalCell(cell);
     symCell->line = Line::None;
   }
-}
-
-// {A, B, C, D} -> {A, B, C, D, E}
-void Solver::PushPath(u8 value) {
-  path[pathSize++] = value;
-}
-
-// {A, B, C, D} -> {A, B, C, E}
-void Solver::SetLastPath(u8 value) {
-  path[pathSize-1] = value;
-}
-
-// {A, B, C, D} -> {A, B, C}
-u8 Solver::PopPath() {
-  return path[--pathSize];
 }
 
 void Solver::SolveLoop(int x, int y, Vector<Path>& solutionPaths) {
@@ -125,18 +108,13 @@ void Solver::SolveLoop(int x, int y, Vector<Path>& solutionPaths) {
   }
 
   if (cell->end != END_NONE) {
-    PushPath(PATH_NONE);
+    path->PushBack(PATH_NONE);
     puzzle->_endPoint = cell;
     RegionData puzzleData = Validator::Validate(*puzzle, true);
     if (puzzleData.Valid()) {
-      if (solutionPaths.Size() < MAX_SOLUTIONS) {
-        solutionPaths.PushBack(path);
-        pathSize = puzzle->_width * puzzle->_height;
-        Path newPath = new u8[pathSize];
-        memcpy_s(newPath, pathSize, path, pathSize);
-      }
+      solutionPaths.EmplaceBack(path->Copy());
     }
-    PopPath();
+    path->Pop();
 
     // If there are no further endpoints, tail recurse.
     // Otherwise, keep going -- we might be able to reach another endpoint.
@@ -179,25 +157,25 @@ void Solver::SolveLoop(int x, int y, Vector<Path>& solutionPaths) {
   }
   */
 
-  PushPath(PATH_NONE);
+  path->PushBack(PATH_NONE);
 
   // Recursion order (LRUD) is optimized for BL->TR and mid-start puzzles
   if (y%2 == 0) {
-    SetLastPath(PATH_LEFT);
+    *path->Back() = PATH_LEFT;
     SolveLoop(x - 1, y, solutionPaths);
 
-    SetLastPath(PATH_RIGHT);
+    *path->Back() = PATH_RIGHT;
     SolveLoop(x + 1, y, solutionPaths);
   }
 
   if (x%2 == 0) {
-    SetLastPath(PATH_TOP);
+    *path->Back() = PATH_TOP;
     SolveLoop(x, y - 1, solutionPaths);
 
-    SetLastPath(PATH_BOTTOM);
+    *path->Back() = PATH_BOTTOM;
     SolveLoop(x, y + 1, solutionPaths);
   }
 
-  PopPath();
+  path->Pop();
   TailRecurse(cell);
 }

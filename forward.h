@@ -13,7 +13,7 @@ template <typename T> class Vector;
 
 
 using Region = Vector<std::pair<u8, u8>>;
-using Path = u8*;
+using Path = Vector<u8>;
 
 #define DELETE_RO3(clazz) \
   clazz##(const clazz & other) = delete; /* Copy constructor */ \

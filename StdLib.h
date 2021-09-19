@@ -1,4 +1,6 @@
 #pragma once
+#include <utility> // For move
+
 template <typename T>
 T** NewDoubleArray(int width, int height) {
   // Single allocation for the grid for perf reasons.
@@ -64,7 +66,7 @@ public:
   }
 
   void EmplaceBack(T&& obj) {
-    _data[_pos++] = move(obj);
+    _data[_pos++] = std::move(obj);
     assert(_pos < _maxPos);
   }
 
@@ -80,6 +82,10 @@ public:
     assert(index < _pos);
     return _data[_pos];
   }
+
+  T* Back() {
+    return &_data[_pos];
+  }
   
   T Pop() {
     assert(_pos >= 1);
@@ -92,6 +98,12 @@ public:
 
   void Append(Vector<T>&& other) {
     for (const T& it : other) EmplaceBack(it);
+  }
+
+  Vector<T> Copy() {
+    Vector<T> newVector(_maxPos);
+    for (const T& it : *this) newVector.PushBack(it);
+    return newVector;
   }
 
 private:
