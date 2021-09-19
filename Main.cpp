@@ -12,6 +12,8 @@ Console console;
 // Ideas to bring back to the javascript version:
 // - Try making a single maskedGrid (and polyGrid?) per puzzle. Then, instead of swapping out the puzzle, just write into that grid.
 // - Clean up parameters passed through solveLoop.
+// - Region should be [cells] not [(x, y)]. (uh, maybe not, unsure of if we store x,y on cell)
+// - Use RegionData to return "info about the puzzle state", rather than members on the puzzle.
 
 unordered_map<int, int> tests = {
   {0x00000000, 0x6F4EE991},

@@ -144,8 +144,7 @@ void Solver::SolveLoop(int x, int y, Vector<Vector<u8>>& solutionPaths) {
 
         // Additionally, we might have left an endpoint in the enclosed region.
         // If so, we should decrement the number of remaining endpoints (and possibly tail recurse).
-        for (auto [x_, y_] : region) {
-          Cell* endCell = &puzzle->_grid[x_][y_];
+        for (Cell* endCell : region) {
           if (endCell->end != End::None) numEndpoints--;
         }
 

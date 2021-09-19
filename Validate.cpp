@@ -13,8 +13,7 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
   // Validate gap failures as an early exit.
   for (int x=0; x<puzzle._width; x++) {
     for (int y=0; y<puzzle._height; y++) {
-      Cell* cell = &puzzle._grid[x][y]; // Copy is probably cheaper here, since we reference some data more than once.
-      // if (cell == nullptr) continue;
+      Cell* cell = &puzzle._grid[x][y];
       if (!needsRegions && cell->type != Type::Line && cell->type != Type::Triangle) needsRegions = true;
       if (cell->type == Type::Nega) puzzle._hasNegations = true;
       if (cell->type == Type::Poly || cell->type == Type::Ylop) puzzle._hasPolyominos = true;
@@ -31,7 +30,7 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
           if (quick) return puzzleData;
         }
       } else if (!needsRegions) { // We can stop building the monoRegion if we actually need regions.
-        monoRegion.Emplace({ (u8)x, (u8)y });
+        monoRegion.Push(cell);
       }
     }
   }
@@ -62,8 +61,7 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
 
   // Get a list of negation symbols in the grid, and set them to "nonce"
   Vector<Cell*> negationSymbols;
-  for (const auto [x, y] : region) {
-    Cell* cell = &puzzle._grid[x][y];
+  for (Cell* cell : region) {
     if (cell->type == Type::Nega) {
       cell->type = Type::Nonce;
       negationSymbols.Push(cell);
@@ -156,8 +154,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
   ColoredObjectArr coloredObjects(4);
   int squareColor = 0;
 
-  for (auto& [x, y] : region) {
-    Cell* cell = &puzzle._grid[x][y];
+  for (Cell* cell : region) {
     switch (cell->type) {
       case Type::Null:
       default:
@@ -166,7 +163,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
       case Type::Line:
         // Check for uncovered dots
         if (cell->dot > Dot::None) {
-          console.log("Dot at", x, y, "is not covered");
+          console.log("Dot at", cell->x, cell->y, "is not covered");
           regionData.veryInvalidElements.Push(cell);
           if (quick) return regionData;
         }
@@ -175,12 +172,12 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
       case Type::Triangle:
         {
           int count = 0;
-          if (puzzle.GetLine(x - 1, y) > Line::None) count++;
-          if (puzzle.GetLine(x + 1, y) > Line::None) count++;
-          if (puzzle.GetLine(x, y - 1) > Line::None) count++;
-          if (puzzle.GetLine(x, y + 1) > Line::None) count++;
+          if (puzzle.GetLine(cell->x - 1, cell->y) > Line::None) count++;
+          if (puzzle.GetLine(cell->x + 1, cell->y) > Line::None) count++;
+          if (puzzle.GetLine(cell->x, cell->y - 1) > Line::None) count++;
+          if (puzzle.GetLine(cell->x, cell->y + 1) > Line::None) count++;
           if (cell->count != count) {
-            console.log("Triangle at grid[" + to_string(x) + "][" + to_string(y) + "] has", count, "borders");
+            console.log("Cell ", cell, "has", count, "borders");
             regionData.veryInvalidElements.Push(cell);
             if (quick) return regionData;
           }
@@ -226,9 +223,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
 
   if (puzzle._hasPolyominos) {
     if (!Polyominos::PolyFit(region, puzzle)) {
-      for (const auto [x, y] : region) {
-        Cell* cell = puzzle.GetCell(x, y);
-        if (cell == nullptr) continue;
+      for (Cell* cell : region) {
         if (cell->type == Type::Poly || cell->type == Type::Ylop) {
           regionData.invalidElements.Push(cell);
           if (quick) return regionData;

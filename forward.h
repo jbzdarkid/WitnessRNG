@@ -17,7 +17,7 @@ class Random;
 struct RegionData;
 template <typename T> class Vector;
 
-using Region = Vector<std::pair<u8, u8>>;
+using Region = Vector<Cell*>;
 
 #define DELETE_RO3(clazz) \
   clazz##(const clazz & other) = delete; /* Copy constructor */ \

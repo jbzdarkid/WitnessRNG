@@ -127,8 +127,7 @@ void Puzzle::_floodFill(int x, int y, Region& region) {
   Masked cell = _maskedGrid[x][y];
   if (cell == Masked::Processed) return;
   if (cell != Masked::Uncounted) {
-    // region.Emplace(&_grid[x][y]);
-    region.Emplace({ (u8)x, (u8)y });
+    region.Emplace(&_grid[x][y]);
   }
   _maskedGrid[x][y] = Masked::Processed;
 
