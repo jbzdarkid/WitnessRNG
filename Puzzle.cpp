@@ -200,8 +200,11 @@ void Puzzle::GenerateMaskedGrid() {
 }
 
 Vector<Region> Puzzle::GetRegions() {
-  Vector<Region> regions(5); //  = VECTOR(5, Region);
+  Vector<Region> regions(4);
   GenerateMaskedGrid();
+
+  // A limit for the total size of all regions -- at least this way, we won't make all the regions as large as possible.
+  int remainingRegionSize = _width * _height;
 
   for (int x=0; x<_width; x++) {
     for (int y=0; y<_height; y++) {
@@ -209,9 +212,10 @@ Vector<Region> Puzzle::GetRegions() {
 
       // If this cell is empty (aka hasn't already been used by a region), then create a new one
       // This will also mark all lines inside the new region as used.
-      Region region(_width * _height);
+      Region region(remainingRegionSize);
       _floodFill(x, y, region);
-      regions.Emplace(move(region), true);
+      remainingRegionSize -= region.Size();
+      regions.Emplace(move(region));
     }
   }
 

@@ -67,8 +67,8 @@ bool Polyominos::PolyFit(const Region& region, const Puzzle& puzzle) {
   int polyCount = 0;
   int regionSize = 0;
   for (Cell* cell : region) {
-    if (cell->polyshape == 0) continue;
     if (cell->x%2 == 1 && cell->y%2 == 1) regionSize++;
+    if (cell->polyshape == 0) continue;
     if (cell->type == Type::Poly) {
       polys.push_back(cell);
       polyCount += GetPolySize(cell->polyshape);

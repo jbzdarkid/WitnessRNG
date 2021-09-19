@@ -119,19 +119,8 @@ int main(int argc, char* argv[]) {
       assert(rng.Peek() == endRng);
       for (int i=0; i<4; i++) assert(test[i] == shuffled[i]);
     }
-    rng.GeneratePolyominos(true);
-    rng.GeneratePolyominos(true);
-    rng.GeneratePolyominos(true);
 
     cout << "Done" << endl;
-
-  } else if (argc > 1 && strcmp(argv[1], "rand") == 0) {
-    Random rng;
-    rng.Set(0x5C64B474);
-    Puzzle* p = rng.GeneratePolyominos(true);
-    cout << *p << endl;
-    auto solutions = Solver(p).Solve();
-    delete p;
 
   } else if (argc > 1 && strcmp(argv[1], "period") == 0) {
     const int numThreads = 8;
@@ -179,15 +168,23 @@ int main(int argc, char* argv[]) {
     cout << "The values ranged from 0x" << hex << uppercase << setfill('0') << setw(8) << *min_element(&minValues[0], &minValues[numThreads]);
     cout << " to 0x" << hex << uppercase << setfill('0') << setw(8) << *max_element(&maxValues[0], &maxValues[numThreads]) << endl;
 
+  } else if (argc > 1 && strcmp(argv[1], "rand") == 0) {
+    Random rng;
+    rng.Set(0x5C64B474);
+    Puzzle* p = rng.GeneratePolyominos(true);
+    cout << *p << endl;
+    auto solutions = Solver(p).Solve();
+    delete p;
+
   } else if (argc > 1 && strcmp(argv[1], "thrd") == 0) {
     vector<thread> threads;
-    #if _DEBUG
+#if _DEBUG
     const int numThreads = 1;
-    const int maxSeed = 0x10;
-    #else
-    const int numThreads = 4;
-    const int maxSeed = 0x10'0000; // Maximum of 0x7FFF'FFFE;
-    #endif
+    const int maxSeed = 0x1000;
+#else
+    const int numThreads = 8;
+    const int maxSeed = 0x1'0000; // Maximum of 0x7FFF'FFFE;
+#endif
     int** data = NewDoubleArray<int>(numThreads, maxSeed / numThreads);
     for (int i=0; i<numThreads; i++) {
       thread t([&](int i) {

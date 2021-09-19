@@ -20,7 +20,7 @@ Vector<Path> Solver::Solve(int maxSolutions) {
       Cell* cell = &puzzle->_grid[x][y];
       if (cell->type == Type::Null) continue;
       if (cell->start == true) {
-        startPoints.Push(cell, true);
+        startPoints.Push(cell);
       }
       if (cell->end != End::None) numEndpoints++;
       if (cell->type == Type::Nega) puzzle->_hasNegations = true;
@@ -56,7 +56,8 @@ Vector<Path> Solver::Solve(int maxSolutions) {
   // Unfortunately, this optimization doesn"t work for pillars, since the two regions are still connected.
   // Additionally, this optimization doesn"t work when custom mechanics are active, as many custom mechanics
   // depend on the path through the entire puzzle
-  doPruning = (puzzle->_pillar == false);
+  // doPruning = (puzzle->_pillar == false);
+  doPruning = false; // Sigh.
 
   for (Cell* startPoint : startPoints) {
     // NOTE: This is subtly different from WitnessPuzzles, which starts the path with [[x, y]] instead of [x, y]!
@@ -150,25 +151,26 @@ void Solver::SolveLoop(int x, int y, Vector<Path>& solutionPaths) {
     }
   }
 
-  path->Push(PATH_NONE);
-
   // Recursion order (LRUD) is optimized for BL->TR and mid-start puzzles
   if (y%2 == 0) {
-    *path->Back() = PATH_LEFT;
+    path->Push(PATH_LEFT);
     SolveLoop(x - 1, y, solutionPaths);
+    path->Pop();
 
-    *path->Back() = PATH_RIGHT;
+    path->Push(PATH_RIGHT);
     SolveLoop(x + 1, y, solutionPaths);
+    path->Pop();
   }
 
   if (x%2 == 0) {
-    *path->Back() = PATH_TOP;
+    path->Push(PATH_TOP);
     SolveLoop(x, y - 1, solutionPaths);
+    path->Pop();
 
-    *path->Back() = PATH_BOTTOM;
+    path->Push(PATH_BOTTOM);
     SolveLoop(x, y + 1, solutionPaths);
+    path->Pop();
   }
 
-  path->Pop();
   TailRecurse(cell);
 }

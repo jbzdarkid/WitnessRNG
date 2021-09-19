@@ -65,18 +65,22 @@ public:
   }
 
   // Functions I use
-  void Push(const T& obj, bool expand = false) {
+  void Push(const T& obj) {
     if (_size == _capacity) {
-      assert(expand);
+// #ifdef _DEBUG
+//       printf("Warning: Expanding Vector at %p from %d to %d\n", this, _capacity, 2 * _capacity + 1);
+// #endif
       Expand(_capacity + 1);
     }
 
     _data[_size++] = obj;
   }
 
-  void Emplace(T&& obj, bool expand = false) {
+  void Emplace(T&& obj) {
     if (_size == _capacity) {
-      assert(expand);
+// #ifdef _DEBUG
+//       printf("Warning: Expanding Vector at %p from %d to %d\n", this, _capacity, 2 * _capacity + 1);
+// #endif
       Expand(_capacity + 1);
     }
 
@@ -106,18 +110,14 @@ public:
     return _data[index];
   }
 
-  T* Back() {
-    return &_data[_size];
-  }
-  
   T Pop() {
     assert(_size >= 1);
     return _data[--_size];
   }
 
   // Expensive functions
-  void Append(const Vector<T>& other, bool expand = false) {
-    for (const T& it : other) Push(it, expand);
+  void Append(const Vector<T>& other) {
+    for (const T& it : other) Push(it);
   }
 
   Vector<T> Copy() {
@@ -127,6 +127,7 @@ public:
   }
 
   void Expand(int size) {
+    if (size == 0) return;
     Vector<T> newVector(_capacity + size);
 
     // Move our data into the new vector, then claim the new vector's data as our own
@@ -149,7 +150,6 @@ private:
 };
 
 template <typename T>
-[[deprecated]]
 bool operator==(const Vector<T>& a, const Vector<T>& b) {
   if (a._size != b._size) return false; // Note that they may have different capacities.
   if (&a == &b) return true; // Very unlikely.

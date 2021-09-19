@@ -2,10 +2,9 @@
 
 RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
   // console.log("Validating", puzzle._name);
-  RegionData puzzleData(quick ? 1 : puzzle._width * puzzle._height);
+  RegionData puzzleData(quick ? 0 : puzzle._width * puzzle._height);
 
   bool needsRegions = false;
-  Region monoRegion(puzzle._width * puzzle._height);
   // These two are both used by validateRegion, so they are saved on the puzzle itself.
   puzzle._hasNegations = false;
   puzzle._hasPolyominos = false;
@@ -29,8 +28,6 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
           puzzleData.veryInvalidElements.Push(cell);
           if (quick) return puzzleData;
         }
-      } else if (!needsRegions) { // We can stop building the monoRegion if we actually need regions.
-        monoRegion.Push(cell);
       }
     }
   }
@@ -39,7 +36,14 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
   if (needsRegions) {
     regions = puzzle.GetRegions();
   } else {
-    regions.Emplace(move(monoRegion), true);
+    Region monoRegion(puzzle._width * puzzle._height);
+    for (int x=0; x<puzzle._width; x++) {
+      for (int y=0; y<puzzle._height; y++) {
+        Cell* cell = &puzzle._grid[x][y];
+        if (cell->line == Line::None) monoRegion.Push(cell);
+      }
+    }
+    regions.Emplace(move(monoRegion));
   }
   console.log("Found", regions.Size(), "region(s)");
   // console.debug(regions);
@@ -60,7 +64,7 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
   if (!puzzle._hasNegations) return RegionCheck(puzzle, region, quick);
 
   // Get a list of negation symbols in the grid, and set them to "nonce"
-  Vector<Cell*> negationSymbols;
+  Vector<Cell*> negationSymbols(puzzle._width);
   for (Cell* cell : region) {
     if (cell->type == Type::Nega) {
       cell->type = Type::Nonce;
@@ -89,11 +93,11 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
   // We don't need to repopulate these, since we're using cell references.
   console.debug("Forcibly negating", veryInvalidElements.Size(), "symbols");
 
-  vector<tuple<Cell*, Cell*, Type, Type>> baseCombination;
+  Vector<tuple<Cell*, Cell*, Type, Type>> baseCombination;
   while (!negationSymbols.Empty() && !veryInvalidElements.Empty()) {
     Cell* source = negationSymbols.Pop();
     Cell* target = veryInvalidElements.Pop();
-    baseCombination.emplace_back(source, target, source->type, target->type);
+    baseCombination.Emplace({source, target, source->type, target->type});
     source->type = Type::Null;
     target->type = Type::Null;
   }
@@ -147,11 +151,12 @@ void AddColoredObject(ColoredObjectArr& coloredObjects, int color_) {
 
 RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bool quick) {
   // console.log("Validating region of size", region.size());
-  RegionData regionData(quick ? 1 : region.Size());
+  RegionData regionData(quick ? 0 : region.Size());
 
-  Vector<Cell*> squares(4);
-  Vector<Cell*> stars(4);
-  ColoredObjectArr coloredObjects(4);
+  // We could re-use these! Just make a Validator class.
+  Vector<Cell*> squares;
+  Vector<Cell*> stars;
+  ColoredObjectArr coloredObjects;
   int squareColor = 0;
 
   for (Cell* cell : region) {

@@ -132,6 +132,10 @@ Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible, bool abortOnStarsFai
     poly2->polyshape = polyshape2;
 
     if (rerollOnImpossible && Solver(p).Solve(1).Empty()) {
+      if (_seed == 0x7db993b5) {
+        auto solutions = Solver(p).Solve();
+        assert(false); // This seed is solvable (and is commonly used by the tests)
+      }
       p->ClearGrid();
       goto rerollPuzzle;
     }
