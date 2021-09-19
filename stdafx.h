@@ -24,9 +24,9 @@ using namespace std;
 
 struct RegionData {
   RegionData(int size) {
-    invalidElements = Vector<Cell*>(size);
-    veryInvalidElements = Vector<Cell*>(size);
-    negations = Vector<pair<Cell*, Cell*>>(size);
+    invalidElements.Expand(size);
+    veryInvalidElements.Expand(size);
+    negations.Expand(size);
   }
   Vector<Cell*> invalidElements;
   Vector<Cell*> veryInvalidElements;
