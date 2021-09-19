@@ -8,11 +8,12 @@
 using namespace std;
 
 void Validator::Validate(Puzzle& puzzle, bool quick) {
-  console.log("Validating", puzzle._name);
+  // console.log("Validating", puzzle._name);
   puzzle._valid = true; // Assume valid until we find an invalid element
 
   bool needsRegions = false;
   Region monoRegion;
+  monoRegion.reserve(puzzle._width * puzzle._height);
   // These two are both used by validateRegion, so they are saved on the puzzle itself.
   puzzle._hasNegations = false;
   puzzle._hasPolyominos = false;
@@ -20,25 +21,25 @@ void Validator::Validate(Puzzle& puzzle, bool quick) {
   // Validate gap failures as an early exit.
   for (int x=0; x<puzzle._width; x++) {
     for (int y=0; y<puzzle._height; y++) {
-      Cell cell = puzzle._grid[x][y]; // Copy is probably cheaper here, since we reference some data more than once.
+      Cell* cell = &puzzle._grid[x][y]; // Copy is probably cheaper here, since we reference some data more than once.
       // if (cell == nullptr) continue;
-      if (!needsRegions && cell.type != CELL_TYPE_LINE && cell.type != CELL_TYPE_TRIANGLE) needsRegions = true;
-      if (cell.type == CELL_TYPE_NEGA) puzzle._hasNegations = true;
-      if (cell.type == CELL_TYPE_POLY || cell.type == CELL_TYPE_YLOP) puzzle._hasPolyominos = true;
-      if (cell.line > Line::None) {
-        if (cell.gap > GAP_NONE) {
+      if (!needsRegions && cell->type != CELL_TYPE_LINE && cell->type != CELL_TYPE_TRIANGLE) needsRegions = true;
+      if (cell->type == CELL_TYPE_NEGA) puzzle._hasNegations = true;
+      if (cell->type == CELL_TYPE_POLY || cell->type == CELL_TYPE_YLOP) puzzle._hasPolyominos = true;
+      if (cell->line > Line::None) {
+        if (cell->gap > GAP_NONE) {
           console.log("Solution line goes over a gap at", x, y);
           puzzle._valid = false;
           if (quick) return;
         }
-        if ((cell.dot == Dot::Blue && cell.line == Line::Yellow) ||
-            (cell.dot == Dot::Yellow && cell.line == Line::Blue)) {
-          console.log("Incorrectly covered dot: Dot is", (u8)cell.dot, "but line is", (u8)cell.line);
+        if ((cell->dot == Dot::Blue && cell->line == Line::Yellow) ||
+            (cell->dot == Dot::Yellow && cell->line == Line::Blue)) {
+          console.log("Incorrectly covered dot: Dot is", (u8)cell->dot, "but line is", (u8)cell->line);
           puzzle._valid = false;
           if (quick) return;
         }
-      } else {
-        monoRegion.emplace_back(x, y);
+      } else if (!needsRegions) { // We can stop building the monoRegion if we actually need regions.
+        monoRegion.emplace_back((u8)x, (u8)y);
       }
     }
   }
@@ -138,67 +139,93 @@ RegionData Validator::RegionCheckNegations2(
   return RegionData();
 }
 
+using ColoredObjectArr = vector<pair<int, u8>>;
+u8 GetColoredObject(const ColoredObjectArr& coloredObjects, int color_) {
+  for (auto [color, count] : coloredObjects) {
+    if (color == color_) return count;
+  }
+  return 0;
+}
+
+void AddColoredObject(ColoredObjectArr& coloredObjects, int color_) {
+  for (auto& it : coloredObjects) {
+    if (it.first == color_) {
+      it.second++;
+      return;
+    }
+  }
+  coloredObjects.emplace_back(color_, (u8)1);
+}
+
 RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bool quick) {
   // console.log("Validating region of size", region.size());
   RegionData regionData;
 
   vector<Cell*> squares;
+  squares.reserve(4);
   vector<Cell*> stars;
-  unordered_map<int, int> coloredObjects;
+  stars.reserve(4);
+  ColoredObjectArr coloredObjects;
+  coloredObjects.reserve(4);
   int squareColor = 0;
 
   for (auto& [x, y] : region) {
     Cell* cell = &puzzle._grid[x][y];
-    if (cell->type == CELL_TYPE_NULL) continue;
+    switch (cell->type) {
+      case CELL_TYPE_NULL:
+      default:
+        continue;
 
-    // Check for uncovered dots
-    if (cell->dot > Dot::None) {
-      console.log("Dot at", x, y, "is not covered");
-      regionData.veryInvalidElements.push_back(cell);
-      if (quick) return regionData;
-    }
+      case CELL_TYPE_LINE:
+        // Check for uncovered dots
+        if (cell->dot > Dot::None) {
+          console.log("Dot at", x, y, "is not covered");
+          regionData.veryInvalidElements.push_back(cell);
+          if (quick) return regionData;
+        }
+        continue;
 
-    // Check for triangles
-    if (cell->type == CELL_TYPE_TRIANGLE) {
-      int count = 0;
-      if (puzzle.GetLine(x - 1, y) > Line::None) count++;
-      if (puzzle.GetLine(x + 1, y) > Line::None) count++;
-      if (puzzle.GetLine(x, y - 1) > Line::None) count++;
-      if (puzzle.GetLine(x, y + 1) > Line::None) count++;
-      if (cell->count != count) {
-        console.log("Triangle at grid[" + to_string(x) + "][" + to_string(y) + "] has", count, "borders");
-        regionData.veryInvalidElements.push_back(cell);
-        if (quick) return regionData;
-      }
-    }
+      case CELL_TYPE_TRIANGLE:
+        {
+          int count = 0;
+          if (puzzle.GetLine(x - 1, y) > Line::None) count++;
+          if (puzzle.GetLine(x + 1, y) > Line::None) count++;
+          if (puzzle.GetLine(x, y - 1) > Line::None) count++;
+          if (puzzle.GetLine(x, y + 1) > Line::None) count++;
+          if (cell->count != count) {
+            console.log("Triangle at grid[" + to_string(x) + "][" + to_string(y) + "] has", count, "borders");
+            regionData.veryInvalidElements.push_back(cell);
+            if (quick) return regionData;
+          }
+        }
+        continue;
 
-    // Count color-based elements
-    if (cell->color != 0) {
-      int count = GetValueOrDefault(coloredObjects, cell->color, 0);
-      coloredObjects[cell->color] = count + 1;
-
-      if (cell->type == CELL_TYPE_SQUARE) {
+      case CELL_TYPE_SQUARE:
         squares.push_back(cell);
+        AddColoredObject(coloredObjects, cell->color);
         if (squareColor == 0) {
           squareColor = cell->color;
         } else if (squareColor != cell->color) {
           squareColor = -1; // Signal value which indicates square color collision
         }
-      }
+        continue;
 
-      if (cell->type == CELL_TYPE_STAR) {
+      case CELL_TYPE_STAR:
         stars.push_back(cell);
-      }
+        AddColoredObject(coloredObjects, cell->color);
+        continue;
     }
   }
 
   if (squareColor == -1) {
-    Append(regionData.invalidElements, squares);
-    if (quick) return regionData;
+    for (Cell* square : squares) {
+      regionData.invalidElements.push_back(square);
+      if (quick) return regionData;
+    }
   }
 
   for (Cell* star : stars) {
-    int count = GetValueOrDefault(coloredObjects, star->color, 0);
+    int count = GetColoredObject(coloredObjects, star->color);
     if (count == 1) {
       console.log("Found a", star->color, "star in a region with 1", star->color, "object");
       regionData.veryInvalidElements.push_back(star);

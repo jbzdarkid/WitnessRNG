@@ -17,7 +17,7 @@ int Polyominos::GetPolySize(int polyshape) {
   return size;
 }
 
-vector<tuple<int, int>> Polyominos::PolyominoFromPolyshape(unsigned short polyshape, bool ylop, bool precise) {
+vector<pair<int, int>> Polyominos::PolyominoFromPolyshape(unsigned short polyshape, bool ylop, bool precise) {
   int topLeftX = -1;
   int topLeftY = -1;
   for (int x=0; x<4; x++) {
@@ -32,7 +32,7 @@ vector<tuple<int, int>> Polyominos::PolyominoFromPolyshape(unsigned short polysh
   }
   if (topLeftX == -1) return {}; // Empty polyomino
 
-  vector<tuple<int, int>> polyomino;
+  vector<pair<int, int>> polyomino;
   for (int x=0; x<4; x++) {
     for (int y=0; y<4; y++) {
       if (!IsSet(polyshape, x, y)) continue;
@@ -119,7 +119,7 @@ bool Polyominos::PolyFit(const Region& region, const Puzzle& puzzle) {
   return ret;
 }
 
-bool Polyominos::TryPlacePolyshape(const vector<tuple<int, int>>& cells, int x, int y, const Puzzle& puzzle, int** polyGrid, int sign) {
+bool Polyominos::TryPlacePolyshape(const vector<pair<int, int>>& cells, int x, int y, const Puzzle& puzzle, int** polyGrid, int sign) {
   console.spam("Placing at", x, y, "with sign", sign);
   vector<int> values(cells.size(), 0);
   for (int i=0; i<cells.size(); i++) {
@@ -168,7 +168,7 @@ bool Polyominos::PlacePolys(std::vector<Cell*>& polys, const Puzzle& puzzle, int
   // The top-left (first open cell) must be filled by a polyomino.
   // However in the case of pillars, there is no top-left, so we try all open cells in the
   // top-most open row
-  vector<tuple<int, int>> openCells;
+  vector<pair<int, int>> openCells;
   for (int y=1; y<puzzle._height; y+=2) {
     for (int x=1; x<puzzle._width; x+=2) {
       if (polyGrid[x][y] >= 0) continue;
@@ -196,7 +196,7 @@ bool Polyominos::PlacePolys(std::vector<Cell*>& polys, const Puzzle& puzzle, int
       polys.erase(polys.begin() + i); // polys.splice(i, 1)
       for (auto polyshape : GetRotations(poly->polyshape)) {
         console.spam("Selected polyshape", polyshape);
-        vector<tuple<int, int>> cells = PolyominoFromPolyshape(polyshape, false, false /*puzzle.settings.PRECISE_POLYOMINOS*/);
+        vector<pair<int, int>> cells = PolyominoFromPolyshape(polyshape, false, false /*puzzle.settings.PRECISE_POLYOMINOS*/);
         if (!TryPlacePolyshape(cells, openCellX, openCellY, puzzle, polyGrid, +1)) {
           console.spam("Polyshape", polyshape, "does not fit into", openCellX, openCellY);
           continue;

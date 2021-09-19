@@ -63,7 +63,7 @@ Cell* Puzzle::GetCell(int x, int y) const {
   return &_grid[x][y];
 }
 
-tuple<int, int> Puzzle::GetSymmetricalPos(int x, int y) {
+pair<int, int> Puzzle::GetSymmetricalPos(int x, int y) {
   if (_symmetry != SYM_NONE) {
     if (_pillar == true) {
       x += _width/2;
@@ -145,7 +145,7 @@ void Puzzle::_floodFill(int x, int y, Region& region) {
   u8 cell = _maskedGrid[x][y];
   if (cell == MASKED_PROCESSED) return;
   if (cell != MASKED_INB_NONCOUNT) {
-    region.emplace_back(x, y);
+    region.emplace_back((u8)x, (u8)y);
   }
   _maskedGrid[x][y] = MASKED_PROCESSED;
 
@@ -220,6 +220,7 @@ void Puzzle::GenerateMaskedGrid() {
 
 vector<Region> Puzzle::GetRegions() {
   vector<Region> regions;
+  regions.reserve(5);
   GenerateMaskedGrid();
 
   for (int x=0; x<_width; x++) {
@@ -229,8 +230,9 @@ vector<Region> Puzzle::GetRegions() {
       // If this cell is empty (aka hasn't already been used by a region), then create a new one
       // This will also mark all lines inside the new region as used.
       Region region;
+      region.reserve(_width * _height);
       _floodFill(x, y, region);
-      regions.emplace_back(region);
+      regions.emplace_back(move(region));
     }
   }
 

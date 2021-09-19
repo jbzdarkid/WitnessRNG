@@ -4,6 +4,7 @@
 #include "Utilities.h"
 
 using u8 = unsigned char;
+using Region = std::vector<std::pair<u8, u8>>;
 
 class Random;
 
@@ -25,8 +26,6 @@ struct Cell {
   std::string ToString();
 };
 
-using Region = std::vector<std::tuple<int, int>>;
-
 class Puzzle {
 public:
   int _origWidth = 0;
@@ -37,7 +36,7 @@ public:
   int _numConnections = 0;
   int _symmetry = 0;
   std::string _name;
-  std::vector<std::tuple<int, int>> _connections;
+  std::vector<std::pair<int, int>> _connections;
   Cell** _grid;
   u8** _maskedGrid;
 
@@ -47,7 +46,7 @@ public:
   bool _hasPolyominos = false;
   Cell* _startPoint = nullptr;
   Cell* _endPoint = nullptr;
-  std::vector<std::tuple<Cell*, Cell*>> _negations;
+  std::vector<std::pair<Cell*, Cell*>> _negations;
   std::vector<Cell*> _invalidElements;
   std::vector<Cell*> _veryInvalidElements;
 
@@ -59,7 +58,7 @@ public:
 
   // void SetCell(int x, int y, Cell cell);
   Cell* GetCell(int x, int y) const;
-  std::tuple<int, int> GetSymmetricalPos(int x, int y);
+  std::pair<int, int> GetSymmetricalPos(int x, int y);
   Cell* GetSymmetricalCell(Cell* cell);
   bool MatchesSymmetricalPos(int x1, int y1, int x2, int y2);
   // A variant of getCell which specifically returns line values,

@@ -1,7 +1,8 @@
 #pragma once
 #include <vector>
 
-using Region = std::vector<std::tuple<int, int>>;
+using u8 = unsigned char;
+using Region = std::vector<std::pair<u8, u8>>;
 
 struct Cell;
 class Puzzle;
@@ -28,10 +29,10 @@ private:
   // (0, 0) must also be a cell in the shape, so that
   // placing the shape at (x, y) will fill (x, y)
   // Ylops will have -1s on all adjacent cells, to break "overlaps" for polyominos.
-  static std::vector<std::tuple<int, int>> PolyominoFromPolyshape(unsigned short polyshape, bool ylop=false, bool precise=false);
+  static std::vector<std::pair<int, int>> PolyominoFromPolyshape(unsigned short polyshape, bool ylop=false, bool precise=false);
   // If false, poly doesn"t fit and grid is unmodified
   // If true, poly fits and grid is modified (with the placement)
-  static bool TryPlacePolyshape(const std::vector<std::tuple<int, int>>& cells, int x, int y, const Puzzle& puzzle, int** polyGrid, int sign);
+  static bool TryPlacePolyshape(const std::vector<std::pair<int, int>>& cells, int x, int y, const Puzzle& puzzle, int** polyGrid, int sign);
   // Places the ylops such that they are inside of the grid, then checks if the polys
   // zero the region.
   static bool PlaceYlops(const std::vector<Cell*>& ylops, int i, std::vector<Cell*>& polys, const Puzzle& puzzle, int** polyGrid);

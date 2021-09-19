@@ -8,12 +8,11 @@
 #include <thread>
 #include <sstream>
 
-#include "Windows.h"
-
 #include "Random.h"
 #include "Puzzle.h"
 #include "Utilities.h"
 #include "Solve.h"
+#include "DoubleArray.h"
 
 using namespace std;
 
@@ -186,16 +185,15 @@ int main(int argc, char* argv[]) {
     const int maxSeed = 0x10;
     #else
     const int numThreads = 4;
-    const int maxSeed = 0x30'0000; // Maximum of 0x7FFF'FFFE;
+    const int maxSeed = 0x10'0000; // Maximum of 0x7FFF'FFFE;
     #endif
+    int** data = NewDoubleArray<int>(numThreads, maxSeed / numThreads);
     for (int i=0; i<numThreads; i++) {
-      thread t([numThreads, maxSeed](int i) {
-        string fileName = "thread_" + to_string(i) + ".dat";
-        auto file = CreateFileA(fileName.c_str(), FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
-
+      thread t([&](int i) {
         Random rng;
-        for (int j=i+1; j<maxSeed; j+=numThreads) {
-          rng.Set(j);
+        for (int j=0; j<maxSeed / numThreads; j++) {
+          int seed = 1 + i + (j * numThreads); // RNG starts at 1
+          rng.Set(seed);
           Puzzle* p = rng.GeneratePolyominos(false, true);
           if (!p) continue; // If stars fail, then we will hit this seed in another thread, and there's no reason to solve.
           bool solvable = Solver(p).IsSolvable();
@@ -204,11 +202,8 @@ int main(int argc, char* argv[]) {
 
           // Write all valid ending RNGs as contiguous bytes into the file. This is not designed to be human-readable.
           int endingRng = rng.Peek();
-          DWORD unused;
-          WriteFile(file, &endingRng, sizeof(endingRng), &unused, nullptr);
-          SetFilePointer(file, 0, nullptr, FILE_END);
+          data[i][j] = endingRng;
         }
-        CloseHandle(file);
       }, i);
       threads.push_back(std::move(t));
     }
@@ -216,23 +211,23 @@ int main(int argc, char* argv[]) {
     for (auto& thread : threads) {
       if (thread.joinable()) thread.join();
     }
+    return 0;
+    // 0b0111 1111 1111 1111 ' 1111 1111 1111 1111
+    // We know that the maximum seed value is 0x7FFF'FFFE
+    // So we shift right by 7, which gets a maximum of 0xFF'FFFF (which is approximately the number of seeds)
+    // Then we use the bottom byte for the bucket, and the remaining 2 bytes for the index.
+    // FOR NOW, we are just counting the number of input RNGs which generate each output RNG. This may change.
+    short** data2 = NewDoubleArray<short>(0xFF, 0xFFFF);
+    (void)data2;
 
-    // auto outFile = CreateFileA("thread_merged.tsv", FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
-    // 
-    // string buffer(1024 * 1024, '\0');
-    // for (int i=0; i<numThreads; i++) {
-    //   string fileName = "thread_" + to_string(i) + ".txt";
-    //   auto file = CreateFileA(fileName.c_str(), GENERIC_READ, NULL, nullptr, OPEN_EXISTING, NULL, nullptr);
-    //   DWORD bytesRead;
-    //   do {
-    //     ReadFile(file, &buffer[0], (DWORD)buffer.size(), &bytesRead, nullptr);
-    //     DWORD unused;
-    //     WriteFile(outFile, &buffer[0], bytesRead, &unused, nullptr);
-    //     SetFilePointer(outFile, 0, nullptr, FILE_END);
-    //   } while (bytesRead > 0);
-    //   CloseHandle(file);
-    // }
-    // CloseHandle(outFile);
+    // ... I'm not sure what the hell to do here.
+
+    Random rng;
+    for (int i=1; i<maxSeed; i++) {
+      rng.Set(i);
+      rng.GeneratePolyominos(false);
+      // ...
+    }
   }
 
   return 0;

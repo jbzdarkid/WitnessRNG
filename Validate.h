@@ -6,7 +6,7 @@ class Puzzle;
 struct RegionData {
   std::vector<Cell*> invalidElements;
   std::vector<Cell*> veryInvalidElements;
-  std::vector<std::tuple<Cell*, Cell*>> negations;
+  std::vector<std::pair<Cell*, Cell*>> negations;
 
   inline bool Valid() {
     return invalidElements.size() == 0 && veryInvalidElements.size() == 0;
