@@ -18,7 +18,7 @@ Puzzle::Puzzle(int width, int height, bool pillar) {
       Cell* cell = &_grid[x][y];
       cell->x = x;
       cell->y = y;
-      if (x%2 != 1 || y%2 != 1) cell->type = CELL_TYPE_LINE;
+      if (x%2 != 1 || y%2 != 1) cell->type = Type::Line;
     }
   }
   _connections = new Vector<pair<int, int>>(_numConnections);
@@ -100,7 +100,7 @@ bool Puzzle::_safeCell(int x, int y) const {
 Line Puzzle::GetLine(int x, int y) const {
   Cell* cell = GetCell(x, y);
   if (cell == nullptr) return Line::None;
-  if (cell->type != CELL_TYPE_LINE) return Line::None;
+  if (cell->type != Type::Line) return Line::None;
   return cell->line;
 }
 
@@ -108,7 +108,7 @@ void Puzzle::ClearGrid() {
   for (int x=0; x<_width; x++) {
     for (int y=0; y<_width; y++) {
       Cell* cell = &_grid[x][y];
-      if (x%2 == 1 && y%2 == 1) cell->type = CELL_TYPE_NULL;
+      if (x%2 == 1 && y%2 == 1) cell->type = Type::Null;
       cell->dot = Dot::None;
       cell->gap = GAP_NONE;
       cell->line = Line::None;
@@ -117,7 +117,7 @@ void Puzzle::ClearGrid() {
       cell->polyshape = 0u;
 
       cell->start = false;
-      cell->end = END_NONE;
+      cell->end = End::None;
     }
   }
   _numConnections = (_origWidth+1)*_origHeight + _origWidth*(_origHeight+1);
@@ -127,6 +127,7 @@ void Puzzle::_floodFill(int x, int y, Region& region) {
   Masked cell = _maskedGrid[x][y];
   if (cell == Masked::Processed) return;
   if (cell != Masked::Uncounted) {
+    // region.Emplace(&_grid[x][y]);
     region.Emplace({ (u8)x, (u8)y });
   }
   _maskedGrid[x][y] = Masked::Processed;
@@ -260,26 +261,8 @@ Cell* Puzzle::GetEmptyCell(Random& rng) {
     int x = (rand % _origWidth)*2 + 1;
     int y = (_origHeight - rand/_origWidth)*2 - 1;
     Cell* cell = &_grid[x][y];
-    if (cell->type == CELL_TYPE_NULL) return cell;
+    if (cell->type == Type::Null) return cell;
   }
-}
-
-ostream& operator<<(ostream& os, const Cell& c) {
-  if (c.type == CELL_TYPE_NULL) {
-    os << "null";
-    return os;
-  }
-
-  os << '{';
-    if (c.dot != Dot::None) os << "\"dot\": " << dec << (u8)c.dot << ",";
-    if (c.gap != 0) os << "\"gap\": " << dec << c.gap << ",";
-    if (c.polyshape != 0) os << "\"polyshape\": " << dec << c.polyshape << ",";
-    if (c.start) os << "\"start\": true,";
-    if (c.end != END_NONE) os << "\"end\": \"" << c.end << "\",";
-    if (c.color != 0) os << "\"color\": \"" << c.color << "\",";
-    os << "\"type\": \"" << c.type << "\"";
-  os << '}';
-  return os;
 }
 
 ostream& operator<<(ostream& os, const Puzzle& p) {
@@ -326,25 +309,25 @@ const char* IntToString(int i) {
 }
 
 std::string Cell::ToString() {
-  if (x%2 == 1 && y%2 == 1 && type == CELL_TYPE_NULL) return "null";
+  if (x%2 == 1 && y%2 == 1 && type == Type::Null) return "null";
   
   const char* typeStr = "";
-  if (type == CELL_TYPE_NULL    ) typeStr = ",\"type\":null";
-  if (type == CELL_TYPE_LINE    ) typeStr = ",\"type\":\"line\"";
-  if (type == CELL_TYPE_SQUARE  ) typeStr = ",\"type\":\"square\"";
-  if (type == CELL_TYPE_STAR    ) typeStr = ",\"type\":\"star\"";
-  if (type == CELL_TYPE_NEGA    ) typeStr = ",\"type\":\"nega\"";
-  if (type == CELL_TYPE_TRIANGLE) typeStr = ",\"type\":\"triangle\"";
-  if (type == CELL_TYPE_POLY    ) typeStr = ",\"type\":\"poly\"";
-  if (type == CELL_TYPE_YLOP    ) typeStr = ",\"type\":\"ylop\"";
+  if (type == Type::Null    ) typeStr = ",\"type\":null";
+  if (type == Type::Line    ) typeStr = ",\"type\":\"line\"";
+  if (type == Type::Square  ) typeStr = ",\"type\":\"square\"";
+  if (type == Type::Star    ) typeStr = ",\"type\":\"star\"";
+  if (type == Type::Nega    ) typeStr = ",\"type\":\"nega\"";
+  if (type == Type::Triangle) typeStr = ",\"type\":\"triangle\"";
+  if (type == Type::Poly    ) typeStr = ",\"type\":\"poly\"";
+  if (type == Type::Ylop    ) typeStr = ",\"type\":\"ylop\"";
 
 char polyshapeStr[sizeof(R"("polyshape":65535,)")] = {'\0'};
   if (polyshape != 0) sprintf_s(&polyshapeStr[0], sizeof(polyshapeStr), ",\"polyshape\":%hu", polyshape);
   const char* endDir = "";
-  if (end == END_LEFT)   endDir = ",\"end\":\"left\"";
-  if (end == END_TOP)    endDir = ",\"end\":\"top\"";
-  if (end == END_RIGHT)  endDir = ",\"end\":\"right\"";
-  if (end == END_BOTTOM) endDir = ",\"end\":\"bottom\"";
+  if (end == End::Left)   endDir = ",\"end\":\"left\"";
+  if (end == End::Top)    endDir = ",\"end\":\"top\"";
+  if (end == End::Right)  endDir = ",\"end\":\"right\"";
+  if (end == End::Bottom) endDir = ",\"end\":\"bottom\"";
 
   char colorStr[sizeof(R"("color":"#FF00FF",)")] = {'\0'};
   if (color != 0) sprintf_s(&colorStr[0], sizeof(colorStr), ",\"color\":\"#%06x\"", color);

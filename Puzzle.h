@@ -3,7 +3,7 @@
 #include <string>
 
 struct Cell {
-  u8 type;
+  Type type;
   u8 x = 0;
   u8 y = 0;
 
@@ -14,7 +14,7 @@ struct Cell {
   unsigned short polyshape = 0u;
   int color;
 
-  u8 end;
+  End end;
   bool start = false;
 
   std::string ToString();

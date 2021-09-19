@@ -15,9 +15,9 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
     for (int y=0; y<puzzle._height; y++) {
       Cell* cell = &puzzle._grid[x][y]; // Copy is probably cheaper here, since we reference some data more than once.
       // if (cell == nullptr) continue;
-      if (!needsRegions && cell->type != CELL_TYPE_LINE && cell->type != CELL_TYPE_TRIANGLE) needsRegions = true;
-      if (cell->type == CELL_TYPE_NEGA) puzzle._hasNegations = true;
-      if (cell->type == CELL_TYPE_POLY || cell->type == CELL_TYPE_YLOP) puzzle._hasPolyominos = true;
+      if (!needsRegions && cell->type != Type::Line && cell->type != Type::Triangle) needsRegions = true;
+      if (cell->type == Type::Nega) puzzle._hasNegations = true;
+      if (cell->type == Type::Poly || cell->type == Type::Ylop) puzzle._hasPolyominos = true;
       if (cell->line > Line::None) {
         if (cell->gap > GAP_NONE) {
           console.log("Solution line goes over a gap at", x, y);
@@ -64,8 +64,8 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
   Vector<Cell*> negationSymbols;
   for (const auto [x, y] : region) {
     Cell* cell = &puzzle._grid[x][y];
-    if (cell->type == CELL_TYPE_NEGA) {
-      cell->type = CELL_TYPE_NONCE;
+    if (cell->type == Type::Nega) {
+      cell->type = Type::Nonce;
       negationSymbols.Push(cell);
     }
   }
@@ -83,7 +83,7 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
 
   // Set "nonce" back to "nega" for the negation symbols
   for (Cell* cell : negationSymbols) {
-    cell->type = CELL_TYPE_NEGA;
+    cell->type = Type::Nega;
   }
 
   auto& invalidElements = regionData.invalidElements;
@@ -91,13 +91,13 @@ RegionData Validator::ValidateRegion(const Puzzle& puzzle, const Region& region,
   // We don't need to repopulate these, since we're using cell references.
   console.debug("Forcibly negating", veryInvalidElements.Size(), "symbols");
 
-  vector<tuple<Cell*, Cell*, u8, u8>> baseCombination;
+  vector<tuple<Cell*, Cell*, Type, Type>> baseCombination;
   while (negationSymbols.Size() > 0 && veryInvalidElements.Size() > 0) {
     Cell* source = negationSymbols.Pop();
     Cell* target = veryInvalidElements.Pop();
     baseCombination.emplace_back(source, target, source->type, target->type);
-    source->type = CELL_TYPE_NULL;
-    target->type = CELL_TYPE_NULL;
+    source->type = Type::Null;
+    target->type = Type::Null;
   }
 
   regionData = RegionCheckNegations2(puzzle, region, negationSymbols, invalidElements);
@@ -159,11 +159,11 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
   for (auto& [x, y] : region) {
     Cell* cell = &puzzle._grid[x][y];
     switch (cell->type) {
-      case CELL_TYPE_NULL:
+      case Type::Null:
       default:
         continue;
 
-      case CELL_TYPE_LINE:
+      case Type::Line:
         // Check for uncovered dots
         if (cell->dot > Dot::None) {
           console.log("Dot at", x, y, "is not covered");
@@ -172,7 +172,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
         }
         continue;
 
-      case CELL_TYPE_TRIANGLE:
+      case Type::Triangle:
         {
           int count = 0;
           if (puzzle.GetLine(x - 1, y) > Line::None) count++;
@@ -187,7 +187,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
         }
         continue;
 
-      case CELL_TYPE_SQUARE:
+      case Type::Square:
         squares.Push(cell);
         AddColoredObject(coloredObjects, cell->color);
         if (squareColor == 0) {
@@ -197,7 +197,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
         }
         continue;
 
-      case CELL_TYPE_STAR:
+      case Type::Star:
         stars.Push(cell);
         AddColoredObject(coloredObjects, cell->color);
         continue;
@@ -229,7 +229,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
       for (const auto [x, y] : region) {
         Cell* cell = puzzle.GetCell(x, y);
         if (cell == nullptr) continue;
-        if (cell->type == CELL_TYPE_POLY || cell->type == CELL_TYPE_YLOP) {
+        if (cell->type == Type::Poly || cell->type == Type::Ylop) {
           regionData.invalidElements.Push(cell);
           if (quick) return regionData;
         }

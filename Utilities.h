@@ -2,18 +2,18 @@
 #include <iostream>
 
 enum class Line : u8 {
-  None = 0,
-  Black = 1,
-  Blue = 2,
+  None =   0,
+  Black =  1,
+  Blue =   2,
   Yellow = 3,
 };
 
 enum class Dot : u8 {
-  None = 0,
-  Black = 1,
-  Blue = 2,
+  None =   0,
+  Black =  1,
+  Blue =   2,
   Yellow = 3,
-  Invis = 4,
+  Invis =  4,
 };
 
 #define GAP_NONE    0
@@ -25,11 +25,13 @@ enum class Dot : u8 {
 #define SYM_Y       2
 #define SYM_XY      3
 
-#define END_NONE    0
-#define END_LEFT    1
-#define END_RIGHT   2
-#define END_TOP     3
-#define END_BOTTOM  4
+enum class End : u8 {
+  None   = 0,
+  Left   = 1,
+  Right  = 2,
+  Top    = 3,
+  Bottom = 4,
+};
 
 #define PATH_NONE   0
 #define PATH_LEFT   1
@@ -37,15 +39,17 @@ enum class Dot : u8 {
 #define PATH_TOP    3
 #define PATH_BOTTOM 4
 
-#define CELL_TYPE_NULL     0
-#define CELL_TYPE_LINE     1
-#define CELL_TYPE_SQUARE   2
-#define CELL_TYPE_STAR     3
-#define CELL_TYPE_NEGA     4
-#define CELL_TYPE_TRIANGLE 5
-#define CELL_TYPE_POLY     6
-#define CELL_TYPE_YLOP     7
-#define CELL_TYPE_NONCE    8
+enum class Type : u8 {
+  Null =     0,
+  Line =     1,
+  Square =   2,
+  Star =     3,
+  Nega =     4,
+  Triangle = 5,
+  Poly =     6,
+  Ylop =     7,
+  Nonce =    8,
+};
 
 // The masked grid contains 5 colors:
 enum class Masked : u8 {

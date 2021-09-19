@@ -10,12 +10,12 @@ Solver::~Solver() {
 }
 
 bool Solver::IsSolvable() {
-  Vector<Path> solutions = Solve(1);
+  Vector<Vector<u8>> solutions = Solve(1);
   if (solutions.Size() == 0) return false;
   return true;
 }
 
-Vector<Path> Solver::Solve(int maxSolutions) {
+Vector<Vector<u8>> Solver::Solve(int maxSolutions) {
   Vector<Cell*> startPoints(puzzle->_width);
   numEndpoints = 0;
 
@@ -24,20 +24,20 @@ Vector<Path> Solver::Solve(int maxSolutions) {
   for (int x=0; x<puzzle->_width; x++) {
     for (int y=0; y<puzzle->_height; y++) {
       Cell* cell = &puzzle->_grid[x][y];
-      if (cell->type == CELL_TYPE_NULL) continue;
+      if (cell->type == Type::Null) continue;
       if (cell->start == true) {
         startPoints.Push(cell, true);
       }
-      if (cell->end != END_NONE) numEndpoints++;
-      if (cell->type == CELL_TYPE_NEGA) puzzle->_hasNegations = true;
-      if (cell->type == CELL_TYPE_POLY || cell->type == CELL_TYPE_YLOP) puzzle->_hasPolyominos = true;
+      if (cell->end != End::None) numEndpoints++;
+      if (cell->type == Type::Nega) puzzle->_hasNegations = true;
+      if (cell->type == Type::Poly || cell->type == Type::Ylop) puzzle->_hasPolyominos = true;
     }
   }
 
   // Some reasonable default data, which will avoid crashes during the solveLoop.
   // var earlyExitData = [false, {"isEdge": false}, {"isEdge": false}]
   if (maxSolutions > 0) MAX_SOLUTIONS = maxSolutions;
-  Vector<Path> solutionPaths(MAX_SOLUTIONS);
+  Vector<Vector<u8>> solutionPaths(MAX_SOLUTIONS);
 
   // Large pruning optimization -- Attempt to early exit once we cut out a region.
   // Inspired by https://github.com/Overv/TheWitnessSolver
@@ -83,13 +83,13 @@ void Solver::TailRecurse(Cell* cell) {
   }
 }
 
-void Solver::SolveLoop(int x, int y, Vector<Path>& solutionPaths) {
+void Solver::SolveLoop(int x, int y, Vector<Vector<u8>>& solutionPaths) {
   // Stop trying to solve once we reach our goal
   if (solutionPaths.Size() >= MAX_SOLUTIONS) return;
 
   // Check for collisions (outside, gap, self, other)
   Cell* cell = puzzle->GetCell(x, y);
-  if (cell == nullptr || cell->type == CELL_TYPE_NULL) return;
+  if (cell == nullptr || cell->type == Type::Null) return;
   if (cell->gap > GAP_NONE) return;
   if (cell->line != Line::None) return;
 
@@ -105,7 +105,7 @@ void Solver::SolveLoop(int x, int y, Vector<Path>& solutionPaths) {
     symCell->line = Line::Yellow;
   }
 
-  if (cell->end != END_NONE) {
+  if (cell->end != End::None) {
     path->Push(PATH_NONE);
     puzzle->_endPoint = cell;
     RegionData puzzleData = Validator::Validate(*puzzle, true);
@@ -123,37 +123,39 @@ void Solver::SolveLoop(int x, int y, Vector<Path>& solutionPaths) {
     }
   }
 
-  /*
   if (doPruning) {
-    var isEdge = x <= 0 || y <= 0 || x >= puzzle->width - 1 || y >= puzzle->height - 1
-    var newEarlyExitData = [
-      earlyExitData[0] || (!isEdge && earlyExitData[2].isEdge), // Have we ever left an edge?
-      earlyExitData[2],                                         // The position before our current one
-      {'x':x, 'y':y, 'isEdge':isEdge}                           // Our current position.
-    ]
-    if (earlyExitData[0] && !earlyExitData[1].isEdge && earlyExitData[2].isEdge && isEdge) {
+    bool isEdge = x <= 0 || y <= 0 || x >= puzzle->_width - 1 || y >= puzzle->_height - 1;
+    EarlyExitData newEarlyExitData = {
+      earlyExitData.hasEverLeftEdge || (!isEdge && earlyExitData.isEdge2), // Have we ever left an edge?
+      earlyExitData.x2, earlyExitData.y2, earlyExitData.isEdge2,           // The position before our current one
+      x, y, isEdge                                                         // Our current position.
+    };
+    if (earlyExitData.hasEverLeftEdge && !earlyExitData.isEdge1 && earlyExitData.isEdge2 && isEdge) {
       // See the above comment for an explanation of this math.
-      var floodX = earlyExitData[2].x + (earlyExitData[1].x - x)
-      var floodY = earlyExitData[2].y + (earlyExitData[1].y - y)
-      var region = puzzle->getRegion(floodX, floodY)
-      if (region != null) {
-        var regionData = window.validateRegion(puzzle, region, true)
-        if (!regionData.valid()) return tailRecurse(x, y)
+      int floodX = earlyExitData.x2 + (earlyExitData.x1 - x);
+      int floodY = earlyExitData.y2 + (earlyExitData.y1 - y);
+      Region region = puzzle->GetRegion(floodX, floodY);
+      if (region.Size() != 0) {
+        RegionData regionData = Validator::ValidateRegion(*puzzle, region, true);
+        if (!regionData.Valid()) {
+          TailRecurse(cell);
+          return;
+        }
 
         // Additionally, we might have left an endpoint in the enclosed region.
         // If so, we should decrement the number of remaining endpoints (and possibly tail recurse).
-        for (var pos of region.cells) {
-          var endCell = puzzle->getCell(pos.x, pos.y)
-          if (endCell != null && endCell.end != null) numEndpoints--
+        for (auto [x_, y_] : region) {
+          Cell* endCell = &puzzle->_grid[x_][y_];
+          if (endCell->end != End::None) numEndpoints--;
         }
 
-        if (numEndpoints === 0) return tailRecurse(x, y)
+        if (numEndpoints == 0) {
+          TailRecurse(cell);
+          return;
+        }
       }
     }
-  } else {
-    var newEarlyExitData = earlyExitData // Unused, just make a cheap copy.
   }
-  */
 
   path->Push(PATH_NONE);
 

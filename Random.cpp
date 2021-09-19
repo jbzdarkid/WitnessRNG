@@ -97,7 +97,7 @@ Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible, bool abortOnStarsFai
   rerollPuzzle:
   {
     p->_grid[0][8].start = true;
-    p->_grid[8][0].end = END_RIGHT; p->_numConnections++;
+    p->_grid[8][0].end = End::Right; p->_numConnections++;
 
     rerollStars:
     Cell* star1 = p->GetEmptyCell(*this);
@@ -112,9 +112,9 @@ Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible, bool abortOnStarsFai
       goto rerollStars;
     }
 
-    star1->type = CELL_TYPE_STAR;
+    star1->type = Type::Star;
     star1->color = colors[0];
-    star2->type = CELL_TYPE_STAR;
+    star2->type = Type::Star;
     star2->color = colors[0];
 
     p->CutRandomEdges(*this, 8);
@@ -122,12 +122,12 @@ Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible, bool abortOnStarsFai
     unsigned short polyshape1 = RandomPolyshape();
     unsigned short polyshape2 = RandomPolyshape();
     Cell* poly1 = p->GetEmptyCell(*this);
-    poly1->type = CELL_TYPE_POLY;
+    poly1->type = Type::Poly;
     poly1->color = colors[1];
     poly1->polyshape = polyshape1;
 
     Cell* poly2 = p->GetEmptyCell(*this);
-    poly2->type = CELL_TYPE_POLY;
+    poly2->type = Type::Poly;
     poly2->color = colors[1];
     poly2->polyshape = polyshape2;
 

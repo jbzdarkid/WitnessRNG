@@ -3,8 +3,13 @@
 
 using u8 = unsigned char;
 
-enum class Dot : u8;
-enum class Line : u8;
+enum class Dot    : u8;
+enum class Line   : u8;
+enum class Gap    : u8;
+enum class Sym    : u8;
+enum class End    : u8;
+enum class Path   : u8;
+enum class Type   : u8;
 enum class Masked : u8;
 struct Cell;
 class Puzzle;
@@ -12,9 +17,7 @@ class Random;
 struct RegionData;
 template <typename T> class Vector;
 
-
 using Region = Vector<std::pair<u8, u8>>;
-using Path = Vector<u8>;
 
 #define DELETE_RO3(clazz) \
   clazz##(const clazz & other) = delete; /* Copy constructor */ \
