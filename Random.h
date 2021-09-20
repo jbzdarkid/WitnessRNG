@@ -15,7 +15,7 @@ public:
 
   u16 RandomPolyshape();
 
-  Puzzle* GeneratePolyominos(bool rerollOnImpossible, bool abortOnStarsFailure=false);
+  Puzzle* GeneratePolyominos(bool rerollOnImpossible, bool abortOnStarsFailure=false, u8* validSeeds=nullptr);
 
 private:
   int _seed = 0;

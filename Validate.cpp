@@ -57,7 +57,7 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
     for (u8 x=0; x<puzzle._width; x++) {
       for (u8 y=0; y<puzzle._height; y++) {
         Cell* cell = &puzzle._grid[x][y];
-        if (cell->line == Line::None) monoRegion.Push(cell);
+        if (cell->line == Line::None) monoRegion.UnsafePush(cell);
       }
     }
     regions.Emplace(move(monoRegion));

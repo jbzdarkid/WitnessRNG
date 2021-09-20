@@ -94,7 +94,7 @@ bool Polyominos::TryPlacePolyshape(const Polyomino& cells, u8 x, u8 y, const Puz
     auto [cellX, cellY] = cells[i];
     if (puzzle.GetCell(cellX + x, cellY + y) == nullptr) return false;
     s8 puzzleCell = polyGrid[cellX + x][cellY + y];
-    values[i] = puzzleCell;
+    values.UnsafePush(puzzleCell);
   }
   for (u8 i=0; i<cells.size(); i++) {
     auto [cellX, cellY] = cells[i];

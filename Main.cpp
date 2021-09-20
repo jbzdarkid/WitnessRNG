@@ -182,10 +182,13 @@ int main(int argc, char* argv[]) {
     const int numThreads = 1;
     const int maxSeed = 0x1000;
 #else
-    const int numThreads = 1;
-    const int maxSeed = 0x10'0000; // Maximum of 0x7FFF'FFFE;
+    const int numThreads = 4;
+    const int maxSeed = 0x1'0000; // Maximum of 0x7FFF'FFFE;
 #endif
-    int** data = NewDoubleArray<int>(numThreads, maxSeed / numThreads);
+    // The /8 here is because we know that this data is sparse -- most seeds are not valid.
+    Vector<Vector<int>> data(numThreads);
+    for (int i=0; i<numThreads; i++) data.Emplace(Vector<int>(maxSeed / numThreads / 8));
+
     for (int i=0; i<numThreads; i++) {
       thread t([&](int i) {
         Random rng;
@@ -200,31 +203,53 @@ int main(int argc, char* argv[]) {
 
           // Write all valid ending RNGs as contiguous bytes into the file. This is not designed to be human-readable.
           int endingRng = rng.Peek();
-          data[i][j] = endingRng;
+          data[i].Push(endingRng);
         }
       }, i);
       threads.push_back(std::move(t));
     }
 
-    for (auto& thread : threads) {
-      if (thread.joinable()) thread.join();
+    for (int i=0; i<numThreads; i++) {
+      if (threads[i].joinable()) threads[i].join();
     }
-    return 0; /*
+
+    struct Data {
+      int seed = 0;
+      u16 poly1 = 0;
+      u16 poly2 = 0;
+      u8 count = 0;
+    };
     // 0b0111 1111 1111 1111 ' 1111 1111 1111 1111
     // We know that the maximum seed value is 0x7FFF'FFFE
     // So we shift right by 7, which gets a maximum of 0xFF'FFFF (which is approximately the number of seeds)
     // Then we use the bottom byte for the bucket, and the remaining 2 bytes for the index.
-    // FOR NOW, we are just counting the number of input RNGs which generate each output RNG. This may change.
-    short** data2 = NewDoubleArray<short>(0xFF, 0xFFFF);
+    // This helps us to avoid allocating a large contiguous block of data.
+    Data** data2 = NewDoubleArray<Data>(0xFF, 0xFFFF);
 
-    // ... I'm not sure what the hell to do here.
+    for (int i=0; i<numThreads; i++) {
+      for (int rng : data[i]) {
+        u8 bucket1 = (rng >> 7) & 0xFF;
+        u16 bucket2 = (u16)(rng >> 15);
+        Data* elem = &data2[bucket1][bucket2];
+        assert(elem->seed == 0);
+        elem->seed = rng;
+      }
+    }
 
     Random rng;
     for (int i=1; i<maxSeed; i++) {
       rng.Set(i);
-      rng.GeneratePolyominos(false);
-      // ...
-    }*/
+      Puzzle* p = rng.GeneratePolyominos(true, false, data2);
+      int endRng = rng.Peek();
+
+      u8 bucket1 = endRng >> 7 & 0xFF;
+      u16 bucket2 = (u16)(endRng >> 15);
+      Data* elem = &data2[bucket1][bucket2];
+
+      delete p;
+    }
+
+    DeleteDoubleArray(data2);
   }
 
   return 0;

@@ -85,7 +85,7 @@ u16 Random::RandomPolyshape() {
   return polyshape;
 }
 
-Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible, bool abortOnStarsFailure) {
+Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible, bool abortOnStarsFailure, u8* validSeeds) {
   Puzzle* p = new Puzzle(4, 4);
   p->_name = "Random polyominos #" + std::to_string(_seed);
 
@@ -131,13 +131,23 @@ Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible, bool abortOnStarsFai
     poly2->color = colors[1];
     poly2->polyshape = polyshape2;
 
-    if (rerollOnImpossible && Solver(p).Solve(1).Empty()) {
-      if (_seed == 0x7db993b5) {
-        auto solutions = Solver(p).Solve();
-        assert(false); // This seed is solvable (and is commonly used by the tests)
+    if (rerollOnImpossible) {
+      bool unsolvable;
+      if (validSeeds != nullptr) {
+        // uh oh
+        unsolvable = (validSeeds[_seed >> 8] & (1 << (_seed % 8))) != 0;
+      } else {
+        unsolvable = Solver(p).Solve(1).Empty();
       }
-      p->ClearGrid();
-      goto rerollPuzzle;
+
+      if (unsolvable) {
+        if (_seed == 0x7db993b5) { // This seed is known to be solvable (and is used by the tests)
+          auto solutions = Solver(p).Solve();
+          assert(false);
+        }
+        p->ClearGrid();
+        goto rerollPuzzle;
+      }
     }
   }
 

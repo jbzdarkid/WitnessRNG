@@ -61,8 +61,8 @@ Vector<Path> Solver::Solve(int maxSolutions) {
 
   for (Cell* startPoint : startPoints) {
     // NOTE: This is subtly different from WitnessPuzzles, which starts the path with [[x, y]] instead of [x, y]!
-    path->Push(startPoint->x);
-    path->Push(startPoint->y);
+    path->UnsafePush(startPoint->x);
+    path->UnsafePush(startPoint->y);
     puzzle->_startPoint = startPoint;
     SolveLoop(startPoint->x, startPoint->y, solutionPaths);
   }
