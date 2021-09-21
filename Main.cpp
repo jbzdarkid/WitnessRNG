@@ -183,7 +183,7 @@ int main(int argc, char* argv[]) {
     vector<thread> threads;
 #if _DEBUG
     const int numThreads = 1;
-    const int maxSeed = 0x1000;
+    const int maxSeed = 0x4000;
 #else
     const int numThreads = 8;
     const int maxSeed = 0x1000'0000; // Maximum of 0x7FFF'FFFE;
@@ -203,7 +203,8 @@ int main(int argc, char* argv[]) {
           Vector<Path> solutions;
           if (p == nullptr) { // If stars fail, then we will hit this seed in another thread, and there's no reason to solve.
             rng.Set(seed);
-            rng.GeneratePolyominos(false); // But we still want to roll the RNG to find the endRng.
+            Puzzle* unused = rng.GeneratePolyominos(false); // But we still want to roll the RNG to find the endRng.
+            delete unused;
           } else {
             solutions = Solver(p).Solve();
           }
