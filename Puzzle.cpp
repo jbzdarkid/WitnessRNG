@@ -261,33 +261,9 @@ Cell* Puzzle::GetEmptyCell(Random& rng) {
   }
 }
 
-[[deprecated]]
-ostream& operator<<(ostream& os, const Puzzle& p) {
-  os << "{";
-    os << "\"width\": " << dec << p._origWidth << ',';
-    os << "\"height\": " << dec << p._origHeight << ',';
-    os << "\"pillar\": false,";
-    os << "\"name\": \"" << p._name << "\",";
-
-    os << "\"grid\": [";
-    for (int x=0; x<p._width; x++) {
-      os << '[';
-      for (int y=0; y<p._height; y++) {
-        os << dec << p._grid[x][y].ToString();
-        if (y < p._height-1) os << ',';
-      }
-      os << ']';
-      if (x < p._width-1) os << ',';
-    }
-    os << ']';
-
-  os << "}";
-  return os;
-}
-
-#define PRINTF(format, ...) \
+#define PRINTF(variable, format, ...) \
   int length = snprintf(nullptr, 0, format, ##__VA_ARGS__); \
-  string output(length, '\0'); \
+  string variable = string(length, '\0'); \
   snprintf(&output[0], output.size() + 1, format, ##__VA_ARGS__); \
   do {} while(0)
 
@@ -324,7 +300,7 @@ char polyshapeStr[sizeof(R"("polyshape":65535,)")] = {'\0'};
   char colorStr[sizeof(R"("color":"#FF00FF",)")] = {'\0'};
   if (color != 0) sprintf_s(&colorStr[0], sizeof(colorStr), ",\"color\":\"#%06x\"", color);
 
-  PRINTF("{\"line\":%d"
+  PRINTF(output, "{\"line\":%d"
     "%s" // type
     "%s%s" // dot
     "%s%s" // gap
@@ -342,5 +318,26 @@ char polyshapeStr[sizeof(R"("polyshape":65535,)")] = {'\0'};
     colorStr,
     polyshapeStr
   );
+  return output;
+}
+
+string Puzzle::ToString() {
+  stringstream grid;
+  grid << '[';
+  for (int x=0; x<_width; x++) {
+    grid << '[';
+    for (int y=0; y<_height; y++) {
+      grid << _grid[x][y].ToString();
+      if (y < _height-1) grid << ',';
+    }
+    grid << ']';
+    if (x < _width-1) grid << ',';
+  }
+  grid << ']';
+
+  string gridStr = grid.str();
+
+  PRINTF(output, R"({"width":%d,"height":%d,"pillar":%s,"name":%s","grid":%s})" "\n",
+    _width, _height, (_pillar ? "true" : "false"), _name.c_str(), gridStr.c_str());
   return output;
 }

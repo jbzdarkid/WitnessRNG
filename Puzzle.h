@@ -60,6 +60,8 @@ public:
   Vector<Region> GetRegions();
   Region GetRegion(s8 x, s8 y);
 
+  std::string ToString();
+
   // RNG functions (from TW)
   void CutRandomEdges(Random& rng, u8 numCuts);
   // void AddRandomDots(Random& rng, int numDots);
@@ -69,6 +71,3 @@ private:
   u8 _mod(s8 x) const;
   bool _safeCell(s8 x, s8 y) const;
 };
-
-std::ostream& operator<<(std::ostream& os, const Puzzle& p);
-std::ostream& operator<<(std::ostream& os, const Region& r);

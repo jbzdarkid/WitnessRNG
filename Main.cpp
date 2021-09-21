@@ -7,6 +7,9 @@
 #include <thread>
 #include <unordered_map>
 
+#define WIN32_LEAN_AND_MEAN
+#include "Windows.h"
+
 Console console;
 
 // Ideas to bring back to the javascript version:
@@ -172,7 +175,7 @@ int main(int argc, char* argv[]) {
     Random rng;
     rng.Set(0x5C64B474);
     Puzzle* p = rng.GeneratePolyominos(true);
-    cout << *p << endl;
+    cout << p->ToString() << endl;
     auto solutions = Solver(p).Solve();
     delete p;
 
@@ -182,29 +185,48 @@ int main(int argc, char* argv[]) {
     const int numThreads = 1;
     const int maxSeed = 0x1000;
 #else
-    const int numThreads = 4;
-    const int maxSeed = 0x1'0000; // Maximum of 0x7FFF'FFFE;
+    const int numThreads = 8;
+    const int maxSeed = 0x1000'0000; // Maximum of 0x7FFF'FFFE;
+    // Estimated (bad) filesize is 244 KB per 0x8000. You do the math.
 #endif
-    // The /8 here is because we know that this data is sparse -- most seeds are not valid.
-    Vector<Vector<int>> data(numThreads);
-    for (int i=0; i<numThreads; i++) data.Emplace(Vector<int>(maxSeed / numThreads / 8));
-
     for (int i=0; i<numThreads; i++) {
       thread t([&](int i) {
+        auto goodFile = CreateFileA(("thread_" + to_string(i) + "_good.dat").c_str(), FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
+        auto badFile = CreateFileA(("thread_" + to_string(i) + "_bad.dat").c_str(), FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
+
         Random rng;
         for (int j=0; j<maxSeed / numThreads; j++) {
           int seed = 1 + i + (j * numThreads); // RNG starts at 1
           rng.Set(seed);
           Puzzle* p = rng.GeneratePolyominos(false, true);
-          if (!p) continue; // If stars fail, then we will hit this seed in another thread, and there's no reason to solve.
-          bool unsolvable = Solver(p).Solve(1).Empty();
-          delete p;
-          if (unsolvable) continue;
 
-          // Write all valid ending RNGs as contiguous bytes into the file. This is not designed to be human-readable.
+          Vector<Path> solutions;
+          if (p == nullptr) { // If stars fail, then we will hit this seed in another thread, and there's no reason to solve.
+            rng.Set(seed);
+            rng.GeneratePolyominos(false); // But we still want to roll the RNG to find the endRng.
+          } else {
+            solutions = Solver(p).Solve();
+          }
+
           int endingRng = rng.Peek();
-          data[i].Push(endingRng);
+          DWORD unused;
+          if (solutions.Empty()) {
+            WriteFile(badFile, &seed, sizeof(seed), &unused, nullptr);
+            WriteFile(badFile, &endingRng, sizeof(endingRng), &unused, nullptr);
+            SetFilePointer(badFile, 0, nullptr, FILE_END);
+          } else {
+            WriteFile(goodFile, &seed, sizeof(seed), &unused, nullptr);
+            for (const auto& solution : solutions) {
+              WriteFile(goodFile, &solution[0], sizeof(u8) * solution.Size(), &unused, nullptr);
+            }
+            // string puzzleStr = p->ToString();
+            // WriteFile(goodFile, puzzleStr.c_str(), (DWORD)(sizeof(char) * puzzleStr.size()), &unused, nullptr);
+            SetFilePointer(goodFile, 0, nullptr, FILE_END);
+          }
+          delete p;
         }
+        CloseHandle(badFile);
+        CloseHandle(goodFile);
       }, i);
       threads.push_back(std::move(t));
     }
@@ -212,44 +234,6 @@ int main(int argc, char* argv[]) {
     for (int i=0; i<numThreads; i++) {
       if (threads[i].joinable()) threads[i].join();
     }
-
-    struct Data {
-      int seed = 0;
-      u16 poly1 = 0;
-      u16 poly2 = 0;
-      u8 count = 0;
-    };
-    // 0b0111 1111 1111 1111 ' 1111 1111 1111 1111
-    // We know that the maximum seed value is 0x7FFF'FFFE
-    // So we shift right by 7, which gets a maximum of 0xFF'FFFF (which is approximately the number of seeds)
-    // Then we use the bottom byte for the bucket, and the remaining 2 bytes for the index.
-    // This helps us to avoid allocating a large contiguous block of data.
-    Data** data2 = NewDoubleArray<Data>(0xFF, 0xFFFF);
-
-    for (int i=0; i<numThreads; i++) {
-      for (int rng : data[i]) {
-        u8 bucket1 = (rng >> 7) & 0xFF;
-        u16 bucket2 = (u16)(rng >> 15);
-        Data* elem = &data2[bucket1][bucket2];
-        assert(elem->seed == 0);
-        elem->seed = rng;
-      }
-    }
-
-    Random rng;
-    for (int i=1; i<maxSeed; i++) {
-      rng.Set(i);
-      Puzzle* p = rng.GeneratePolyominos(true, false, data2);
-      int endRng = rng.Peek();
-
-      u8 bucket1 = endRng >> 7 & 0xFF;
-      u16 bucket2 = (u16)(endRng >> 15);
-      Data* elem = &data2[bucket1][bucket2];
-
-      delete p;
-    }
-
-    DeleteDoubleArray(data2);
   }
 
   return 0;
