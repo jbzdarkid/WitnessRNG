@@ -180,23 +180,27 @@ int main(int argc, char* argv[]) {
     delete p;
 
   } else if (argc > 1 && strcmp(argv[1], "thrd") == 0) {
-    vector<thread> threads;
 #if _DEBUG
+    const int threadOffset = 0;
     const int numThreads = 1;
+    const int initSeed = 0;
     const int maxSeed = 0x4000;
 #else
-    const int numThreads = 8;
-    const int maxSeed = 0x1000'0000; // Maximum of 0x7FFF'FFFE;
+    const int threadOffset = 8;
+    const int numThreads = 4;
+    const int initSeed = 0x1000'0000;
+    const int maxSeed = 0x2000'0000; // Maximum of 0x7FFF'FFFE;
     // Estimated (bad) filesize is 244 KB per 0x8000. You do the math.
 #endif
+    Vector<thread> threads;
     for (int i=0; i<numThreads; i++) {
       thread t([&](int i) {
-        auto goodFile = CreateFileA(("thread_" + to_string(i) + "_good.dat").c_str(), FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
-        auto badFile = CreateFileA(("thread_" + to_string(i) + "_bad.dat").c_str(), FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
+        auto goodFile = CreateFileA(("thread_" + to_string(i+threadOffset) + "_good.dat").c_str(), FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
+        auto badFile  = CreateFileA(("thread_" + to_string(i+threadOffset) + "_bad.dat").c_str(),  FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
 
         Random rng;
         for (int j=0; j<maxSeed / numThreads; j++) {
-          int seed = 1 + i + (j * numThreads); // RNG starts at 1
+          int seed = initSeed + 1 + i + (j * numThreads); // RNG starts at 1
           rng.Set(seed);
           Puzzle* p = rng.GeneratePolyominos(false, true);
 
@@ -229,7 +233,7 @@ int main(int argc, char* argv[]) {
         CloseHandle(badFile);
         CloseHandle(goodFile);
       }, i);
-      threads.push_back(std::move(t));
+      threads.Emplace(std::move(t));
     }
 
     for (int i=0; i<numThreads; i++) {
