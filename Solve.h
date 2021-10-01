@@ -13,7 +13,7 @@ private:
   void TailRecurse(Cell* cell);
   // Note: Most mechanics are NP (or harder), so don't feel bad about solving them by brute force.
   // https://arxiv.org/pdf/1804.10193.pdf
-  void SolveLoop(s8 x, s8 y, Vector<Path>& solutionPaths);
+  void SolveLoop(s8 x, s8 y, Vector<Path>& solutionPaths, u8 numEndpoints);
 
   Puzzle* puzzle;
   Path* path;

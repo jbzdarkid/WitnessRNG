@@ -11,7 +11,7 @@ Solver::~Solver() {
 
 Vector<Path> Solver::Solve(int maxSolutions) {
   Vector<Cell*> startPoints(puzzle->_width);
-  numEndpoints = 0;
+  u8 numEndpoints = 0;
 
   puzzle->_hasNegations = false;
   puzzle->_hasPolyominos = false;
@@ -64,7 +64,7 @@ Vector<Path> Solver::Solve(int maxSolutions) {
     path->UnsafePush(startPoint->x);
     path->UnsafePush(startPoint->y);
     puzzle->_startPoint = startPoint;
-    SolveLoop(startPoint->x, startPoint->y, solutionPaths);
+    SolveLoop(startPoint->x, startPoint->y, solutionPaths, numEndpoints);
   }
 
   return solutionPaths;
@@ -78,7 +78,7 @@ void Solver::TailRecurse(Cell* cell) {
   }
 }
 
-void Solver::SolveLoop(s8 x, s8 y, Vector<Path>& solutionPaths) {
+void Solver::SolveLoop(s8 x, s8 y, Vector<Path>& solutionPaths, u8 numEndpoints) {
   // Stop trying to solve once we reach our goal
   if (solutionPaths.Size() >= MAX_SOLUTIONS) return;
 
@@ -154,21 +154,21 @@ void Solver::SolveLoop(s8 x, s8 y, Vector<Path>& solutionPaths) {
   // Recursion order (LRUD) is optimized for BL->TR and mid-start puzzles
   if (y%2 == 0) {
     path->UnsafePush(PATH_LEFT);
-    SolveLoop(x - 1, y, solutionPaths);
+    SolveLoop(x - 1, y, solutionPaths, numEndpoints);
     path->Pop();
 
     path->UnsafePush(PATH_RIGHT);
-    SolveLoop(x + 1, y, solutionPaths);
+    SolveLoop(x + 1, y, solutionPaths, numEndpoints);
     path->Pop();
   }
 
   if (x%2 == 0) {
     path->UnsafePush(PATH_TOP);
-    SolveLoop(x, y - 1, solutionPaths);
+    SolveLoop(x, y - 1, solutionPaths, numEndpoints);
     path->Pop();
 
     path->UnsafePush(PATH_BOTTOM);
-    SolveLoop(x, y + 1, solutionPaths);
+    SolveLoop(x, y + 1, solutionPaths, numEndpoints);
     path->Pop();
   }
 
