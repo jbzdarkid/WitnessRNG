@@ -186,10 +186,10 @@ int main(int argc, char* argv[]) {
     const int initSeed = 0;
     const int maxSeed = 0x4000;
 #else
-    const int threadOffset = 12;
-    const int numThreads = 16;
-    const int initSeed = 0x2000'0000;
-    const int maxSeed = 0x4000'0000; // Maximum of 0x7FFF'FFFE;
+    const int threadOffset = 28;
+    const int numThreads = 4;
+    const int initSeed = 0x4000'0000;
+    const int maxSeed = 0x5000'0000; // Maximum of 0x7FFF'FFFE;
     // Estimated (bad) filesize is 244 KB per 0x8000. You do the math.
 #endif
     Vector<thread> threads;

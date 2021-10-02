@@ -18,7 +18,6 @@ private:
   Puzzle* puzzle;
   Path* path;
   int MAX_SOLUTIONS = 0;
-  u8 numEndpoints = 0;
   bool doPruning = false;
   struct EarlyExitData {
     bool hasEverLeftEdge;
