@@ -239,6 +239,36 @@ int main(int argc, char* argv[]) {
     for (int i=0; i<numThreads; i++) {
       if (threads[i].joinable()) threads[i].join();
     }
+  } else if (argc > 1 && strcmp(argv[1], "merge") == 0) {
+    Vector<u16> data(1 << 27); // A single bit per seed
+    data.Fill(0);
+
+    Vector<u32> buff(1024 * 1024);
+    buff.Resize(1024 * 1024);
+
+    int count = 0;
+    for (int i = 0; i < 8; i++) {
+      string filename = "thread_" + to_string(i) + "_bad.dat";
+      auto badFile = CreateFileA(filename.c_str(), FILE_GENERIC_READ, NULL, nullptr, OPEN_EXISTING, NULL, nullptr);
+      // u64 fileSize;
+      // u32 lowSize = GetFileSize(badFile, (DWORD*)&fileSize + 1);
+      // *(u32*)&fileSize = lowSize;
+
+      while (true) {
+        DWORD bytesRead;
+        BOOL success = ReadFile(badFile, &buff[0], buff.Size() * sizeof(buff[0]), &bytesRead, nullptr);
+        if (success == FALSE || bytesRead == 0) break;
+        SetFilePointer(badFile, bytesRead, nullptr, FILE_CURRENT);
+        buff.Resize(bytesRead / sizeof(buff[0]));
+
+        for (int j = 0; j < buff.Size(); j += 2) {
+          u32 seed = buff[j];
+          data[seed >> 4] |= 1 << (seed % 16);
+          count++;
+        }
+      }
+    }
+    cout << "count" << count << endl;
   }
 
   return 0;
