@@ -53,14 +53,17 @@ public:
   // A variant of getCell which specifically returns line values,
   // and treats objects as being out-of-bounds
   Line GetLine(s8 x, s8 y) const;
-  void ClearGrid();
+  void ClearGrid(bool linesOnly = false);
 
   void _floodFill(u8 x, u8 y, Region& region);
   void GenerateMaskedGrid();
   Vector<Region> GetRegions();
   Region GetRegion(s8 x, s8 y);
+  // Works for up to an 8x8 region
+  u64 GetPolyishFromMaskedGrid();
 
-  std::string ToString();
+  std::string ToString(); // Can be imported into TW
+  void LogGrid();
 
   // RNG functions (from TW)
   void CutRandomEdges(Random& rng, u8 numCuts);

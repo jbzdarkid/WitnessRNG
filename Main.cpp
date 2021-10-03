@@ -6,6 +6,7 @@
 #include <sstream>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 
 #define WIN32_LEAN_AND_MEAN
 #include "Windows.h"
@@ -269,6 +270,7 @@ int main(int argc, char* argv[]) {
       u8 numSolutions = 0;
       u8 polysTogether = 0;
       u8 polysApart = 0;
+      unordered_set<u64> polyish;
     };
     unordered_map<u32, PuzzleData> goodData;
 
@@ -317,7 +319,8 @@ int main(int argc, char* argv[]) {
           // This should be impossible for consecutive solutions, and thus indicates the next seed.
           if (goodFile.Peek(4) == 0 && goodFile.Peek(5) == 8) break;
 
-          p->ClearGrid();
+          p->ClearGrid(true);
+          p->LogGrid();
           u8 x = goodFile.Get();
           u8 y = goodFile.Get();
           assert(x == 0 && y == 8);
@@ -343,6 +346,13 @@ int main(int argc, char* argv[]) {
           }
           sameRegion ? data.polysTogether++ : data.polysApart++;
           data.numSolutions++;
+          u64 polyish = p->GetPolyishFromMaskedGrid();
+          cout << p->ToString() << endl;
+          auto a = __popcnt16(data.polyshape1);
+          auto b = __popcnt16(data.polyshape2);
+          auto c = __popcnt64(polyish);
+          assert(a + b == c);
+          data.polyish.insert(polyish);
         } // done with puzzle
         delete p;
         goodData[seed] = data;

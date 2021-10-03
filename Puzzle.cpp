@@ -97,20 +97,22 @@ Line Puzzle::GetLine(s8 x, s8 y) const {
   return cell->line;
 }
 
-void Puzzle::ClearGrid() {
+void Puzzle::ClearGrid(bool linesOnly) {
   for (u8 x=0; x<_width; x++) {
     for (u8 y=0; y<_width; y++) {
       Cell* cell = &_grid[x][y];
-      if (x%2 == 1 && y%2 == 1) cell->type = Type::Null;
-      cell->dot = Dot::None;
-      cell->gap = Gap::None;
       cell->line = Line::None;
-      cell->color = 0;
-      cell->count = 0;
-      cell->polyshape = 0u;
+      if (!linesOnly) {
+        if (x % 2 == 1 && y % 2 == 1) cell->type = Type::Null;
+        cell->dot = Dot::None;
+        cell->gap = Gap::None;
+        cell->color = 0;
+        cell->count = 0;
+        cell->polyshape = 0u;
 
-      cell->start = false;
-      cell->end = End::None;
+        cell->start = false;
+        cell->end = End::None;
+      }
     }
   }
   _numConnections = (_origWidth+1)*_origHeight + _origWidth*(_origHeight+1);
@@ -197,7 +199,7 @@ Vector<Region> Puzzle::GetRegions() {
   Vector<Region> regions(4);
   GenerateMaskedGrid();
 
-  // A limit for the total size of all regions -- at least this way, we won't make all the regions as large as possible.
+  // A limit for the total size of all regions -- at least this way, we won't allocate all the regions as large as possible.
   int remainingRegionSize = _width * _height;
 
   for (u8 x=0; x<_width; x++) {
@@ -231,6 +233,47 @@ Region Puzzle::GetRegion(s8 x, s8 y) {
   }
 
   return region;
+}
+
+u64 Puzzle::GetPolyishFromMaskedGrid() {
+  u8 minX = 0xFF;
+  u8 minY = 0xFF;
+  for (u8 x=1; x<_width; x+=2) {
+    for (u8 y=1; y<_height; y+=2) {
+      if (_maskedGrid[x][y] == Masked::Processed) {
+        minX = min(minX, x);
+        minY = min(minY, y);
+      }
+    }
+  }
+
+  u64 polyish = 0;
+  for (u8 x=1; x<_width; x+=2) {
+    for (u8 y=1; y<_height; y+=2) {
+      if (_maskedGrid[x][y] != Masked::Processed) continue;
+
+      // Given that X <= 15, x * 4 < 64
+      // And, since x - minX is always even, the smallest it can be is 8, which doesn't conflict with Y.
+      assert((x - minX) * 4 < 64);
+      assert(((x - minX) * 4) % 8 == 0);
+      assert((y - minY) / 2 < 8);
+      u8 offset = (x - minX) * 4 + (y - minY) / 2;
+      polyish |= (u64)1 << offset;
+    }
+  }
+
+  cout << endl;
+  LogGrid();
+  cout << endl;
+
+  for (u8 y=0; y<_height; y++) {
+    for (u8 x=0; x<_width; x++) {
+      cout << (_maskedGrid[x][y] == Masked::Processed ? '1' : '0');
+    }
+    cout << endl;
+  }
+
+  return polyish;
 }
 
 void Puzzle::CutRandomEdges(Random& rng, u8 numCuts) {
@@ -289,7 +332,7 @@ std::string Cell::ToString() {
   if (type == Type::Poly    ) typeStr = ",\"type\":\"poly\"";
   if (type == Type::Ylop    ) typeStr = ",\"type\":\"ylop\"";
 
-char polyshapeStr[sizeof(R"("polyshape":65535,)")] = {'\0'};
+  char polyshapeStr[sizeof(R"("polyshape":65535,)")] = {'\0'};
   if (polyshape != 0) sprintf_s(&polyshapeStr[0], sizeof(polyshapeStr), ",\"polyshape\":%hu", polyshape);
   const char* endDir = "";
   if (end == End::Left)   endDir = ",\"end\":\"left\"";
@@ -337,7 +380,28 @@ string Puzzle::ToString() {
 
   string gridStr = grid.str();
 
-  PRINTF(output, R"({"width":%d,"height":%d,"pillar":%s,"name":%s","grid":%s})" "\n",
+  PRINTF(output, R"({"width":%d,"height":%d,"pillar":%s,"name":"%s","grid":%s})" "\n",
     _width, _height, (_pillar ? "true" : "false"), _name.c_str(), gridStr.c_str());
   return output;
+}
+
+void Puzzle::LogGrid() {
+  for (u8 y=0; y<_height; y++) {
+    for (u8 x=0; x<_width; x++) {
+      Cell* cell = &_grid[x][y];
+      if (cell == nullptr)               cout << ' ';
+      else if (cell->type == Type::Null) cout << ' ';
+      else if (cell->start == true)      cout << 'S';
+      else if (cell->end != End::None)   cout << 'E';
+      else if (cell->type == Type::Line) {
+        if (cell->gap > Gap::None)            cout << ' ';
+        else if (cell->dot > Dot::None)       cout << 'X';
+        else if (cell->line == Line::None)    cout << '.';
+        else if (cell->line == Line::Black)   cout << '#';
+        else if (cell->line == Line::Blue)    cout << '#';
+        else if (cell->line == Line::Yellow)  cout << 'o';
+      } else                                  cout << '?';
+    }
+    cout << endl;
+  }
 }
