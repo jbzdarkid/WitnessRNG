@@ -218,19 +218,20 @@ int main(int argc, char* argv[]) {
           }
 
           int endingRng = rng.Peek();
-          DWORD unused;
           if (solutions.Empty()) {
-            WriteFile(badFile, &seed, sizeof(seed), &unused, nullptr);
-            WriteFile(badFile, &endingRng, sizeof(endingRng), &unused, nullptr);
+            WriteFile(badFile, &seed, sizeof(seed), nullptr, nullptr);
+            WriteFile(badFile, &endingRng, sizeof(endingRng), nullptr, nullptr);
             SetFilePointer(badFile, 0, nullptr, FILE_END);
           } else {
-            WriteFile(goodFile, &seed, sizeof(seed), &unused, nullptr);
+            WriteFile(goodFile, &seed, sizeof(seed), nullptr, nullptr);
+            int numSolutions = solutions.Size();
+            WriteFile(goodFile, &numSolutions, sizeof(numSolutions), nullptr, nullptr);
             // TODO: Write number of solutions here!
             for (const auto& solution : solutions) {
-              WriteFile(goodFile, &solution[0], sizeof(u8) * solution.Size(), &unused, nullptr);
+              WriteFile(goodFile, &solution[0], sizeof(u8) * solution.Size(), nullptr, nullptr);
             }
             // string puzzleStr = p->ToString();
-            // WriteFile(goodFile, puzzleStr.c_str(), (DWORD)(sizeof(char) * puzzleStr.size()), &unused, nullptr);
+            // WriteFile(goodFile, puzzleStr.c_str(), (DWORD)(sizeof(char) * puzzleStr.size()), nullptr, nullptr);
             SetFilePointer(goodFile, 0, nullptr, FILE_END);
           }
           delete p;
