@@ -9,6 +9,9 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include "Windows.h"
+#include "File.h"
+
+using namespace std;
 
 Console console;
 
@@ -153,7 +156,7 @@ int main(int argc, char* argv[]) {
         minValues[i] = minValue;
         numSteps[i] = count;
       }, i);
-      threads.push_back(std::move(t));
+      threads.push_back(move(t));
     }
     for (auto& thread : threads) {
       if (thread.joinable()) thread.join();
@@ -186,10 +189,10 @@ int main(int argc, char* argv[]) {
     const int initSeed = 0;
     const int maxSeed = 0x4000;
 #else
-    const int threadOffset = 12;
-    const int numThreads = 16;
-    const int initSeed = 0x2000'0000;
-    const int maxSeed = 0x4000'0000; // Maximum of 0x7FFF'FFFE;
+    const int threadOffset = 0;
+    const int numThreads = 2;
+    const int initSeed = 0x0000'0000;
+    const int maxSeed = 0x0001'0000; // Maximum of 0x7FFF'FFFE;
     // Estimated (bad) filesize is 244 KB per 0x8000. You do the math.
 #endif
     Vector<thread> threads;
@@ -233,7 +236,7 @@ int main(int argc, char* argv[]) {
         CloseHandle(badFile);
         CloseHandle(goodFile);
       }, i);
-      threads.Emplace(std::move(t));
+      threads.Emplace(move(t));
     }
 
     for (int i=0; i<numThreads; i++) {
@@ -243,32 +246,102 @@ int main(int argc, char* argv[]) {
     Vector<u16> data(1 << 27); // A single bit per seed
     data.Fill(0);
 
-    Vector<u32> buff(1024 * 1024);
-    buff.Resize(1024 * 1024);
-
     int count = 0;
-    for (int i = 0; i < 8; i++) {
-      string filename = "thread_" + to_string(i) + "_bad.dat";
-      auto badFile = CreateFileA(filename.c_str(), FILE_GENERIC_READ, NULL, nullptr, OPEN_EXISTING, NULL, nullptr);
-      // u64 fileSize;
-      // u32 lowSize = GetFileSize(badFile, (DWORD*)&fileSize + 1);
-      // *(u32*)&fileSize = lowSize;
+    for (int i = 0;; i++) {
+      File badFile("thread_" + to_string(i) + "_bad.dat");
+      if (badFile.Done()) break; // File did not exist
 
-      while (true) {
-        DWORD bytesRead;
-        BOOL success = ReadFile(badFile, &buff[0], buff.Size() * sizeof(buff[0]), &bytesRead, nullptr);
-        if (success == FALSE || bytesRead == 0) break;
-        SetFilePointer(badFile, bytesRead, nullptr, FILE_CURRENT);
-        buff.Resize(bytesRead / sizeof(buff[0]));
-
-        for (int j = 0; j < buff.Size(); j += 2) {
-          u32 seed = buff[j];
-          data[seed >> 4] |= 1 << (seed % 16);
-          count++;
-        }
+      while (!badFile.Done()) {
+        u32 seed = badFile.GetInt();
+        data[seed >> 4] |= 1 << (seed % 16);
+        count++;
       }
     }
+    // This file can probably be checked in, honestly. It's only about 256 MB, which is /annoying/ but not that big of a deal.
+    auto output = CreateFileA("puzzle_solvability.dat", FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
+    WriteFile(output, &data[0], data.Size() * sizeof(data[0]), nullptr, nullptr);
     cout << "count" << count << endl;
+  } else if (argc > 1 && strcmp(argv[1], "good") == 0) {
+    struct PuzzleData {
+      u16 polyshape1;
+      u16 polyshape2;
+
+      u8 numSolutions = 0;
+      u8 polysTogether = 0;
+      u8 polysApart = 0;
+    };
+    unordered_map<u32, PuzzleData> goodData;
+
+    Random rng;
+    for (int i = 0;; i++) {
+      File goodFile("thread_" + to_string(i) + "_good.dat");
+      if (goodFile.Done()) break; // File did not exist
+
+      while (!goodFile.Done()) { // Read through the entire file
+        u32 seed = goodFile.GetInt();
+        rng.Set(seed);
+        Puzzle* p = rng.GeneratePolyominos(false);
+        assert(!Solver(p).Solve(1).Empty());
+
+        PuzzleData data;
+        Cell* firstPoly = nullptr;
+        Cell* secondPoly = nullptr;
+
+        // Compute polyshapes
+        for (u8 x = 1; x < p->_width; x += 2) {
+          for (u8 y = 1; y < p->_height; y += 2) {
+            Cell* cell = &p->_grid[x][y];
+            u16 polyshape = cell->polyshape;
+            if (polyshape == 0) continue;
+
+            if (!firstPoly) {
+              firstPoly = cell;
+              data.polyshape1 = polyshape;
+            } else {
+              secondPoly = cell;
+              data.polyshape2 = polyshape;
+              break;
+            }
+          }
+        }
+        assert(firstPoly);
+        assert(secondPoly);
+        if (data.polyshape1 < data.polyshape2) swap(data.polyshape1, data.polyshape2);
+
+        // Compute solution paths by reading from file
+        // If the file is done (or the next byte is non-zero), we have reached the end of this set of solutions.
+        // [we check for zero because we know the start of every solution is (0, 8)]
+        while (!goodFile.Done() && goodFile.Peek() == 0) {
+          p->ClearGrid();
+          u8 x = goodFile.Get();
+          u8 y = goodFile.Get();
+          while (true) { // Trace the solution path
+            Cell* cell = &p->_grid[x][y];
+            cell->line = Line::Black;
+            u8 dir = goodFile.Get();
+            if (dir == PATH_NONE) break;
+            else if (dir == PATH_LEFT)   x--;
+            else if (dir == PATH_RIGHT)  x++;
+            else if (dir == PATH_TOP)    y--;
+            else if (dir == PATH_BOTTOM) y++;
+          }
+
+          Region region = p->GetRegion(firstPoly->x, firstPoly->y);
+          bool sameRegion = false;
+          for (Cell* cell : region) {
+            if (cell == secondPoly) {
+              sameRegion = true;
+              break;
+            }
+          }
+          sameRegion ? data.polysTogether++ : data.polysApart++;
+          data.numSolutions++;
+        } // done with puzzle
+        // delete p;
+        goodData[seed] = data;
+      } // done reading file
+    }
+    cout << "Found " << goodData.size() << " valid puzzles";
   }
 
   return 0;

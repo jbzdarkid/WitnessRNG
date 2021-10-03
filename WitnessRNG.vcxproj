@@ -182,6 +182,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="File.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Polyominos.cpp" />
     <ClCompile Include="Puzzle.cpp" />
@@ -190,6 +191,7 @@
     <ClCompile Include="Validate.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="File.h" />
     <ClInclude Include="forward.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="StdLib.h" />

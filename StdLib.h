@@ -119,7 +119,7 @@ public:
 
   // Shrink (or grow) the vector's size. This does not affect the underlying data.
   void Resize(int size) {
-    assert(size > 0);
+    assert(size >= 0);
     assert(size <= _capacity);
     _size = size;
   }
