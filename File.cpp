@@ -44,8 +44,9 @@ u32 File::GetInt() {
   return (b4 << 24) | (b3 << 16) | (b2 << 8) | b1;
 }
 
-u8 File::Peek() {
-  return _buffer->At(_position);
+u8 File::Peek(u8 index) {
+  if (_position + index > _buffer->Size()) Fetch();
+  return _buffer->At(_position + index);
 }
 
 bool File::Done() {
@@ -57,4 +58,13 @@ void File::Read() {
   ReadFile((HANDLE)_handle, &_buffer->At(0), CAPACITY, &bytesRead, nullptr);
   _buffer->Resize(bytesRead);
   _position = 0;
+}
+
+void File::Fetch() {
+  DWORD bytesRead;
+  int currentSize = _buffer->Size();
+  _buffer->Expand(CAPACITY);
+  _buffer->Resize(currentSize + CAPACITY);
+  ReadFile((HANDLE)_handle, &_buffer->At(currentSize), CAPACITY, &bytesRead, nullptr);
+  _buffer->Resize(currentSize + bytesRead);
 }

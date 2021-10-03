@@ -311,12 +311,19 @@ int main(int argc, char* argv[]) {
         // Compute solution paths by reading from file
         // If the file is done (or the next byte is non-zero), we have reached the end of this set of solutions.
         // [we check for zero because we know the start of every solution is (0, 8)]
-        while (!goodFile.Done() && goodFile.Peek() == 0) {
+        // Oops! I forgot that seeds totally can end with 0. Oh well, I guess we can just seek ahead and check for <int> <0, 8>
+        while (!goodFile.Done()) {
+          // Check to see if a hypothetical seed followed by an X, Y is a valid startpoint.
+          // This should be impossible for consecutive solutions, and thus indicates the next seed.
+          if (goodFile.Peek(4) == 0 && goodFile.Peek(5) == 8) break;
+
           p->ClearGrid();
           u8 x = goodFile.Get();
           u8 y = goodFile.Get();
+          assert(x == 0 && y == 8);
           while (true) { // Trace the solution path
-            Cell* cell = &p->_grid[x][y];
+            Cell* cell = p->GetCell(x, y);
+            assert(cell);
             cell->line = Line::Black;
             u8 dir = goodFile.Get();
             if (dir == PATH_NONE) break;
@@ -337,7 +344,7 @@ int main(int argc, char* argv[]) {
           sameRegion ? data.polysTogether++ : data.polysApart++;
           data.numSolutions++;
         } // done with puzzle
-        // delete p;
+        delete p;
         goodData[seed] = data;
       } // done reading file
     }

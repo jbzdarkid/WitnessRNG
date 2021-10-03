@@ -10,11 +10,14 @@ public:
 
   u8 Get();
   u32 GetInt();
-  u8 Peek();
+  u8 Peek(u8 index = 0);
   bool Done();
 
 private:
+  // Reads the next CAPACITY bytes into the buffer.
   void Read();
+  // Expands the buffer, then reads the next CAPACITY bytes.
+  void Fetch();
 
   s64 _handle = 0;
   Vector<u8>* _buffer = nullptr;
