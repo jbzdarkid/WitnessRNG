@@ -262,17 +262,6 @@ u64 Puzzle::GetPolyishFromMaskedGrid() {
     }
   }
 
-  cout << endl;
-  LogGrid();
-  cout << endl;
-
-  for (u8 y=0; y<_height; y++) {
-    for (u8 x=0; x<_width; x++) {
-      cout << (_maskedGrid[x][y] == Masked::Processed ? '1' : '0');
-    }
-    cout << endl;
-  }
-
   return polyish;
 }
 

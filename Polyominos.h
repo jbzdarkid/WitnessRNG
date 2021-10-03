@@ -36,7 +36,7 @@ private:
   // so try every piece to fill it, then recurse.
   static bool PlacePolys(std::vector<Cell*>& polys, const Puzzle& puzzle, s8** polyGrid);
 
-  static inline u8 Mask(u8 x, u8 y) {
+  static inline u16 Mask(u8 x, u8 y) {
     return 1 << (x * 4 + y);
   }
 

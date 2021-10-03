@@ -225,6 +225,7 @@ int main(int argc, char* argv[]) {
             SetFilePointer(badFile, 0, nullptr, FILE_END);
           } else {
             WriteFile(goodFile, &seed, sizeof(seed), &unused, nullptr);
+            // TODO: Write number of solutions here!
             for (const auto& solution : solutions) {
               WriteFile(goodFile, &solution[0], sizeof(u8) * solution.Size(), &unused, nullptr);
             }
@@ -258,14 +259,14 @@ int main(int argc, char* argv[]) {
         count++;
       }
     }
-    // This file can probably be checked in, honestly. It's only about 256 MB, which is /annoying/ but not that big of a deal.
+    // This file can probably be checked in, honestly. It's only about 256 MB, which is /annoying/ to clone but not that big of a deal. Especially since it'll never change.
     auto output = CreateFileA("puzzle_solvability.dat", FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
     WriteFile(output, &data[0], data.Size() * sizeof(data[0]), nullptr, nullptr);
     cout << "count" << count << endl;
   } else if (argc > 1 && strcmp(argv[1], "good") == 0) {
     struct PuzzleData {
-      u16 polyshape1;
-      u16 polyshape2;
+      u16 polyshape1 = 0;
+      u16 polyshape2 = 0;
 
       u8 numSolutions = 0;
       u8 polysTogether = 0;
@@ -273,6 +274,8 @@ int main(int argc, char* argv[]) {
       unordered_set<u64> polyish;
     };
     unordered_map<u32, PuzzleData> goodData;
+
+    u32 miscounted = 0;
 
     Random rng;
     for (int i = 0;; i++) {
@@ -283,7 +286,6 @@ int main(int argc, char* argv[]) {
         u32 seed = goodFile.GetInt();
         rng.Set(seed);
         Puzzle* p = rng.GeneratePolyominos(false);
-        assert(!Solver(p).Solve(1).Empty());
 
         PuzzleData data;
         Cell* firstPoly = nullptr;
@@ -310,6 +312,8 @@ int main(int argc, char* argv[]) {
         assert(secondPoly);
         if (data.polyshape1 < data.polyshape2) swap(data.polyshape1, data.polyshape2);
 
+        bool puzzleIsActuallySolvable = false;
+
         // Compute solution paths by reading from file
         // If the file is done (or the next byte is non-zero), we have reached the end of this set of solutions.
         // [we check for zero because we know the start of every solution is (0, 8)]
@@ -320,7 +324,6 @@ int main(int argc, char* argv[]) {
           if (goodFile.Peek(4) == 0 && goodFile.Peek(5) == 8) break;
 
           p->ClearGrid(true);
-          p->LogGrid();
           u8 x = goodFile.Get();
           u8 y = goodFile.Get();
           assert(x == 0 && y == 8);
@@ -335,6 +338,10 @@ int main(int argc, char* argv[]) {
             else if (dir == PATH_TOP)    y--;
             else if (dir == PATH_BOTTOM) y++;
           }
+          
+          auto puzzleData = Validator::Validate(*p);
+          if (!puzzleData.Valid()) continue;
+          puzzleIsActuallySolvable = true;
 
           Region region = p->GetRegion(firstPoly->x, firstPoly->y);
           bool sameRegion = false;
@@ -346,15 +353,21 @@ int main(int argc, char* argv[]) {
           }
           sameRegion ? data.polysTogether++ : data.polysApart++;
           data.numSolutions++;
-          u64 polyish = p->GetPolyishFromMaskedGrid();
-          cout << p->ToString() << endl;
-          auto a = __popcnt16(data.polyshape1);
-          auto b = __popcnt16(data.polyshape2);
-          auto c = __popcnt64(polyish);
-          assert(a + b == c);
-          data.polyish.insert(polyish);
+          if (sameRegion) {
+            u64 polyish = p->GetPolyishFromMaskedGrid();
+            auto a = __popcnt16(data.polyshape1);
+            auto b = __popcnt16(data.polyshape2);
+            auto c = __popcnt64(polyish);
+            assert(a + b == c);
+            data.polyish.insert(polyish);
+          }
         } // done with puzzle
+
         delete p;
+        if (!puzzleIsActuallySolvable) {
+          miscounted++;
+          continue;
+        }
         goodData[seed] = data;
       } // done reading file
     }
