@@ -1,5 +1,7 @@
 #pragma once
 #include <iostream>
+#include <unordered_map>
+#include <vector>
 
 enum class Line : u8 {
   None =   0,

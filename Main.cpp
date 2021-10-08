@@ -108,6 +108,31 @@ vector<tuple<int, int, vector<int>>> tests2 = {
   {0x54647333, 0x3FC55A34, {3, 0, 1, 2}},
 };
 
+void PrintBitmap(u64 polyish, u8 width, u8 height) {
+#define IS_SET(x, y) ((polyish & (1ull << (x * height + y))) != 0)
+  u8 minX = 0xFF;
+  u8 minY = 0xFF;
+  u8 maxX = 0x00;
+  u8 maxY = 0x00;
+  for (u8 x=0; x<width; x++) {
+    for (u8 y=0; y<height; y++) {
+      if (IS_SET(x, y)) {
+        minX = min(minX, x);
+        minY = min(minY, y);
+        maxX = max(maxX, x);
+        maxY = max(maxY, y);
+      }
+    }
+  }
+
+  for (u8 y = minY; y <= maxY; y++) {
+    for (u8 x = minX; x <= maxX; x++) {
+      cout << (IS_SET(x, y) ? '#' : '.');
+    }
+    cout << endl;
+  }
+};
+
 int main(int argc, char* argv[]) {
 #ifdef _DEBUG
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
@@ -190,11 +215,13 @@ int main(int argc, char* argv[]) {
     const int initSeed = 0;
     const int maxSeed = 0x4000;
 #else
-    const int threadOffset = 28;
-    const int numThreads = 4;
-    const int initSeed = 0x4000'0000;
-    const int maxSeed = 0x5000'0000; // Maximum of 0x7FFF'FFFE;
+    const int threadOffset = 8;
+    const int numThreads = 8;
+    const int initSeed = 0x1000'0000;
+    const int maxSeed = 0x2000'0000; // Maximum of 0x7FFF'FFFE;
+    // const int maxSeed = 0x1000'0000; // Maximum of 0x7FFF'FFFE;
     // Estimated (bad) filesize is 244 KB per 0x8000. You do the math.
+    // The plan is 0x1000'0000 for every 8 threads, or 0x0200'0000 per thread.
 #endif
     Vector<thread> threads;
     for (int i=0; i<numThreads; i++) {
@@ -203,9 +230,11 @@ int main(int argc, char* argv[]) {
         auto badFile  = CreateFileA(("thread_" + to_string(i+threadOffset) + "_bad.dat").c_str(),  FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
 
         Random rng;
-        for (int j=0; j<maxSeed / numThreads; j++) {
+        for (int j=0;; j++) {
           int seed = initSeed + 1 + i + (j * numThreads); // RNG starts at 1
+          if (seed > maxSeed) break;
           rng.Set(seed);
+
           Puzzle* p = rng.GeneratePolyominos(false, true);
 
           Vector<Path> solutions;
@@ -256,6 +285,7 @@ int main(int argc, char* argv[]) {
 
       while (!badFile.Done()) {
         u32 seed = badFile.GetInt();
+        badFile.GetInt(); // Skip result seed
         data[seed >> 4] |= 1 << (seed % 16);
         count++;
       }
@@ -272,9 +302,9 @@ int main(int argc, char* argv[]) {
       u8 numSolutions = 0;
       u8 polysTogether = 0;
       u8 polysApart = 0;
-      unordered_set<u64> polyish;
     };
     unordered_map<u32, PuzzleData> goodData;
+    unordered_map<u32, unordered_map<u64, u32>> combinedPolyshapes;
 
     u32 miscounted = 0;
 
@@ -299,6 +329,10 @@ int main(int argc, char* argv[]) {
             u16 polyshape = cell->polyshape;
             if (polyshape == 0) continue;
 
+            // Normalize the polyshape (not required for actual solving, only important for statistics)
+            while ((polyshape & 0x1111) == 0) polyshape >>= 1;
+            while ((polyshape & 0x0007) == 0) polyshape >>= 4;
+
             if (!firstPoly) {
               firstPoly = cell;
               data.polyshape1 = polyshape;
@@ -316,14 +350,7 @@ int main(int argc, char* argv[]) {
         bool puzzleIsActuallySolvable = false;
 
         // Compute solution paths by reading from file
-        // If the file is done (or the next byte is non-zero), we have reached the end of this set of solutions.
-        // [we check for zero because we know the start of every solution is (0, 8)]
-        // Oops! I forgot that seeds totally can end with 0. Oh well, I guess we can just seek ahead and check for <int> <0, 8>
-        while (!goodFile.Done()) {
-          // Check to see if a hypothetical seed followed by an X, Y is a valid startpoint.
-          // This should be impossible for consecutive solutions, and thus indicates the next seed.
-          if (goodFile.Peek(4) == 0 && goodFile.Peek(5) == 8) break;
-
+        for(u32 numSolutions = goodFile.GetInt(); numSolutions > 0; numSolutions--) {
           p->ClearGrid(true);
           u8 x = goodFile.Get();
           u8 y = goodFile.Get();
@@ -356,11 +383,10 @@ int main(int argc, char* argv[]) {
           data.numSolutions++;
           if (sameRegion) {
             u64 polyish = p->GetPolyishFromMaskedGrid();
-            auto a = __popcnt16(data.polyshape1);
-            auto b = __popcnt16(data.polyshape2);
-            auto c = __popcnt64(polyish);
-            assert(a + b == c);
-            data.polyish.insert(polyish);
+            assert(__popcnt16(data.polyshape1) + __popcnt16(data.polyshape2) == __popcnt64(polyish));
+            combinedPolyshapes[(data.polyshape1 << 16) | data.polyshape2][polyish]++;
+          } else {
+            combinedPolyshapes[(data.polyshape1 << 16) | data.polyshape2][0]++;
           }
         } // done with puzzle
 
@@ -372,6 +398,31 @@ int main(int argc, char* argv[]) {
         goodData[seed] = data;
       } // done reading file
     }
+
+    for (const auto& [key, data] : combinedPolyshapes) {
+      cout << "----------------------" << endl;
+      cout << "For polyominos:" << endl;
+      PrintBitmap(key, 8, 4);
+
+      // Sort and count the items
+      u32 total = 0;
+      vector<pair<u64, u32>> items;
+      for (const auto& it : data) {
+        items.push_back(it);
+        total += it.second;
+      }
+      sort(items.begin(), items.end(), [](const pair<u64, u32>& a, const pair<u64, u32>& b) { return a.second > b.second; });
+
+      for (const auto& [shape, count] : items) {
+        cout << (100.0f * count) / total << "% (" << count << '/' << total << ')' << endl;
+        if (shape == 0) {
+          cout << "Separated" << endl;
+        } else {
+          PrintBitmap(shape, 8, 8);
+        }
+      }
+    }
+
     cout << "Found " << goodData.size() << " valid puzzles";
   }
 
