@@ -215,13 +215,10 @@ int main(int argc, char* argv[]) {
     const int initSeed = 0;
     const int maxSeed = 0x4000;
 #else
-    const int threadOffset = 8;
-    const int numThreads = 8;
-    const int initSeed = 0x1000'0000;
-    const int maxSeed = 0x2000'0000; // Maximum of 0x7FFF'FFFE;
-    // const int maxSeed = 0x1000'0000; // Maximum of 0x7FFF'FFFE;
-    // Estimated (bad) filesize is 244 KB per 0x8000. You do the math.
-    // The plan is 0x1000'0000 for every 8 threads, or 0x0200'0000 per thread.
+    const int threadOffset = 32;
+    const int numThreads = 16;
+    const int initSeed = 0x4000'0000;
+    const int maxSeed = 0x6000'0000; // Maximum of 0x7FFF'FFFE;
 #endif
     Vector<thread> threads;
     for (int i=0; i<numThreads; i++) {
@@ -255,7 +252,6 @@ int main(int argc, char* argv[]) {
             WriteFile(goodFile, &seed, sizeof(seed), nullptr, nullptr);
             int numSolutions = solutions.Size();
             WriteFile(goodFile, &numSolutions, sizeof(numSolutions), nullptr, nullptr);
-            // TODO: Write number of solutions here!
             for (const auto& solution : solutions) {
               WriteFile(goodFile, &solution[0], sizeof(u8) * solution.Size(), nullptr, nullptr);
             }
@@ -284,10 +280,18 @@ int main(int argc, char* argv[]) {
       if (badFile.Done()) break; // File did not exist
 
       while (!badFile.Done()) {
-        u32 seed = badFile.GetInt();
-        badFile.GetInt(); // Skip result seed
-        data[seed >> 4] |= 1 << (seed % 16);
-        count++;
+        /*u32 initialSeed = */badFile.GetInt();
+        u32 finalSeed = badFile.GetInt();
+
+        // We use the finalSeed here (not the initial seed) so that we can check validity *after* puzzle generation,
+        // which is pertinent because puzzle generation increments the seed a non-obvious number of times.
+        u16 bucket = data[finalSeed >> 4];
+        u16 mask = 1 << (finalSeed % 16);
+
+        if ((bucket & mask) == 0) {
+          data[finalSeed >> 4] = bucket | mask;
+          count++;
+        }
       }
     }
     // This file can probably be checked in, honestly. It's only about 256 MB, which is /annoying/ to clone but not that big of a deal. Especially since it'll never change.
