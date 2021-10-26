@@ -158,8 +158,8 @@ int main(int argc, char* argv[]) {
     const int numThreads = 8;
     vector<thread> threads;
     string results[8];
-    int maxValues[8];
-    int minValues[8];
+    s64 maxValues[8];
+    s64 minValues[8];
     long numSteps[8];
     for (int i=0; i<numThreads; i++) {
       thread t([&](int i) {
@@ -167,8 +167,8 @@ int main(int argc, char* argv[]) {
         rng.Set(111111 + i);
         long count = 0;
         int value = 0;
-        int maxValue = -0x7FFFFFFF;
-        int minValue = 0x7FFFFFFF;
+        s64 maxValue = -0x7FFF'FFFF'FFFF'FFFF;
+        s64 minValue = 0x7FFF'FFFF'FFFF'FFFF;
         do {
           value = rng.Get();
           count++;
@@ -212,23 +212,24 @@ int main(int argc, char* argv[]) {
 #if _DEBUG
     const int threadOffset = 0;
     const int numThreads = 1;
-    const int initSeed = 0;
-    const int maxSeed = 0x4000;
+    const u32 initSeed = 0;
+    const u32 maxSeed = 0x4000;
 #else
-    const int threadOffset = 32;
+    const int threadOffset = 48;
     const int numThreads = 16;
-    const int initSeed = 0x4000'0000;
-    const int maxSeed = 0x6000'0000; // Maximum of 0x7FFF'FFFE;
+    const u32 initSeed = 0x6000'0000;
+    const u32 maxSeed = 0x7FFF'FFFE;
 #endif
+    static_assert(maxSeed <= 0x7FFF'FFFE);
     Vector<thread> threads;
-    for (int i=0; i<numThreads; i++) {
+    for (u32 i=0; i<numThreads; i++) {
       thread t([&](int i) {
         auto goodFile = CreateFileA(("thread_" + to_string(i+threadOffset) + "_good.dat").c_str(), FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
         auto badFile  = CreateFileA(("thread_" + to_string(i+threadOffset) + "_bad.dat").c_str(),  FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
 
         Random rng;
-        for (int j=0;; j++) {
-          int seed = initSeed + 1 + i + (j * numThreads); // RNG starts at 1
+        for (u32 j=0;; j++) {
+          u32 seed = initSeed + 1 + i + (j * numThreads); // RNG starts at 1
           if (seed > maxSeed) break;
           rng.Set(seed);
 
@@ -243,7 +244,7 @@ int main(int argc, char* argv[]) {
             solutions = Solver(p).Solve();
           }
 
-          int endingRng = rng.Peek();
+          u32 endingRng = rng.Peek();
           if (solutions.Empty()) {
             WriteFile(badFile, &seed, sizeof(seed), nullptr, nullptr);
             WriteFile(badFile, &endingRng, sizeof(endingRng), nullptr, nullptr);
