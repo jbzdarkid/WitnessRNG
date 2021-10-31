@@ -1,4 +1,6 @@
 #pragma once
+#define _HAS_STD_BYTE 0 // sigh, windows.
+
 #include <vector>
 #include <utility>
 

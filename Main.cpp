@@ -11,10 +11,13 @@
 #define WIN32_LEAN_AND_MEAN
 #include "Windows.h"
 #include "File.h"
+#include <mutex>
 
 using namespace std;
 
 Console console;
+
+// TODO: I'm a little worried about the _numConnections overflow. Double-check (ugh) with TW.
 
 // Ideas to bring back to the javascript version:
 // - Try making a single maskedGrid (and polyGrid?) per puzzle. Then, instead of swapping out the puzzle, just write into that grid.
@@ -108,6 +111,17 @@ vector<tuple<int, int, vector<int>>> tests2 = {
   {0x54647333, 0x3FC55A34, {3, 0, 1, 2}},
 };
 
+vector<tuple<int, int, int>> tests3 = {
+  { 0x00000001, 0x618FB492, 0 },
+  { 0x00000009, 0x4FF76178, 0 },
+  { 0x00000011, 0x6DF2FFE9, 0 },
+  { 0x00000019, 0x337647A4, 0 },
+  { 0x00000229, 0x34265078, 2 },
+  { 0x00000319, 0x7134A0C2, 3 },
+  { 0x00001031, 0x23D1E006, 1 },
+  { 0x00002351, 0x6B33B70C, 1 },
+};
+
 void PrintBitmap(u64 polyish, u8 width, u8 height) {
 #define IS_SET(x, y) ((polyish & (1ull << (x * height + y))) != 0)
   u8 minX = 0xFF;
@@ -152,6 +166,26 @@ int main(int argc, char* argv[]) {
       for (int i=0; i<4; i++) assert(test[i] == shuffled[i]);
     }
 
+    for (const auto& [initRng, endRng, numSolutions] : tests3) {
+      rng.Set(initRng);
+      Puzzle* p = rng.GeneratePolyominos(false);
+      assert(rng.Peek() == endRng);
+      auto solutions = Solver(p).Solve();
+      assert(solutions.Size() == numSolutions);
+
+      // See comment in merge. We need to increment until we reach the loop start.
+      rng.Set(initRng);
+      int extra = rng.CheckStarsFailure();
+
+      for (int k=0; k<extra - 2; k++) rng.Get();
+      // rng is now set to the initial seed that will *actually* generate this result.
+      assert(rng.CheckStarsFailure() == 2);
+
+      for (int k=0; k<13; k++) rng.Get();
+      bool isSolvable = Random::IsSolvable(rng.Peek());
+      assert((numSolutions > 0) == isSolvable);
+      delete p;
+    }
     cout << "Done" << endl;
 
   } else if (argc > 1 && strcmp(argv[1], "period") == 0) {
@@ -202,8 +236,9 @@ int main(int argc, char* argv[]) {
 
   } else if (argc > 1 && strcmp(argv[1], "rand") == 0) {
     Random rng;
-    rng.Set(0x5C64B474);
-    Puzzle* p = rng.GeneratePolyominos(true);
+    rng.Set(806297464);
+    // rng.Set(819664878);
+    Puzzle* p = rng.GeneratePolyominos(false);
     cout << p->ToString() << endl;
     auto solutions = Solver(p).Solve();
     delete p;
@@ -233,14 +268,11 @@ int main(int argc, char* argv[]) {
           if (seed > maxSeed) break;
           rng.Set(seed);
 
-          Puzzle* p = rng.GeneratePolyominos(false, true);
+          bool starsFailure = rng.CheckStarsFailure();
+          Puzzle* p = rng.GeneratePolyominos(false); // Even if stars fail, we still want to roll the RNG to find the endRng.
 
           Vector<Path> solutions;
-          if (p == nullptr) { // If stars fail, then we will hit this seed in another thread, and there's no reason to solve.
-            rng.Set(seed);
-            Puzzle* unused = rng.GeneratePolyominos(false); // But we still want to roll the RNG to find the endRng.
-            delete unused;
-          } else {
+          if (!starsFailure) { // If stars fail, then we will hit this seed in another thread, and there's no reason to solve.
             solutions = Solver(p).Solve();
           }
 
@@ -272,33 +304,70 @@ int main(int argc, char* argv[]) {
       if (threads[i].joinable()) threads[i].join();
     }
   } else if (argc > 1 && strcmp(argv[1], "merge") == 0) {
-    Vector<u16> data(1 << 27); // A single bit per seed
-    data.Fill(0);
+    Vector<u16> finalData(1 << 27); // A single bit per seed
+    std::mutex dataLock;
+    finalData.Fill(0xFF);
 
-    int count = 0;
-    for (int i = 0;; i++) {
-      File badFile("thread_" + to_string(i) + "_bad.dat");
-      if (badFile.Done()) break; // File did not exist
+#if _DEBUG
+    const int numThreads = 1;
+#else
+    const int numThreads = 4;
+#endif
+    Vector<thread> threads(numThreads);
 
-      while (!badFile.Done()) {
-        /*u32 initialSeed = */badFile.GetInt();
-        u32 finalSeed = badFile.GetInt();
+    for (u32 i=0; i<numThreads; i++) {
+      thread t([&](int i) {
+        Vector<u16> threadData = finalData.Copy(); 
+        Random rng;
+        for (int j = i;; j+=numThreads) {
+          File badFile("thread_" + to_string(j) + "_bad.dat");
+          if (badFile.Done()) break; // File did not exist
 
-        // We use the finalSeed here (not the initial seed) so that we can check validity *after* puzzle generation,
-        // which is pertinent because puzzle generation increments the seed a non-obvious number of times.
-        u16 bucket = data[finalSeed >> 4];
-        u16 mask = 1 << (finalSeed % 16);
+          while (!badFile.Done()) {
+            u32 initialSeed = badFile.GetInt();
+            u32 finalSeed = badFile.GetInt();
+            (void)finalSeed;
 
-        if ((bucket & mask) == 0) {
-          data[finalSeed >> 4] = bucket | mask;
-          count++;
+            // if (initialSeed == 0x000041a7) DebugBreak();
+            // if (initialSeed == 1) DebugBreak();
+
+            rng.Set(initialSeed);
+            // While generating data, we do not differentiate a generation failure from an unsolvable puzzle, as both incur a reroll.
+            // However, for the purposes of computing solvability, we only want to denote actualy unsolvable puzzles,
+            // ergo we  need to skip any puzzles which failed due to a stars failure.
+            int rerollCount = rng.CheckStarsFailure();
+            if (rerollCount > 2) continue;
+
+            // We use a value based on the initial seed here, because the final seed is not actually unique!
+            // Two puzzles may share a final seed if they had different polyomino sizes, since differently-sized polyominos
+            // will increment the RNG a different number of times. Ergo, differentiating based on the end RNG is not possible.
+            // Instead, we use the initial seed. However, if a puzzle fails, we jump to just before the starts failure,
+            // which means *that* moment is the "initial" seed for re-rolls. To avoid extra normalization, we always use that location,
+            // which is 11 RNG steps beyond the initial seed, +2 for the stars roll.
+            for (int k=0; k<13; k++) rng.Get();
+            // if (rng.Peek() == 0x6a5d128c) DebugBreak();
+
+            // Computing *solvability* here
+            threadData[rng.Peek() >> 4] &= ~(1 << (rng.Peek() % 16)); 
+          }
         }
-      }
+
+        dataLock.lock();
+        for (int j=0; j<threadData.Size(); j++) {
+          finalData[j] &= threadData[j];
+        }
+        dataLock.unlock();
+      }, i);
+      threads.Emplace(move(t));
     }
+    for (int i=0; i<numThreads; i++) {
+      if (threads[i].joinable()) threads[i].join();
+    }
+
     // This file can probably be checked in, honestly. It's only about 256 MB, which is /annoying/ to clone but not that big of a deal. Especially since it'll never change.
     auto output = CreateFileA("puzzle_solvability.dat", FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
-    WriteFile(output, &data[0], data.Size() * sizeof(data[0]), nullptr, nullptr);
-    cout << "count" << count << endl;
+    WriteFile(output, &finalData[0], finalData.Size() * sizeof(finalData[0]), nullptr, nullptr);
+
   } else if (argc > 1 && strcmp(argv[1], "good") == 0) {
     struct PuzzleData {
       u16 polyshape1 = 0;

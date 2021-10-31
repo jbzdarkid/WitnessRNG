@@ -117,7 +117,7 @@ public:
     return _size;
   }
 
-  // Shrink (or grow) the vector's size to equal |size|. This does not affect the underlying data.
+  // Shrink (or grow) the vector's size to equal |size|. This does not affect the underlying data nor capacity.
   void Resize(int size) {
     assert(size >= 0);
     assert(size <= _capacity);

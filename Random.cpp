@@ -85,7 +85,33 @@ u16 Random::RandomPolyshape() {
   return polyshape;
 }
 
-Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible, bool abortOnStarsFailure, u8* validSeeds) {
+int Random::CheckStarsFailure() {
+  int rngBefore = _seed;
+  for (int k=0; k<11; k++) Get(); // Initial color generation
+
+  int i = 0;
+
+  // hacky, stolen from puzzle
+  while (true) {
+    int rand = Get() % (4 * 4); i++;
+    int x1 = (rand % 4)*2 + 1;
+    int y1 = (4 - rand/4)*2 - 1;
+
+    int x2, y2;
+    do {
+      rand = Get() % (4 * 4); i++;
+      x2 = (rand % 4)*2 + 1;
+      y2 = (4 - rand/4)*2 - 1;
+    } while (x1 == x2 && y1 == y2);
+
+    if (abs(x1 - x2) + abs(y1 - y2) >= 6) break;
+  }
+
+  _seed = rngBefore;
+  return i;
+}
+
+Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible) {
   Puzzle* p = new Puzzle(4, 4);
   p->_name = "Random polyominos #" + std::to_string(_seed);
 
@@ -98,19 +124,15 @@ Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible, bool abortOnStarsFai
   {
     p->_grid[0][8].start = true;
     p->_grid[8][0].end = End::Right; p->_numConnections++;
+    bool solvable = IsSolvable(_seed);
+    (void)solvable;
 
     rerollStars:
     Cell* star1 = p->GetEmptyCell(*this);
     Cell* star2 = p->GetEmptyCell(*this);
 
     // Manhattan Distance of 3 or more
-    if (abs(star1->x - star2->x) + abs(star1->y - star2->y) < 6) {
-      if (abortOnStarsFailure) {
-        delete p;
-        return nullptr;
-      }
-      goto rerollStars;
-    }
+    if (abs(star1->x - star2->x) + abs(star1->y - star2->y) < 6) goto rerollStars;
 
     star1->type = Type::Star;
     star1->color = colors[0];
@@ -132,13 +154,7 @@ Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible, bool abortOnStarsFai
     poly2->polyshape = polyshape2;
 
     if (rerollOnImpossible) {
-      bool unsolvable;
-      if (validSeeds != nullptr) {
-        // uh oh
-        unsolvable = (validSeeds[_seed >> 8] & (1 << (_seed % 8))) != 0;
-      } else {
-        unsolvable = Solver(p).Solve(1).Empty();
-      }
+      bool unsolvable = Solver(p).Solve(1).Empty();
 
       if (unsolvable) {
         if (_seed == 0x7db993b5) { // This seed is known to be solvable (and is used by the tests)
@@ -152,4 +168,25 @@ Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible, bool abortOnStarsFai
   }
 
   return p;
+}
+
+#include "Windows.h"
+#include <mutex>
+
+static Vector<u16> solvability;
+static std::mutex solvabilityLock;
+
+bool Random::IsSolvable(int seed) {
+  if (solvability.Empty()) {
+    std::lock_guard<std::mutex> lock(solvabilityLock);
+    if (solvability.Empty()) {
+      solvability.Expand(1 << 27);
+      solvability.Resize(1 << 27);
+      HANDLE file = CreateFileA("puzzle_solvability.dat", FILE_GENERIC_READ, NULL, nullptr, OPEN_EXISTING, NULL, nullptr);
+      ReadFile((HANDLE)file, &solvability[0], solvability.Size() * sizeof(solvability[0]), nullptr, nullptr);
+      CloseHandle(file);
+    }
+  }
+
+  return (solvability[seed >> 4] & (1 << (seed % 16))) != 0;
 }
