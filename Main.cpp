@@ -182,8 +182,7 @@ int main(int argc, char* argv[]) {
       assert(rng.CheckStarsFailure() == 2);
 
       for (int k=0; k<13; k++) rng.Get();
-      bool isSolvable = Random::IsSolvable(rng.Peek());
-      assert((numSolutions > 0) == isSolvable);
+      assert((numSolutions > 0) == Random::IsSolvable(rng.Peek()));
       delete p;
     }
     cout << "Done" << endl;
@@ -369,21 +368,13 @@ int main(int argc, char* argv[]) {
     WriteFile(output, &finalData[0], finalData.Size() * sizeof(finalData[0]), nullptr, nullptr);
 
   } else if (argc > 1 && strcmp(argv[1], "good") == 0) {
-    struct PuzzleData {
-      u16 polyshape1 = 0;
-      u16 polyshape2 = 0;
-
-      u8 numSolutions = 0;
-      u8 polysTogether = 0;
-      u8 polysApart = 0;
-    };
-    unordered_map<u32, PuzzleData> goodData;
     unordered_map<u32, unordered_map<u64, u32>> combinedPolyshapes;
-
-    u32 miscounted = 0;
+    unordered_map<u32, unordered_map<u64, u32>> uniquePolyshapes;
+    unordered_map<u32, u32[4]> starStatistics;
 
     Random rng;
     for (int i = 0;; i++) {
+      OutputDebugString((L"Starting file: thread_" + to_wstring(i) + L"_good.dat\n").c_str());
       File goodFile("thread_" + to_string(i) + "_good.dat");
       if (goodFile.Done()) break; // File did not exist
 
@@ -392,38 +383,60 @@ int main(int argc, char* argv[]) {
         rng.Set(seed);
         Puzzle* p = rng.GeneratePolyominos(false);
 
-        PuzzleData data;
         Cell* firstPoly = nullptr;
         Cell* secondPoly = nullptr;
+        bool canContainStars = false;
+        bool canExcludeStars = false;
+        std::unordered_set<u64> validPolyshapes;
 
         // Compute polyshapes
+        u16 polyshape1 = 0;
+        u16 polyshape2 = 0;
         for (u8 x = 1; x < p->_width; x += 2) {
           for (u8 y = 1; y < p->_height; y += 2) {
             Cell* cell = &p->_grid[x][y];
             u16 polyshape = cell->polyshape;
             if (polyshape == 0) continue;
 
-            // Normalize the polyshape (not required for actual solving, only important for statistics)
-            while ((polyshape & 0x1111) == 0) polyshape >>= 1;
-            while ((polyshape & 0x0007) == 0) polyshape >>= 4;
-
             if (!firstPoly) {
               firstPoly = cell;
-              data.polyshape1 = polyshape;
+              polyshape1 = polyshape;
             } else {
               secondPoly = cell;
-              data.polyshape2 = polyshape;
+              polyshape2 = polyshape;
               break;
             }
           }
         }
+
         assert(firstPoly);
         assert(secondPoly);
-        if (data.polyshape1 < data.polyshape2) swap(data.polyshape1, data.polyshape2);
 
-        bool puzzleIsActuallySolvable = false;
+        // Normalize polyshape1 to be the larger of the two
+        if (polyshape1 < polyshape2) swap(polyshape1, polyshape2);
 
-        // Compute solution paths by reading from file
+        // Normalize rotation and shift of polyshape1
+        u8 minRotation = 0;
+        u16 minPolyshape = polyshape1;
+
+        u16 rotatedShape = polyshape1;
+        for (u8 j=1; j<4; j++) {
+          rotatedShape = Polyominos::RotatePolyshape(rotatedShape);
+          rotatedShape = Polyominos::Normalize(rotatedShape);
+          if (rotatedShape < minPolyshape) {
+            minPolyshape = rotatedShape;
+            minRotation = j;
+          }
+        }
+
+        for (u8 j = 0; j<minRotation; j++) {
+          polyshape1 = Polyominos::RotatePolyshape(polyshape1);
+          polyshape2 = Polyominos::RotatePolyshape(polyshape2);
+        }
+        polyshape1 = Polyominos::Normalize(polyshape1);
+        polyshape2 = Polyominos::Normalize(polyshape2);
+
+        // Compute all solution paths by reading from file
         for(u32 numSolutions = goodFile.GetInt(); numSolutions > 0; numSolutions--) {
           p->ClearGrid(true);
           u8 x = goodFile.Get();
@@ -441,63 +454,102 @@ int main(int argc, char* argv[]) {
             else if (dir == PATH_BOTTOM) y++;
           }
           
-          auto puzzleData = Validator::Validate(*p);
-          if (!puzzleData.Valid()) continue;
-          puzzleIsActuallySolvable = true;
+          assert(Validator::Validate(*p).Valid());
 
           Region region = p->GetRegion(firstPoly->x, firstPoly->y);
           bool sameRegion = false;
+          bool containsStars = false;
           for (Cell* cell : region) {
-            if (cell == secondPoly) {
-              sameRegion = true;
-              break;
-            }
+            if (cell == secondPoly) sameRegion = true;
+            if (cell->type == Type::Star) containsStars = true;
           }
-          sameRegion ? data.polysTogether++ : data.polysApart++;
-          data.numSolutions++;
+
           if (sameRegion) {
-            u64 polyish = p->GetPolyishFromMaskedGrid();
-            assert(__popcnt16(data.polyshape1) + __popcnt16(data.polyshape2) == __popcnt64(polyish));
-            combinedPolyshapes[(data.polyshape1 << 16) | data.polyshape2][polyish]++;
+            u64 polyish = p->GetPolyishFromMaskedGrid(minRotation);
+            assert(__popcnt16(polyshape1) + __popcnt16(polyshape2) == __popcnt64(polyish));
+            validPolyshapes.insert(polyish);
           } else {
-            combinedPolyshapes[(data.polyshape1 << 16) | data.polyshape2][0]++;
+            validPolyshapes.insert(0);
           }
+          if (containsStars) canContainStars = true;
+          else               canExcludeStars = true;
         } // done with puzzle
 
+        u32 key = (polyshape1 << 16) | polyshape2;
+        for (u64 polyish : validPolyshapes) combinedPolyshapes[key][polyish]++;
+        if (validPolyshapes.size() == 1) uniquePolyshapes[key][*validPolyshapes.begin()]++;
+
+        u8 starsValue = (canContainStars ? 1 : 0) + (canExcludeStars ? 2 : 0);
+        starStatistics[key][starsValue]++;
+
         delete p;
-        if (!puzzleIsActuallySolvable) {
-          miscounted++;
-          continue;
-        }
-        goodData[seed] = data;
       } // done reading file
     }
 
+    u64 uberTotal = 0;
+    u64 totalPolysTogether = 0;
+    u64 totalPolysApart = 0;
+    u64 totalPolysBoth = 0;
+    // u64 totalStarsContained = 0;
+    // u64 totalStarsExcluded = 0;
+    // u64 totalStarsBoth = 0;
+
+    vector<pair<u32, u32>> sortedPolyshapes;
     for (const auto& [key, data] : combinedPolyshapes) {
+      u32 total = 0;
+      for (const auto& [shape, count] : data) total += count;
+      sortedPolyshapes.emplace_back(key, total);
+      uberTotal += total;
+    }
+    sort(sortedPolyshapes.begin(), sortedPolyshapes.end(), [](const pair<u32, u32>& a, const pair<u32, u32>& b) { return a.second > b.second; });
+
+    cout << "Found " << uberTotal << " valid puzzles\n";
+
+    for (const auto& [key, total] : sortedPolyshapes) {
+      const auto& data = combinedPolyshapes[key];
+      const auto& uniqueData = uniquePolyshapes[key];
+      u32 uniqueTotal = 0;
+      for (const auto& [key2, data2] : uniqueData) uniqueTotal += data2;
+
       cout << "----------------------" << endl;
-      cout << "For polyominos:" << endl;
+      cout << "This pair of polyominos is present in " << total << " puzzles (" << (100.0f * total) / uberTotal << "% of all puzzles)\n";
+      cout << uniqueTotal << " (" << (100.0f * uniqueTotal / total) << "%) of these puzzles have only one valid configuration of polyshapes.\n";
+
       PrintBitmap(key, 8, 4);
 
-      // Sort and count the items
-      u32 total = 0;
       vector<pair<u64, u32>> items;
-      for (const auto& it : data) {
-        items.push_back(it);
-        total += it.second;
-      }
+      for (const auto& it : data) items.push_back(it);
       sort(items.begin(), items.end(), [](const pair<u64, u32>& a, const pair<u64, u32>& b) { return a.second > b.second; });
 
       for (const auto& [shape, count] : items) {
-        cout << (100.0f * count) / total << "% (" << count << '/' << total << ')' << endl;
+        u32 uniqueCount = uniqueData.at(shape);
+
         if (shape == 0) {
-          cout << "Separated" << endl;
+          cout << count << " (" << (100.0f * count) / total << "%) of these puzzles can be solved with the polyominos separated\n";
+          cout << uniqueCount << " (" << (100.0f * uniqueCount) / total << "%) of these puzzles must be solved with the polyominos separated\n";
         } else {
+          cout << count << " (" << (100.0f * count) / total << "%) of these puzzles can be solved with the polyominos in this configuration:\n";
+          cout << uniqueCount << " (" << (100.0f * uniqueCount) / total << "%) of these puzzles must be solved with the polyominos in this configuration:\n";
           PrintBitmap(shape, 8, 8);
         }
       }
+
+      if (data.size() == 1) {
+        if (data.at(0) == 0) {
+          totalPolysApart++; // Only one solution type and it involves separation
+        } else {
+          totalPolysTogether++; // Only one solution type and it requires combination
+        }
+      } else if (data.find(0) != data.end()) {
+        totalPolysBoth++; // Multiple types and one of them is separation
+      } else {
+        totalPolysTogether++; // Multiple types but none of them are separation
+      }
     }
 
-    cout << "Found " << goodData.size() << " valid puzzles";
+    cout << totalPolysApart << " (" << (100.0f * totalPolysApart) / uberTotal << "%) of all puzzles must be solved with the polyominos separated\n";
+    cout << totalPolysTogether << " (" << (100.0f * totalPolysTogether) / uberTotal << "%) of all puzzles must be solved with the polyominos combined\n";
+    cout << totalPolysBoth << " (" << (100.0f * totalPolysBoth) / uberTotal << "%) of all puzzles can be solved either way\n";
   }
 
   return 0;

@@ -182,5 +182,18 @@ bool Polyominos::PlacePolys(std::vector<Cell*>& polys, const Puzzle& puzzle, s8*
   return false;
 }
 
+u16 Polyominos::RotatePolyshape(u16 polyshape) {
+  u16 newshape = 0;
+  for (u8 x=0; x<4; x++) {
+    for (u8 y=0; y<4; y++) {
+      if (polyshape & (1 << (x*4 + y))) newshape |= 1 << (y*4 + 3-x);
+    }
+  }
+  return newshape;
+}
 
-
+u16 Polyominos::Normalize(u16 polyshape) {
+  while ((polyshape & 0x1111) == 0) polyshape >>= 1;
+  while ((polyshape & 0x000F) == 0) polyshape >>= 4;
+  return polyshape;
+}

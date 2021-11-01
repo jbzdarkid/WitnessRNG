@@ -49,16 +49,6 @@ void Random::ShuffleIntegers(Vector<int>& arr) {
   }
 }
 
-u16 RotatePolyshape(u16 polyshape) {
-  u16 newshape = 0;
-  for (u8 x=0; x<4; x++) {
-    for (u8 y=0; y<4; y++) {
-      if (polyshape & (1 << (x*4 + y))) newshape |= 1 << (y*4 + 3-x);
-    }
-  }
-  return newshape;
-}
-
 u16 Random::RandomPolyshape() {
   u8 cursorX = 0;
   u8 cursorY = 0;
@@ -79,7 +69,7 @@ u16 Random::RandomPolyshape() {
   // Slight adjustment here due to differences in rotation between WitnessPuzzles and The Witness.
   u8 rotation = (Get() + 1) % 4;
   for (; rotation > 0; rotation--) {
-    polyshape = RotatePolyshape(polyshape);
+    polyshape = Polyominos::RotatePolyshape(polyshape);
   }
 
   return polyshape;

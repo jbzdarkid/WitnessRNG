@@ -235,32 +235,30 @@ Region Puzzle::GetRegion(s8 x, s8 y) {
   return region;
 }
 
-u64 Puzzle::GetPolyishFromMaskedGrid() {
-  u8 minX = 0xFF;
-  u8 minY = 0xFF;
-  for (u8 x=1; x<_width; x+=2) {
-    for (u8 y=1; y<_height; y+=2) {
-      if (_maskedGrid[x][y] == Masked::Processed) {
-        minX = min(minX, x);
-        minY = min(minY, y);
-      }
-    }
-  }
-
+u64 Puzzle::GetPolyishFromMaskedGrid(u8 rotation) {
   u64 polyish = 0;
   for (u8 x=1; x<_width; x+=2) {
     for (u8 y=1; y<_height; y+=2) {
       if (_maskedGrid[x][y] != Masked::Processed) continue;
 
-      // Given that X <= 15, x * 4 < 64
-      // And, since x - minX is always even, the smallest it can be is 8, which doesn't conflict with Y.
-      assert((x - minX) * 4 < 64);
-      assert(((x - minX) * 4) % 8 == 0);
-      assert((y - minY) / 2 < 8);
-      u8 offset = (x - minX) * 4 + (y - minY) / 2;
-      polyish |= (u64)1 << offset;
+      u8 newX = (x - 1) / 2;
+      u8 newY = (y - 1) / 2;
+      for (int j=0; j<rotation; j++) {
+        u8 tmp = newX;
+        newX = 7 - newY;
+        newY = tmp;
+      }
+      assert(newX < 8);
+      assert(newY < 8);
+
+      polyish |= (u64)1 << (newX * 8 + newY);
     }
   }
+
+  // Each row is represented by a u8 (00 - FF). So, halve the number until any column is odd.
+  while ((polyish & 0x0101'0101'0101'0101) == 0) polyish >>= 1;
+  // Each column is represented by a u8 mask (01 - 80). So, shift until rightmost column has something in it.
+  while ((polyish & 0x0000'0000'0000'00FF) == 0) polyish >>= 8;
 
   return polyish;
 }

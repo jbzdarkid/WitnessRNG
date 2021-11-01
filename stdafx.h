@@ -14,7 +14,7 @@
   } \
 }
 #else
-#define assert(cond) (void)(cond)
+#define assert(cond) 
 #endif
 
 #include "Polyominos.h"

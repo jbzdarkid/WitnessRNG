@@ -60,7 +60,7 @@ public:
   Vector<Region> GetRegions();
   Region GetRegion(s8 x, s8 y);
   // Works for up to an 8x8 region
-  u64 GetPolyishFromMaskedGrid();
+  u64 GetPolyishFromMaskedGrid(u8 rotation);
 
   std::string ToString(); // Can be imported into TW
   void LogGrid();

@@ -17,6 +17,9 @@ public:
   // * And etc, for additional layers of polyominos/onimoylops.
   static bool PolyFit(const Region& region, const Puzzle& puzzle);
 
+  static u16 RotatePolyshape(u16 polyshape);
+  static u16 Normalize(u16 polyshape);
+
 private:
   static u8 GetPolySize(u16 polyshape);
   // IMPORTANT NOTE: When formulating these, the top row must contain (0, 0)
@@ -45,8 +48,9 @@ private:
     if (x >= 4 || y >= 4) return false;
     return (polyshape & Mask(x, y)) != 0;
   }
+
   static inline std::vector<u16> GetRotations(u16 polyshape) {
-    return { polyshape }; // When we implement this for real, delete Random::RotatePolyshape.
+    return { polyshape }; // TODO. Oh well.
   }
 
 };
