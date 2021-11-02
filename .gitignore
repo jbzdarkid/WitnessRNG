@@ -35,3 +35,4 @@
 x64/
 WitnessRNG.vcxproj.user
 thread_*
+*.dat
