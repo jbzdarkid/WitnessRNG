@@ -141,7 +141,11 @@ void PrintBitmap(u64 polyish, u8 width, u8 height) {
 
   for (u8 y = minY; y <= maxY; y++) {
     for (u8 x = minX; x <= maxX; x++) {
-      cout << (IS_SET(x, y) ? '#' : '.');
+      if (width == 8 && x >= 4) {
+        cout << (IS_SET(x, y) ? 'X' : '.');
+      } else {
+        cout << (IS_SET(x, y) ? '#' : '.');
+      }
     }
     cout << endl;
   }
@@ -412,29 +416,36 @@ int main(int argc, char* argv[]) {
         assert(firstPoly);
         assert(secondPoly);
 
-        // Normalize polyshape1 to be the larger of the two
-        if (polyshape1 < polyshape2) swap(polyshape1, polyshape2);
+        struct NormalizedPolys {
+          u16 poly1 = 0xFFFF;
+          u16 poly2 = 0xFFFF;
+          u8 rotation = 0;
+          bool flip = false;
+        } min;
 
-        // Normalize rotation and shift of polyshape1
-        u8 minRotation = 0;
-        u16 minPolyshape = polyshape1;
-
-        u16 rotatedShape = polyshape1;
-        for (u8 j=1; j<4; j++) {
-          rotatedShape = Polyominos::RotatePolyshape(rotatedShape);
-          rotatedShape = Polyominos::Normalize(rotatedShape);
-          if (rotatedShape < minPolyshape) {
-            minPolyshape = rotatedShape;
-            minRotation = j;
+        for (u8 j=0; j<8; j++) {
+          if (polyshape1 < min.poly1 || (polyshape1 == min.poly1 && polyshape2 < min.poly2)) {
+            min.rotation = j;
+            min.poly1 = polyshape1;
+            min.poly2 = polyshape2;
+            min.flip = (j >= 4);
+          }
+          if (polyshape2 < min.poly1 || (polyshape2 == min.poly1 && polyshape1 < min.poly2)) {
+            min.rotation = j;
+            min.poly1 = polyshape2;
+            min.poly2 = polyshape1;
+            min.flip = (j >= 4);
+          }
+          polyshape1 = Polyominos::Normalize(Polyominos::RotatePolyshape(polyshape1));
+          polyshape2 = Polyominos::Normalize(Polyominos::RotatePolyshape(polyshape2));
+          if (j == 3) {
+            polyshape1 = Polyominos::Flip(polyshape1);
+            polyshape2 = Polyominos::Flip(polyshape2);
           }
         }
 
-        for (u8 j = 0; j<minRotation; j++) {
-          polyshape1 = Polyominos::RotatePolyshape(polyshape1);
-          polyshape2 = Polyominos::RotatePolyshape(polyshape2);
-        }
-        polyshape1 = Polyominos::Normalize(polyshape1);
-        polyshape2 = Polyominos::Normalize(polyshape2);
+        polyshape1 = min.poly1;
+        polyshape2 = min.poly2;
 
         // Compute all solution paths by reading from file
         for(u32 numSolutions = goodFile.GetInt(); numSolutions > 0; numSolutions--) {
@@ -465,7 +476,7 @@ int main(int argc, char* argv[]) {
           }
 
           if (sameRegion) {
-            u64 polyish = p->GetPolyishFromMaskedGrid(minRotation);
+            u64 polyish = p->GetPolyishFromMaskedGrid(min.rotation, min.flip);
             assert(__popcnt16(polyshape1) + __popcnt16(polyshape2) == __popcnt64(polyish));
             validPolyshapes.insert(polyish);
           } else {
@@ -513,9 +524,10 @@ int main(int argc, char* argv[]) {
 
       cout << "----------------------" << endl;
       cout << "This pair of polyominos is present in " << total << " puzzles (" << (100.0f * total) / uberTotal << "% of all puzzles)\n";
-      cout << uniqueTotal << " (" << (100.0f * uniqueTotal / total) << "%) of these puzzles have only one valid configuration of polyshapes.\n";
+      cout << "Of those puzzles, " << uniqueTotal << " (" << (100.0f * uniqueTotal / total) << "%) can only be solved with one configuration of polyominos\n";
 
       PrintBitmap(key, 8, 4);
+      cout << "[internal]" << hex << key << dec << endl;
 
       vector<pair<u64, u32>> items;
       for (const auto& it : data) items.push_back(it);
@@ -535,7 +547,7 @@ int main(int argc, char* argv[]) {
       }
 
       if (data.size() == 1) {
-        if (data.at(0) == 0) {
+        if (data.begin()->first == 0) {
           totalPolysApart++; // Only one solution type and it involves separation
         } else {
           totalPolysTogether++; // Only one solution type and it requires combination

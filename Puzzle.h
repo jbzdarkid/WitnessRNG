@@ -3,7 +3,7 @@
 #include <string>
 
 struct Cell {
-  Type type;
+  Type type = (Type)0;
   u8 x = 0;
   u8 y = 0;
 
@@ -30,7 +30,7 @@ public:
   u8 _symmetry = 0;
   Cell** _grid;
   Masked** _maskedGrid;
-  Vector<std::pair<u8, u8>>* _connections;
+  Vector<u8>* _connections;
   std::string _name;
   bool _pillar = false;
 
@@ -60,7 +60,7 @@ public:
   Vector<Region> GetRegions();
   Region GetRegion(s8 x, s8 y);
   // Works for up to an 8x8 region
-  u64 GetPolyishFromMaskedGrid(u8 rotation);
+  u64 GetPolyishFromMaskedGrid(u8 rotation, bool flip);
 
   std::string ToString(); // Can be imported into TW
   void LogGrid();

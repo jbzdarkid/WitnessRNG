@@ -20,6 +20,24 @@ void DeleteDoubleArray(T** arr) {
 }
 
 template <typename T>
+T** NewDoubleArray2(int width, int height) {
+  // Single allocation for the grid for perf reasons.
+  T* raw = (T*)malloc(sizeof(T) * width * height);
+  if (raw == nullptr) return nullptr;
+  memset(raw, 0, sizeof(T) * width * height);
+
+  T** arr = new T*[width];
+  for (int x=0; x<width; x++) arr[x] = (raw + height * x);
+  return arr;
+}
+
+template <typename T>
+void DeleteDoubleArray2(T** arr) {
+  free(arr); // The grid was allocated as one contiguous region.
+  delete[] arr;
+}
+
+template <typename T>
 class Vector {
 public:
   // Construct an empty vector. This allocates space in memory (or on the stack) for the vector *container*,
@@ -70,7 +88,7 @@ public:
 
   /* Cheap functions I use */
 
-  // Copy |value| onto the end of the vector. |T| should be a POD type.
+  // Copy |value| onto the end of the vector. |T| should be a POD type to avoid unnecessary copying.
   // WARNING: This method does not check capacity! Do not call it unless you know there is sufficient capacity.
   void UnsafePush(const T value) {
     assert(_size < _capacity);

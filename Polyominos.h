@@ -19,6 +19,7 @@ public:
 
   static u16 RotatePolyshape(u16 polyshape);
   static u16 Normalize(u16 polyshape);
+  static u16 Flip(u16 polyshape);
 
 private:
   static u8 GetPolySize(u16 polyshape);

@@ -72,7 +72,7 @@ bool Polyominos::PolyFit(const Region& region, const Puzzle& puzzle) {
 
   // For polyominos, we clear the grid to mark it up again:
   // First, we mark all cells as 0: Cells outside the target region should be unaffected.
-  s8** polyGrid = NewDoubleArray<s8>(puzzle._width, puzzle._height);
+  s8** polyGrid = NewDoubleArray2<s8>(puzzle._width, puzzle._height);
 
   // In the normal case, we mark every cell as -1: It needs to be covered by one poly
   if (polyCount > 0) {
@@ -82,7 +82,7 @@ bool Polyominos::PolyFit(const Region& region, const Puzzle& puzzle) {
 
   bool ret = PlaceYlops(ylops, 0, polys, puzzle, polyGrid);
 
-  DeleteDoubleArray(polyGrid);
+  DeleteDoubleArray2(polyGrid);
 
   return ret;
 }
@@ -196,4 +196,8 @@ u16 Polyominos::Normalize(u16 polyshape) {
   while ((polyshape & 0x1111) == 0) polyshape >>= 1;
   while ((polyshape & 0x000F) == 0) polyshape >>= 4;
   return polyshape;
+}
+
+u16 Polyominos::Flip(u16 polyshape) {
+  return (polyshape & 0x000F) << 24 | (polyshape & 0x00F0) << 8 | (polyshape & 0x0F00) >> 8 | (polyshape & 0xF000) >> 24;
 }

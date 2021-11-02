@@ -9,8 +9,8 @@ Puzzle::Puzzle(u8 width, u8 height, bool pillar) {
   _height = 2*height+1;
   _numConnections = (width+1)*height + width*(height+1);
 
-  _grid = NewDoubleArray<Cell>(_width, _height);
-  _maskedGrid = NewDoubleArray<Masked>(_width, _height);
+  _grid = NewDoubleArray2<Cell>(_width, _height);
+  _maskedGrid = NewDoubleArray2<Masked>(_width, _height);
 
   for (u8 x=0; x<_width; x++) {
     for (u8 y=0; y<_height; y++) {
@@ -20,7 +20,7 @@ Puzzle::Puzzle(u8 width, u8 height, bool pillar) {
       if (x%2 != 1 || y%2 != 1) cell->type = Type::Line;
     }
   }
-  _connections = new Vector<pair<u8, u8>>(_numConnections);
+  _connections = new Vector<u8>(_numConnections * 2);
 
   // J is the dot index
   for (u8 j=0; j<(height+1) * (width+1); j++) {
@@ -30,18 +30,22 @@ Puzzle::Puzzle(u8 width, u8 height, bool pillar) {
 
     if (y < height*2) { // Do not add a vertical connection for the bottom row
       // _connections->Emplace({j-(width+1), j}); // (Original game reference)
-      _connections->Emplace({x, (u8)(y+1)});
+      // _connections->Emplace({x, (u8)(y+1)});
+      _connections->UnsafePush(x);
+      _connections->UnsafePush(y+1);
     }
     if (x < width*2) { // Do not add a horizontal connection for the last element in the row
       // _connections->Emplace({j, j+1}); // (Original game reference)
-      _connections->Emplace({(u8)(x+1), y});
+      // _connections->Emplace({(u8)(x+1), y});
+      _connections->UnsafePush(x+1);
+      _connections->UnsafePush(y);
     }
   }
 }
 
 Puzzle::~Puzzle() {
-  DeleteDoubleArray(_grid);
-  DeleteDoubleArray(_maskedGrid);
+  DeleteDoubleArray2(_grid);
+  DeleteDoubleArray2(_maskedGrid);
   delete _connections;
 }
 
@@ -235,21 +239,27 @@ Region Puzzle::GetRegion(s8 x, s8 y) {
   return region;
 }
 
-u64 Puzzle::GetPolyishFromMaskedGrid(u8 rotation) {
+u64 Puzzle::GetPolyishFromMaskedGrid(u8 rotation, bool flip) {
   u64 polyish = 0;
   for (u8 x=1; x<_width; x+=2) {
+    Masked* col = _maskedGrid[x];
     for (u8 y=1; y<_height; y+=2) {
-      if (_maskedGrid[x][y] != Masked::Processed) continue;
+      if (col[y] != Masked::Processed) continue;
 
       u8 newX = (x - 1) / 2;
       u8 newY = (y - 1) / 2;
       for (int j=0; j<rotation; j++) {
         u8 tmp = newX;
-        newX = 7 - newY;
-        newY = tmp;
+        newX = newY;
+        newY = 7 - tmp;
       }
-      assert(newX < 8);
-      assert(newY < 8);
+      if (flip) {
+        newX = 8 - newX;
+        newY = 8 - newY;
+      }
+
+      assert(0 <= newX && newX < 8);
+      assert(0 <= newY && newY < 8);
 
       polyish |= (u64)1 << (newX * 8 + newY);
     }
@@ -269,9 +279,10 @@ void Puzzle::CutRandomEdges(Random& rng, u8 numCuts) {
     int rand = rng.Get() % numConnections;
 
     // In TW, additional connections are added whenever a cut is made. So, we continue if the RNG is larger than the true connection size.
-    if (rand >= _connections->Size()) continue;
+    if (rand*2 >= _connections->Size()) continue;
 
-    auto [x, y] = _connections->At(rand);
+    u8 x = _connections->At(rand*2);
+    u8 y = _connections->At(rand*2 + 1);
     if (_grid[x][y].gap == Gap::None) {
       _numConnections++;
       _grid[x][y].gap = Gap::Break;
