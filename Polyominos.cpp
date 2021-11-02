@@ -193,11 +193,15 @@ u16 Polyominos::RotatePolyshape(u16 polyshape) {
 }
 
 u16 Polyominos::Normalize(u16 polyshape) {
+  if (polyshape == 0) { // we would loop forever
+    assert(false);
+    return 0;
+  }
   while ((polyshape & 0x1111) == 0) polyshape >>= 1;
   while ((polyshape & 0x000F) == 0) polyshape >>= 4;
   return polyshape;
 }
 
 u16 Polyominos::Flip(u16 polyshape) {
-  return (polyshape & 0x000F) << 24 | (polyshape & 0x00F0) << 8 | (polyshape & 0x0F00) >> 8 | (polyshape & 0xF000) >> 24;
+  return (polyshape & 0x000F) << 12 | (polyshape & 0x00F0) << 4 | (polyshape & 0x0F00) >> 4 | (polyshape & 0xF000) >> 12;
 }

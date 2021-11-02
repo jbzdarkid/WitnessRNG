@@ -141,11 +141,7 @@ void PrintBitmap(u64 polyish, u8 width, u8 height) {
 
   for (u8 y = minY; y <= maxY; y++) {
     for (u8 x = minX; x <= maxX; x++) {
-      if (width == 8 && x >= 4) {
-        cout << (IS_SET(x, y) ? 'X' : '.');
-      } else {
-        cout << (IS_SET(x, y) ? '#' : '.');
-      }
+      cout << (IS_SET(x, y) ? '#' : '.');
     }
     cout << endl;
   }
@@ -377,7 +373,7 @@ int main(int argc, char* argv[]) {
     unordered_map<u32, u32[4]> starStatistics;
 
     Random rng;
-    for (int i = 0;; i++) {
+    for (int i = 0; ; i++) {
       OutputDebugString((L"Starting file: thread_" + to_wstring(i) + L"_good.dat\n").c_str());
       File goodFile("thread_" + to_string(i) + "_good.dat");
       if (goodFile.Done()) break; // File did not exist
@@ -394,8 +390,6 @@ int main(int argc, char* argv[]) {
         std::unordered_set<u64> validPolyshapes;
 
         // Compute polyshapes
-        u16 polyshape1 = 0;
-        u16 polyshape2 = 0;
         for (u8 x = 1; x < p->_width; x += 2) {
           for (u8 y = 1; y < p->_height; y += 2) {
             Cell* cell = &p->_grid[x][y];
@@ -404,17 +398,12 @@ int main(int argc, char* argv[]) {
 
             if (!firstPoly) {
               firstPoly = cell;
-              polyshape1 = polyshape;
             } else {
               secondPoly = cell;
-              polyshape2 = polyshape;
               break;
             }
           }
         }
-
-        assert(firstPoly);
-        assert(secondPoly);
 
         struct NormalizedPolys {
           u16 poly1 = 0xFFFF;
@@ -423,29 +412,46 @@ int main(int argc, char* argv[]) {
           bool flip = false;
         } min;
 
+        assert(firstPoly);
+        assert(secondPoly);
+        u16 polyshape1 = firstPoly->polyshape;
+        u16 polyshape2 = secondPoly->polyshape;
+        bool flipped = false;
+        u8 rotation = 0;
+
         for (u8 j=0; j<8; j++) {
-          if (polyshape1 < min.poly1 || (polyshape1 == min.poly1 && polyshape2 < min.poly2)) {
-            min.rotation = j;
-            min.poly1 = polyshape1;
-            min.poly2 = polyshape2;
-            min.flip = (j >= 4);
-          }
-          if (polyshape2 < min.poly1 || (polyshape2 == min.poly1 && polyshape1 < min.poly2)) {
-            min.rotation = j;
-            min.poly1 = polyshape2;
-            min.poly2 = polyshape1;
-            min.flip = (j >= 4);
-          }
-          polyshape1 = Polyominos::Normalize(Polyominos::RotatePolyshape(polyshape1));
-          polyshape2 = Polyominos::Normalize(Polyominos::RotatePolyshape(polyshape2));
-          if (j == 3) {
+          if (j == 4) {
             polyshape1 = Polyominos::Flip(polyshape1);
             polyshape2 = Polyominos::Flip(polyshape2);
+            flipped = !flipped;
+            rotation -= 2;
+          } else {
+            polyshape1 = Polyominos::RotatePolyshape(polyshape1);
+            polyshape2 = Polyominos::RotatePolyshape(polyshape2);
+            rotation++;
+          }
+          polyshape1 = Polyominos::Normalize(polyshape1);
+          polyshape2 = Polyominos::Normalize(polyshape2);
+
+          if (polyshape1 < min.poly1 || (polyshape1 == min.poly1 && polyshape2 < min.poly2)) {
+            min.poly1 = polyshape1;
+            min.poly2 = polyshape2;
+            min.rotation = rotation;
+            min.flip = flipped;
+          }
+          // These need to be separate statements since it's possible that polyshape2 < polyshape1 < min.poly1
+          if (polyshape2 < min.poly1 || (polyshape2 == min.poly1 && polyshape1 < min.poly2)) {
+            min.poly1 = polyshape2;
+            min.poly2 = polyshape1;
+            min.rotation = rotation;
+            min.flip = flipped;
           }
         }
-
-        polyshape1 = min.poly1;
-        polyshape2 = min.poly2;
+        u32 polyKey = 0;
+        // If the left-hand poly (poly2) fills the right-most column, shift the right-hand poly one row.
+        // Due to the minimization, we will never have 4-wide polyominos -- only 4-tall.
+        if (min.poly2 & 0xF000) min.poly1 <<= 4;
+        polyKey = (min.poly1 << 16) | min.poly2;
 
         // Compute all solution paths by reading from file
         for(u32 numSolutions = goodFile.GetInt(); numSolutions > 0; numSolutions--) {
@@ -465,8 +471,6 @@ int main(int argc, char* argv[]) {
             else if (dir == PATH_BOTTOM) y++;
           }
           
-          assert(Validator::Validate(*p).Valid());
-
           Region region = p->GetRegion(firstPoly->x, firstPoly->y);
           bool sameRegion = false;
           bool containsStars = false;
@@ -477,7 +481,7 @@ int main(int argc, char* argv[]) {
 
           if (sameRegion) {
             u64 polyish = p->GetPolyishFromMaskedGrid(min.rotation, min.flip);
-            assert(__popcnt16(polyshape1) + __popcnt16(polyshape2) == __popcnt64(polyish));
+            assert(__popcnt16(min.poly1) + __popcnt16(min.poly2) == __popcnt64(polyish));
             validPolyshapes.insert(polyish);
           } else {
             validPolyshapes.insert(0);
@@ -486,12 +490,11 @@ int main(int argc, char* argv[]) {
           else               canExcludeStars = true;
         } // done with puzzle
 
-        u32 key = (polyshape1 << 16) | polyshape2;
-        for (u64 polyish : validPolyshapes) combinedPolyshapes[key][polyish]++;
-        if (validPolyshapes.size() == 1) uniquePolyshapes[key][*validPolyshapes.begin()]++;
+        for (u64 polyish : validPolyshapes) combinedPolyshapes[polyKey][polyish]++;
+        if (validPolyshapes.size() == 1) uniquePolyshapes[polyKey][*validPolyshapes.begin()]++;
 
         u8 starsValue = (canContainStars ? 1 : 0) + (canExcludeStars ? 2 : 0);
-        starStatistics[key][starsValue]++;
+        starStatistics[polyKey][starsValue]++;
 
         delete p;
       } // done reading file
@@ -527,7 +530,6 @@ int main(int argc, char* argv[]) {
       cout << "Of those puzzles, " << uniqueTotal << " (" << (100.0f * uniqueTotal / total) << "%) can only be solved with one configuration of polyominos\n";
 
       PrintBitmap(key, 8, 4);
-      cout << "[internal]" << hex << key << dec << endl;
 
       vector<pair<u64, u32>> items;
       for (const auto& it : data) items.push_back(it);

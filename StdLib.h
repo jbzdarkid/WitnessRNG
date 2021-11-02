@@ -33,7 +33,7 @@ T** NewDoubleArray2(int width, int height) {
 
 template <typename T>
 void DeleteDoubleArray2(T** arr) {
-  free(arr); // The grid was allocated as one contiguous region.
+  free(arr[0]); // The grid was allocated as one contiguous region.
   delete[] arr;
 }
 

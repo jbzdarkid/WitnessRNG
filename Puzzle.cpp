@@ -248,14 +248,13 @@ u64 Puzzle::GetPolyishFromMaskedGrid(u8 rotation, bool flip) {
 
       u8 newX = (x - 1) / 2;
       u8 newY = (y - 1) / 2;
-      for (int j=0; j<rotation; j++) {
+      if (flip) {
+        newY = 7 - newY;
+      }
+      for (int j=0; j<rotation % 4; j++) {
         u8 tmp = newX;
         newX = newY;
         newY = 7 - tmp;
-      }
-      if (flip) {
-        newX = 8 - newX;
-        newY = 8 - newY;
       }
 
       assert(0 <= newX && newX < 8);
