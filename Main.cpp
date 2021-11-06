@@ -122,26 +122,87 @@ vector<tuple<int, int, int>> tests3 = {
   { 0x00002351, 0x6B33B70C, 1 },
 };
 
-void PrintBitmap(u64 polyish, u8 width, u8 height) {
-#define IS_SET(x, y) ((polyish & (1ull << (x * height + y))) != 0)
-  u8 minX = 0xFF;
-  u8 minY = 0xFF;
+void PrintPolyish(u64 polyish, u8 width, u8 height, u32 polyKey) {
+#define IS_SET(grid, x, y) ((grid & (1ull << (x * height + y))) != 0)
+
+  while ((polyish & 0x0101'0101'0101'0101) == 0) polyish >>= 1;
+  while ((polyish & 0x0000'0000'0000'00FF) == 0) polyish >>= 8;
+
+  u16 polyshape2 = polyKey & 0xFFFF;
+  u16 polyshape1 = Polyominos::Normalize(polyKey >> 16);
+  // Unpack the polyshape into the original polyominos.
+  u64 shiftedShape = 0;
+  for (u8 x=0; x<width; x++) {
+    for (u8 y=0; y<height; y++) {
+      shiftedShape = (polyshape2 & 0xF000) << 12 | (polyshape2 & 0x0F00) << 8 | (polyshape2 & 0x00F0) << 4 | (polyshape2 & 0x000F);
+      shiftedShape <<= x * 8;
+      shiftedShape <<= y;
+      if ((polyish & shiftedShape) == shiftedShape) {
+        // Found a possible placement for the first one, but it might not agree with the second
+        u64 test = polyish & ~shiftedShape;
+        while ((test & 0x0101'0101'0101'0101) == 0) test >>= 1;
+        while ((test & 0x0000'0000'0000'00FF) == 0) test >>= 8;
+        u64 poly1 = (polyshape1 & 0xF000) << 12 | (polyshape1 & 0x0F00) << 8 | (polyshape1 & 0x00F0) << 4 | (polyshape1 & 0x000F);
+        if (test == poly1) goto found;
+      }
+    }
+  }
+
+  found: assert(shiftedShape != 0);
+
   u8 maxX = 0x00;
   u8 maxY = 0x00;
   for (u8 x=0; x<width; x++) {
     for (u8 y=0; y<height; y++) {
-      if (IS_SET(x, y)) {
-        minX = min(minX, x);
-        minY = min(minY, y);
+      if (IS_SET(polyish, x, y)) {
         maxX = max(maxX, x);
         maxY = max(maxY, y);
       }
     }
   }
 
-  for (u8 y = minY; y <= maxY; y++) {
-    for (u8 x = minX; x <= maxX; x++) {
-      cout << (IS_SET(x, y) ? '#' : '.');
+  for (u8 y = 0; y <= maxY; y++) {
+    for (u8 x = 0; x <= maxX; x++) {
+      if (IS_SET(polyish, x, y)) {
+        if (IS_SET(shiftedShape, x, y)) {
+          cout << '@';
+        } else {
+          cout << '#';
+        }
+      } else {
+        cout << ' ';
+      }
+    }
+    cout << endl;
+  }
+};
+
+
+void PrintPolykey(u64 polykey, u8 width, u8 height) {
+#define IS_SET(grid, x, y) ((grid & (1ull << (x * height + y))) != 0)
+
+  u8 maxX = 0x00;
+  u8 maxY = 0x00;
+  for (u8 x=0; x<width; x++) {
+    for (u8 y=0; y<height; y++) {
+      if (IS_SET(polykey, x, y)) {
+        maxX = max(maxX, x);
+        maxY = max(maxY, y);
+      }
+    }
+  }
+
+  for (u8 y = 0; y <= maxY; y++) {
+    for (u8 x = 0; x <= maxX; x++) {
+      if (IS_SET(polykey, x, y)) {
+        if (x >= 4) {
+          cout << '@';
+        } else {
+          cout << '#';
+        }
+      } else {
+        cout << ' ';
+      }
     }
     cout << endl;
   }
@@ -373,7 +434,7 @@ int main(int argc, char* argv[]) {
     unordered_map<u32, u32[4]> starStatistics;
 
     Random rng;
-    for (int i = 0; ; i++) {
+    for (int i = 0;; i++) {
       OutputDebugString((L"Starting file: thread_" + to_wstring(i) + L"_good.dat\n").c_str());
       File goodFile("thread_" + to_string(i) + "_good.dat");
       if (goodFile.Done()) break; // File did not exist
@@ -529,22 +590,27 @@ int main(int argc, char* argv[]) {
       cout << "This pair of polyominos is present in " << total << " puzzles (" << (100.0f * total) / uberTotal << "% of all puzzles)\n";
       cout << "Of those puzzles, " << uniqueTotal << " (" << (100.0f * uniqueTotal / total) << "%) can only be solved with one configuration of polyominos\n";
 
-      PrintBitmap(key, 8, 4);
+      PrintPolykey(key, 8, 4);
 
       vector<pair<u64, u32>> items;
       for (const auto& it : data) items.push_back(it);
       sort(items.begin(), items.end(), [](const pair<u64, u32>& a, const pair<u64, u32>& b) { return a.second > b.second; });
 
-      for (const auto& [shape, count] : items) {
-        u32 uniqueCount = uniqueData.at(shape);
+      if (data.find(0) != data.end()) {
+        totalPolysTogether += total;
+      }
 
-        if (shape == 0) {
+      for (const auto& [polyish, count] : items) {
+        u32 uniqueCount = uniqueData.at(polyish);
+
+        if (polyish == 0) {
           cout << count << " (" << (100.0f * count) / total << "%) of these puzzles can be solved with the polyominos separated\n";
           cout << uniqueCount << " (" << (100.0f * uniqueCount) / total << "%) of these puzzles must be solved with the polyominos separated\n";
+          totalPolysApart += uniqueCount;
         } else {
           cout << count << " (" << (100.0f * count) / total << "%) of these puzzles can be solved with the polyominos in this configuration:\n";
           cout << uniqueCount << " (" << (100.0f * uniqueCount) / total << "%) of these puzzles must be solved with the polyominos in this configuration:\n";
-          PrintBitmap(shape, 8, 8);
+          PrintPolyish(polyish, 8, 8, key);
         }
       }
 
@@ -561,9 +627,9 @@ int main(int argc, char* argv[]) {
       }
     }
 
-    cout << totalPolysApart << " (" << (100.0f * totalPolysApart) / uberTotal << "%) of all puzzles must be solved with the polyominos separated\n";
-    cout << totalPolysTogether << " (" << (100.0f * totalPolysTogether) / uberTotal << "%) of all puzzles must be solved with the polyominos combined\n";
-    cout << totalPolysBoth << " (" << (100.0f * totalPolysBoth) / uberTotal << "%) of all puzzles can be solved either way\n";
+    cout << totalPolysApart << " puzzles (" << (100.0f * totalPolysApart) / uberTotal << "% of all puzzles) must be solved with the polyominos separated\n";
+    cout << totalPolysTogether << " puzzles (" << (100.0f * totalPolysTogether) / uberTotal << "% of all puzzles) must be solved with the polyominos combined\n";
+    cout << totalPolysBoth << " puzzles (" << (100.0f * totalPolysBoth) / uberTotal << "% of all puzzles) can be solved either way\n";
   }
 
   return 0;
