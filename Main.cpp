@@ -663,6 +663,7 @@ int main(int argc, char* argv[]) {
 <body>)";
 
     u64 uberTotal = 0;
+    u64 uberUnique = 0;
     // u64 totalStarsContained = 0;
     // u64 totalStarsExcluded = 0;
     // u64 totalStarsBoth = 0;
@@ -670,11 +671,13 @@ int main(int argc, char* argv[]) {
     vector<pair<u32, u32>> sortedPolyshapes;
     for (const auto& [polykey, total] : totalPuzzles) {
       uberTotal += total;
+      for (const auto& [polyish, count] : uniquePolyshapes[polykey]) uberUnique += count;
       sortedPolyshapes.emplace_back(polykey, total);
     }
     sort(sortedPolyshapes.begin(), sortedPolyshapes.end(), [](const pair<u32, u32>& a, const pair<u32, u32>& b) { return a.second > b.second; });
 
     cout << "There are a total of " << uberTotal << " polyominos + stars puzzles<br>\n";
+    cout << uberUnique << " (" << (100.0f * uberUnique / uberTotal) << "%) of these puzzles can only be solved with one configuration<br>\n";
     cout << totalPolysTogether << " puzzles (" << (100.0f * totalPolysTogether) / uberTotal << "% of all puzzles) must be solved with the polyominos combined<br>\n";
     cout << totalPolysApart << " puzzles (" << (100.0f * totalPolysApart) / uberTotal << "% of all puzzles) must be solved with the polyominos separated<br>\n";
     cout << totalPolysBoth << " puzzles (" << (100.0f * totalPolysBoth) / uberTotal << "% of all puzzles) can be solved either way<br>\n";
