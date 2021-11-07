@@ -649,7 +649,7 @@ int main(int argc, char* argv[]) {
     }
     pre, .polykey {
       white-space: pre;
-      font-family: Monaco;
+      font-family: monospace;
     }
     td {
       border: 1px solid black;
