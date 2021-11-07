@@ -122,7 +122,7 @@ vector<tuple<int, int, int>> tests3 = {
   { 0x00002351, 0x6B33B70C, 1 },
 };
 
-void PrintPolyish(u64 polyish, u8 width, u8 height, u32 polyKey) {
+string PrintPolyish(u64 polyish, u8 width, u8 height, u32 polyKey) {
 #define IS_SET(grid, x, y) ((grid & (1ull << (x * height + y))) != 0)
 
   while ((polyish & 0x0101'0101'0101'0101) == 0) polyish >>= 1;
@@ -135,7 +135,7 @@ void PrintPolyish(u64 polyish, u8 width, u8 height, u32 polyKey) {
   for (u8 x=0; x<width; x++) {
     for (u8 y=0; y<height; y++) {
       shiftedShape = (polyshape2 & 0xF000) << 12 | (polyshape2 & 0x0F00) << 8 | (polyshape2 & 0x00F0) << 4 | (polyshape2 & 0x000F);
-      shiftedShape <<= x * 8;
+      shiftedShape <<= (u16)x * 8;
       shiftedShape <<= y;
       if ((polyish & shiftedShape) == shiftedShape) {
         // Found a possible placement for the first one, but it might not agree with the second
@@ -161,52 +161,106 @@ void PrintPolyish(u64 polyish, u8 width, u8 height, u32 polyKey) {
     }
   }
 
+  string output;
   for (u8 y = 0; y <= maxY; y++) {
     for (u8 x = 0; x <= maxX; x++) {
       if (IS_SET(polyish, x, y)) {
         if (IS_SET(shiftedShape, x, y)) {
-          cout << '@';
+          output += '#';
         } else {
-          cout << '#';
+          output += '@';
         }
       } else {
-        cout << ' ';
+        output += ' ';
       }
     }
-    cout << endl;
+    output += '\n';
   }
+  return output;
 };
 
 
-void PrintPolykey(u64 polykey, u8 width, u8 height) {
+string PrintPolykey(u32 polykey, u8 width=8, u8 height=4) {
 #define IS_SET(grid, x, y) ((grid & (1ull << (x * height + y))) != 0)
 
+  u8 minX = 0xFF;
+  u8 minY = 0xFF;
   u8 maxX = 0x00;
   u8 maxY = 0x00;
   for (u8 x=0; x<width; x++) {
     for (u8 y=0; y<height; y++) {
       if (IS_SET(polykey, x, y)) {
+        minX = min(minX, x);
+        minY = min(minY, y);
         maxX = max(maxX, x);
         maxY = max(maxY, y);
       }
     }
   }
 
-  for (u8 y = 0; y <= maxY; y++) {
-    for (u8 x = 0; x <= maxX; x++) {
+  string output;
+  for (u8 y = minY; y <= maxY; y++) {
+    for (u8 x = minX; x <= maxX; x++) {
       if (IS_SET(polykey, x, y)) {
         if (x >= 4) {
-          cout << '@';
+          output += '@';
         } else {
-          cout << '#';
+          output += '#';
         }
       } else {
-        cout << ' ';
+        output += ' ';
       }
     }
-    cout << endl;
+    output += '\n';
   }
+  return output;
 };
+
+string GenerateTableCell(u16 polyshape, bool isColumn) {
+  u32 shiftedShape = (u32)polyshape << (isColumn ? 16 : 0);
+  return "<td class='polykey'>" + PrintPolykey(shiftedShape) + "</td>";
+}
+
+void GenerateTable(const unordered_map<u32, unordered_map<u64, u32>>& combinedPolyshapes, u64 uberTotal, const vector<u16>& poly1s, const vector<u16>& poly2s) {
+  u64 tableTotal = 0;
+
+  string tableType = to_string(__popcnt(poly1s[0])) + "x" + to_string(__popcnt(poly2s[0]));
+  stringstream table;
+  table << "<table cellspacing='0px'><tr><td>" << tableType << "</td>";
+
+  for (u16 poly2 : poly2s) table << GenerateTableCell(poly2, false);
+  for (u16 poly1 : poly1s) {
+    table << "</tr><tr>" << GenerateTableCell(poly1, true);
+
+    for (int i=0; i<poly2s.size(); i++) {
+      u16 poly2 = poly2s[i];
+      // Adjustment, see explanation in "good".
+      u32 polykey = (poly1 << (poly2 & 0xF000 ? 20 : 16)) | poly2;
+      auto search = combinedPolyshapes.find(polykey);
+      if (search == combinedPolyshapes.end()) {
+        table << "<td></td>";
+      } else {
+        u64 total = 0;
+        for (auto [_, count] : search->second) total += count;
+        table << "<td><a href='#" << polykey << "'>" << fixed << setprecision(2) << 100.0 * total / uberTotal << "%</a></td>";
+        tableTotal += total;
+      }
+    }
+  }
+  table << "</tr></table><br>";
+
+  cout << tableType << " puzzles comprise " << setprecision(2) << (100.0f * tableTotal) / uberTotal << "% (" << tableTotal << ") of all puzzles\n";
+  cout << table.str();
+}
+
+void GenerateTables(const unordered_map<u32, unordered_map<u64, u32>>& combinedPolyshapes, u64 uberTotal) {
+  GenerateTable(combinedPolyshapes, uberTotal, { 0x0007, 0x0013 }, { 0x000F, 0x0017, 0x0113, 0x1111, 0x0036, 0x0074, 0x0047, 0x0132, 0x0071, 0x0063 });
+  GenerateTable(combinedPolyshapes, uberTotal, { 0x0007, 0x0013 }, { 0x0013, 0x0111, 0x0007, 0x0032, 0x0023});
+  GenerateTable(combinedPolyshapes, uberTotal, { 0x0007, 0x0013 }, { 0x001F, 0x0117, 0x1113, 0x0174, 0x0136, 0x003E, 0x008F, 0x00F8, 0x0364, 0x00F1, 0x0447, 0x1132, 0x0744, 0x0326, 0x007C, 0x00C7, 0x0471, 0x00E3, 0x0463 });
+  GenerateTable(combinedPolyshapes, uberTotal, { 0x000F, 0x0017, 0x0036 }, { 0x0017, 0x0113, 0x0036, 0x000F, 0x0132, 0x0074, 0x0223, 0x0071, 0x0322, 0x0047, 0x0063, 0x0231 });
+  GenerateTable(combinedPolyshapes, uberTotal, { 0x000F, 0x0036, 0x0017 }, { 0x001F, 0x0117, 0x0136, 0x003E, 0x0174, 0x008F, 0x1113, 0x0744, 0x0326, 0x3111, 0x0711, 0x00F1, 0x3222, 0x007C, 0x0447, 0x1132, 0x2223, 0x1322, 0x00F8, 0x2311, 0x0364, 0x0463, 0x0623, 0x00E3, 0x00C7, 0x0471, 0x0631 });
+  GenerateTable(combinedPolyshapes, uberTotal, { 0x001F, 0x0117, 0x003E, 0x0136 }, { 0x0174, 0x003E, 0x0447, 0x0136, 0x0117, 0x0744, 0x0364, 0x007C, 0x0326, 0x00F1, 0x0463, 0x0471, 0x00F8, 0x0623, 0x001F, 0x008F, 0x00E3, 0x00C7, 0x0711, 0x0631 });
+}
 
 int main(int argc, char* argv[]) {
 #ifdef _DEBUG
@@ -432,9 +486,16 @@ int main(int argc, char* argv[]) {
     unordered_map<u32, unordered_map<u64, u32>> combinedPolyshapes;
     unordered_map<u32, unordered_map<u64, u32>> uniquePolyshapes;
     unordered_map<u32, u32[4]> starStatistics;
+    u64 totalPolysTogether = 0;
+    u64 totalPolysApart = 0;
+    u64 totalPolysBoth = 0;
 
     Random rng;
+#if _DEBUG
+    for (int i = 0; i < 1; i++) {
+#else
     for (int i = 0;; i++) {
+#endif
       OutputDebugString((L"Starting file: thread_" + to_wstring(i) + L"_good.dat\n").c_str());
       File goodFile("thread_" + to_string(i) + "_good.dat");
       if (goodFile.Done()) break; // File did not exist
@@ -494,18 +555,17 @@ int main(int argc, char* argv[]) {
           polyshape1 = Polyominos::Normalize(polyshape1);
           polyshape2 = Polyominos::Normalize(polyshape2);
 
-          if (polyshape1 < min.poly1 || (polyshape1 == min.poly1 && polyshape2 < min.poly2)) {
-            min.poly1 = polyshape1;
-            min.poly2 = polyshape2;
-            min.rotation = rotation;
-            min.flip = flipped;
-          }
-          // These need to be separate statements since it's possible that polyshape2 < polyshape1 < min.poly1
-          if (polyshape2 < min.poly1 || (polyshape2 == min.poly1 && polyshape1 < min.poly2)) {
-            min.poly1 = polyshape2;
-            min.poly2 = polyshape1;
-            min.rotation = rotation;
-            min.flip = flipped;
+          for (int k=0; k<2; k++) {
+            if (__popcnt16(polyshape1) < __popcnt16(min.poly1)
+             || __popcnt16(polyshape1) == __popcnt16(min.poly1) && polyshape1 < min.poly1
+             || __popcnt16(polyshape1) == __popcnt16(min.poly1) && polyshape1 == min.poly1 && __popcnt16(polyshape2) < __popcnt16(min.poly2)
+             || __popcnt16(polyshape1) == __popcnt16(min.poly1) && polyshape1 == min.poly1 && __popcnt16(polyshape2) == __popcnt16(min.poly2) && polyshape2 < min.poly2) {
+              min.poly1 = polyshape1;
+              min.poly2 = polyshape2;
+              min.rotation = rotation;
+              min.flip = flipped;
+            }
+            swap(polyshape1, polyshape2); // To avoid writing the above logic twice
           }
         }
         u32 polyKey = 0;
@@ -557,14 +617,43 @@ int main(int argc, char* argv[]) {
         u8 starsValue = (canContainStars ? 1 : 0) + (canExcludeStars ? 2 : 0);
         starStatistics[polyKey][starsValue]++;
 
+        if (validPolyshapes.find(0) == validPolyshapes.end()) {
+          totalPolysTogether++; // No configuration allows the polys to be apart
+        } else {
+          if (validPolyshapes.size() == 1) {
+            totalPolysApart++; // There is only one configuration and it has the polys apart
+          } else {
+            totalPolysBoth++; // There are multiple configurations allowing apart & together
+          }
+        }
+
         delete p;
       } // done reading file
     }
 
-    u64 uberTotal = 0;
-    u64 totalPolysTogether = 0;
-    u64 totalPolysApart = 0;
-    u64 totalPolysBoth = 0;
+    // Start of file, etc.
+    cout << R"(<html>
+<head>
+  <style>
+    * {
+      font-family: Constantia;
+    }
+    pre, .polykey {
+      white-space: pre;
+      font-family: Monaco;
+    }
+    td {
+      border: 1px solid black;
+      border-collapse: collapse;
+      padding: 2px;
+      text-align: center;
+      width: 50px;
+    }
+  </style>
+</head>
+<body>)";
+
+    u64 uberTotal = totalPolysTogether + totalPolysApart + totalPolysBoth;
     // u64 totalStarsContained = 0;
     // u64 totalStarsExcluded = 0;
     // u64 totalStarsBoth = 0;
@@ -574,62 +663,48 @@ int main(int argc, char* argv[]) {
       u32 total = 0;
       for (const auto& [shape, count] : data) total += count;
       sortedPolyshapes.emplace_back(key, total);
-      uberTotal += total;
     }
     sort(sortedPolyshapes.begin(), sortedPolyshapes.end(), [](const pair<u32, u32>& a, const pair<u32, u32>& b) { return a.second > b.second; });
 
-    cout << "Found " << uberTotal << " valid puzzles\n";
+    cout << "There are a total of " << uberTotal << " polyominos + stars puzzles<br>\n";
+    cout << totalPolysTogether << " puzzles (" << (100.0f * totalPolysTogether) / uberTotal << "% of all puzzles) must be solved with the polyominos combined<br>\n";
+    cout << totalPolysApart << " puzzles (" << (100.0f * totalPolysApart) / uberTotal << "% of all puzzles) must be solved with the polyominos separated<br>\n";
+    cout << totalPolysBoth << " puzzles (" << (100.0f * totalPolysBoth) / uberTotal << "% of all puzzles) can be solved either way<br>\n";
+    cout << "<br><span class='anchor' id='table-of-contents'><h2>Table of contents</h2></span>";
+    GenerateTables(combinedPolyshapes, uberTotal);
 
-    for (const auto& [key, total] : sortedPolyshapes) {
-      const auto& data = combinedPolyshapes[key];
-      const auto& uniqueData = uniquePolyshapes[key];
+    for (const auto& [polykey, total] : sortedPolyshapes) {
+      const auto& data = combinedPolyshapes[polykey];
+      const auto& uniqueData = uniquePolyshapes[polykey];
       u32 uniqueTotal = 0;
       for (const auto& [key2, data2] : uniqueData) uniqueTotal += data2;
 
-      cout << "----------------------" << endl;
-      cout << "This pair of polyominos is present in " << total << " puzzles (" << (100.0f * total) / uberTotal << "% of all puzzles)\n";
-      cout << "Of those puzzles, " << uniqueTotal << " (" << (100.0f * uniqueTotal / total) << "%) can only be solved with one configuration of polyominos\n";
-
-      PrintPolykey(key, 8, 4);
+      cout << "<span class='anchor' id='" << polykey << "'></span>";
+      cout << "---------------------------------------------------------------------------------------------------------------------------------------<br>\n";
+      cout << "<small><a href='#table-of-contents'>Jump to top</a></small><br>\n";
+      cout << "This pair of polyominos is present in " << total << " puzzles (" << setprecision(2) << (100.0f * total) / uberTotal << "% of all puzzles)<br>\n";
+      cout << "Of those puzzles, " << uniqueTotal << " (" << setprecision(2) << (100.0f * uniqueTotal / total) << "%) can only be solved with one configuration of polyominos<br>\n";
+      cout << "<pre>" << PrintPolykey(polykey) << "</pre>";
 
       vector<pair<u64, u32>> items;
       for (const auto& it : data) items.push_back(it);
       sort(items.begin(), items.end(), [](const pair<u64, u32>& a, const pair<u64, u32>& b) { return a.second > b.second; });
 
-      if (data.find(0) != data.end()) {
-        totalPolysTogether += total;
-      }
-
       for (const auto& [polyish, count] : items) {
         u32 uniqueCount = uniqueData.at(polyish);
 
         if (polyish == 0) {
-          cout << count << " (" << (100.0f * count) / total << "%) of these puzzles can be solved with the polyominos separated\n";
-          cout << uniqueCount << " (" << (100.0f * uniqueCount) / total << "%) of these puzzles must be solved with the polyominos separated\n";
-          totalPolysApart += uniqueCount;
+          cout << count << " (" << setprecision(2) << (100.0f * count) / total << "%) of these puzzles can be solved with the polyominos separated<br>\n";
+          cout << uniqueCount << " (" << setprecision(2) << (100.0f * uniqueCount) / total << "%) of these puzzles must be solved with the polyominos separated<br>\n";
         } else {
-          cout << count << " (" << (100.0f * count) / total << "%) of these puzzles can be solved with the polyominos in this configuration:\n";
-          cout << uniqueCount << " (" << (100.0f * uniqueCount) / total << "%) of these puzzles must be solved with the polyominos in this configuration:\n";
-          PrintPolyish(polyish, 8, 8, key);
+          cout << count << " (" << setprecision(2) << (100.0f * count) / total << "%) of these puzzles can be solved with the polyominos in this configuration:<br>\n";
+          cout << uniqueCount << " (" << setprecision(2) << (100.0f * uniqueCount) / total << "%) of these puzzles must be solved with the polyominos in this configuration:<br>\n";
+          cout << "<pre>" << PrintPolyish(polyish, 8, 8, polykey) << "</pre>";
         }
-      }
-
-      if (data.size() == 1) {
-        if (data.begin()->first == 0) {
-          totalPolysApart++; // Only one solution type and it involves separation
-        } else {
-          totalPolysTogether++; // Only one solution type and it requires combination
-        }
-      } else if (data.find(0) != data.end()) {
-        totalPolysBoth++; // Multiple types and one of them is separation
-      } else {
-        totalPolysTogether++; // Multiple types but none of them are separation
       }
     }
 
-    cout << totalPolysApart << " puzzles (" << (100.0f * totalPolysApart) / uberTotal << "% of all puzzles) must be solved with the polyominos separated\n";
-    cout << totalPolysTogether << " puzzles (" << (100.0f * totalPolysTogether) / uberTotal << "% of all puzzles) must be solved with the polyominos combined\n";
-    cout << totalPolysBoth << " puzzles (" << (100.0f * totalPolysBoth) / uberTotal << "% of all puzzles) can be solved either way\n";
+    cout << "</body></html>";
   }
 
   return 0;
