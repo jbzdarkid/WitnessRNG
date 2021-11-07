@@ -221,7 +221,7 @@ string GenerateTableCell(u16 polyshape, bool isColumn) {
   return "<td class='polykey'>" + PrintPolykey(shiftedShape) + "</td>";
 }
 
-void GenerateTable(const unordered_map<u32, unordered_map<u64, u32>>& combinedPolyshapes, u64 uberTotal, const vector<u16>& poly1s, const vector<u16>& poly2s) {
+void GenerateTable(const unordered_map<u32, u32>& totalPuzzles, u64 uberTotal, const vector<u16>& poly1s, const vector<u16>& poly2s) {
   u64 tableTotal = 0;
 
   string tableType = to_string(__popcnt(poly1s[0])) + "x" + to_string(__popcnt(poly2s[0]));
@@ -236,12 +236,11 @@ void GenerateTable(const unordered_map<u32, unordered_map<u64, u32>>& combinedPo
       u16 poly2 = poly2s[i];
       // Adjustment, see explanation in "good".
       u32 polykey = (poly1 << (poly2 & 0xF000 ? 20 : 16)) | poly2;
-      auto search = combinedPolyshapes.find(polykey);
-      if (search == combinedPolyshapes.end()) {
+      auto search = totalPuzzles.find(polykey);
+      if (search == totalPuzzles.end()) {
         table << "<td></td>";
       } else {
-        u64 total = 0;
-        for (auto [_, count] : search->second) total += count;
+        u64 total = search->second;
         table << "<td><a href='#" << polykey << "'>" << fixed << setprecision(2) << 100.0 * total / uberTotal << "%</a></td>";
         tableTotal += total;
       }
@@ -253,13 +252,13 @@ void GenerateTable(const unordered_map<u32, unordered_map<u64, u32>>& combinedPo
   cout << table.str();
 }
 
-void GenerateTables(const unordered_map<u32, unordered_map<u64, u32>>& combinedPolyshapes, u64 uberTotal) {
-  GenerateTable(combinedPolyshapes, uberTotal, { 0x0007, 0x0013 }, { 0x000F, 0x0017, 0x0113, 0x1111, 0x0036, 0x0074, 0x0047, 0x0132, 0x0071, 0x0063 });
-  GenerateTable(combinedPolyshapes, uberTotal, { 0x0007, 0x0013 }, { 0x0013, 0x0111, 0x0007, 0x0032, 0x0023});
-  GenerateTable(combinedPolyshapes, uberTotal, { 0x0007, 0x0013 }, { 0x001F, 0x0117, 0x1113, 0x0174, 0x0136, 0x003E, 0x008F, 0x00F8, 0x0364, 0x00F1, 0x0447, 0x1132, 0x0744, 0x0326, 0x007C, 0x00C7, 0x0471, 0x00E3, 0x0463 });
-  GenerateTable(combinedPolyshapes, uberTotal, { 0x000F, 0x0017, 0x0036 }, { 0x0017, 0x0113, 0x0036, 0x000F, 0x0132, 0x0074, 0x0223, 0x0071, 0x0322, 0x0047, 0x0063, 0x0231 });
-  GenerateTable(combinedPolyshapes, uberTotal, { 0x000F, 0x0036, 0x0017 }, { 0x001F, 0x0117, 0x0136, 0x003E, 0x0174, 0x008F, 0x1113, 0x0744, 0x0326, 0x3111, 0x0711, 0x00F1, 0x3222, 0x007C, 0x0447, 0x1132, 0x2223, 0x1322, 0x00F8, 0x2311, 0x0364, 0x0463, 0x0623, 0x00E3, 0x00C7, 0x0471, 0x0631 });
-  GenerateTable(combinedPolyshapes, uberTotal, { 0x001F, 0x0117, 0x003E, 0x0136 }, { 0x0174, 0x003E, 0x0447, 0x0136, 0x0117, 0x0744, 0x0364, 0x007C, 0x0326, 0x00F1, 0x0463, 0x0471, 0x00F8, 0x0623, 0x001F, 0x008F, 0x00E3, 0x00C7, 0x0711, 0x0631 });
+void GenerateTables(const unordered_map<u32, u32>& totalPuzzles, u64 uberTotal) {
+  GenerateTable(totalPuzzles, uberTotal, { 0x0007, 0x0013 }, { 0x000F, 0x0017, 0x0113, 0x1111, 0x0036, 0x0074, 0x0047, 0x0132, 0x0071, 0x0063 });
+  GenerateTable(totalPuzzles, uberTotal, { 0x0007, 0x0013 }, { 0x0013, 0x0111, 0x0007, 0x0032, 0x0023});
+  GenerateTable(totalPuzzles, uberTotal, { 0x0007, 0x0013 }, { 0x001F, 0x0117, 0x1113, 0x0174, 0x0136, 0x003E, 0x008F, 0x00F8, 0x0364, 0x00F1, 0x0447, 0x1132, 0x0744, 0x0326, 0x007C, 0x00C7, 0x0471, 0x00E3, 0x0463 });
+  GenerateTable(totalPuzzles, uberTotal, { 0x000F, 0x0017, 0x0036 }, { 0x0017, 0x0113, 0x0036, 0x000F, 0x0132, 0x0074, 0x0223, 0x0071, 0x0322, 0x0047, 0x0063, 0x0231 });
+  GenerateTable(totalPuzzles, uberTotal, { 0x000F, 0x0036, 0x0017 }, { 0x001F, 0x0117, 0x0136, 0x003E, 0x0174, 0x008F, 0x1113, 0x0744, 0x0326, 0x3111, 0x0711, 0x00F1, 0x3222, 0x007C, 0x0447, 0x1132, 0x2223, 0x1322, 0x00F8, 0x2311, 0x0364, 0x0463, 0x0623, 0x00E3, 0x00C7, 0x0471, 0x0631 });
+  GenerateTable(totalPuzzles, uberTotal, { 0x001F, 0x0117, 0x003E, 0x0136 }, { 0x0174, 0x003E, 0x0447, 0x0136, 0x0117, 0x0744, 0x0364, 0x007C, 0x0326, 0x00F1, 0x0463, 0x0471, 0x00F8, 0x0623, 0x001F, 0x008F, 0x00E3, 0x00C7, 0x0711, 0x0631 });
 }
 
 int main(int argc, char* argv[]) {
@@ -483,8 +482,17 @@ int main(int argc, char* argv[]) {
     WriteFile(output, &finalData[0], finalData.Size() * sizeof(finalData[0]), nullptr, nullptr);
 
   } else if (argc > 1 && strcmp(argv[1], "good") == 0) {
+    // using Polykey = u32;
+    // using Polyish = u64;
+    // using Count = u32;
+    // struct Data {
+    //   unordered_map<Polyish, Count> puzzlesWhichCanBeSolvedUsingThisPolyish;
+    // };
+    // unordered_map<Polykey, Data> data;
+
     unordered_map<u32, unordered_map<u64, u32>> combinedPolyshapes;
     unordered_map<u32, unordered_map<u64, u32>> uniquePolyshapes;
+    unordered_map<u32, u32> totalPuzzles;
     unordered_map<u32, u32[4]> starStatistics;
     u64 totalPolysTogether = 0;
     u64 totalPolysApart = 0;
@@ -613,6 +621,7 @@ int main(int argc, char* argv[]) {
 
         for (u64 polyish : validPolyshapes) combinedPolyshapes[polyKey][polyish]++;
         if (validPolyshapes.size() == 1) uniquePolyshapes[polyKey][*validPolyshapes.begin()]++;
+        totalPuzzles[polyKey]++;
 
         u8 starsValue = (canContainStars ? 1 : 0) + (canExcludeStars ? 2 : 0);
         starStatistics[polyKey][starsValue]++;
@@ -653,16 +662,15 @@ int main(int argc, char* argv[]) {
 </head>
 <body>)";
 
-    u64 uberTotal = totalPolysTogether + totalPolysApart + totalPolysBoth;
+    u64 uberTotal = 0;
     // u64 totalStarsContained = 0;
     // u64 totalStarsExcluded = 0;
     // u64 totalStarsBoth = 0;
 
     vector<pair<u32, u32>> sortedPolyshapes;
-    for (const auto& [key, data] : combinedPolyshapes) {
-      u32 total = 0;
-      for (const auto& [shape, count] : data) total += count;
-      sortedPolyshapes.emplace_back(key, total);
+    for (const auto& [polykey, total] : totalPuzzles) {
+      uberTotal += total;
+      sortedPolyshapes.emplace_back(polykey, total);
     }
     sort(sortedPolyshapes.begin(), sortedPolyshapes.end(), [](const pair<u32, u32>& a, const pair<u32, u32>& b) { return a.second > b.second; });
 
@@ -670,11 +678,13 @@ int main(int argc, char* argv[]) {
     cout << totalPolysTogether << " puzzles (" << (100.0f * totalPolysTogether) / uberTotal << "% of all puzzles) must be solved with the polyominos combined<br>\n";
     cout << totalPolysApart << " puzzles (" << (100.0f * totalPolysApart) / uberTotal << "% of all puzzles) must be solved with the polyominos separated<br>\n";
     cout << totalPolysBoth << " puzzles (" << (100.0f * totalPolysBoth) / uberTotal << "% of all puzzles) can be solved either way<br>\n";
+    assert(uberTotal == totalPolysTogether + totalPolysApart + totalPolysBoth);
     cout << "<br><span class='anchor' id='table-of-contents'><h2>Table of contents</h2></span>";
-    GenerateTables(combinedPolyshapes, uberTotal);
+    GenerateTables(totalPuzzles, uberTotal);
+    cout << fixed; // no scientific notation please
 
     for (const auto& [polykey, total] : sortedPolyshapes) {
-      const auto& data = combinedPolyshapes[polykey];
+      const auto& combinedData = combinedPolyshapes[polykey];
       const auto& uniqueData = uniquePolyshapes[polykey];
       u32 uniqueTotal = 0;
       for (const auto& [key2, data2] : uniqueData) uniqueTotal += data2;
@@ -682,23 +692,23 @@ int main(int argc, char* argv[]) {
       cout << "<span class='anchor' id='" << polykey << "'></span>";
       cout << "---------------------------------------------------------------------------------------------------------------------------------------<br>\n";
       cout << "<small><a href='#table-of-contents'>Jump to top</a></small><br>\n";
-      cout << "This pair of polyominos is present in " << total << " puzzles (" << setprecision(2) << (100.0f * total) / uberTotal << "% of all puzzles)<br>\n";
-      cout << "Of those puzzles, " << uniqueTotal << " (" << setprecision(2) << (100.0f * uniqueTotal / total) << "%) can only be solved with one configuration of polyominos<br>\n";
+      cout << "This pair of polyominos is present in " << total << " puzzles (" << (100.0f * total) / uberTotal << "% of all puzzles)<br>\n";
+      cout << "Of those puzzles, " << uniqueTotal << " (" << (100.0f * uniqueTotal / total) << "%) can only be solved with one configuration of polyominos<br>\n";
       cout << "<pre>" << PrintPolykey(polykey) << "</pre>";
 
       vector<pair<u64, u32>> items;
-      for (const auto& it : data) items.push_back(it);
+      for (const auto& it : combinedData) items.push_back(it);
       sort(items.begin(), items.end(), [](const pair<u64, u32>& a, const pair<u64, u32>& b) { return a.second > b.second; });
 
       for (const auto& [polyish, count] : items) {
         u32 uniqueCount = uniqueData.at(polyish);
 
         if (polyish == 0) {
-          cout << count << " (" << setprecision(2) << (100.0f * count) / total << "%) of these puzzles can be solved with the polyominos separated<br>\n";
-          cout << uniqueCount << " (" << setprecision(2) << (100.0f * uniqueCount) / total << "%) of these puzzles must be solved with the polyominos separated<br>\n";
+          cout << count << " (" << (100.0f * count) / total << "%) of these puzzles can be solved with the polyominos separated<br>\n";
+          cout << uniqueCount << " (" << (100.0f * uniqueCount) / total << "%) of these puzzles must be solved with the polyominos separated<br>\n";
         } else {
-          cout << count << " (" << setprecision(2) << (100.0f * count) / total << "%) of these puzzles can be solved with the polyominos in this configuration:<br>\n";
-          cout << uniqueCount << " (" << setprecision(2) << (100.0f * uniqueCount) / total << "%) of these puzzles must be solved with the polyominos in this configuration:<br>\n";
+          cout << count << " (" << (100.0f * count) / total << "%) of these puzzles can be solved with the polyominos in this configuration:<br>\n";
+          cout << uniqueCount << " (" << (100.0f * uniqueCount) / total << "%) of these puzzles must be solved with the polyominos in this configuration:<br>\n";
           cout << "<pre>" << PrintPolyish(polyish, 8, 8, polykey) << "</pre>";
         }
       }
