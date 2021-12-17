@@ -1,6 +1,20 @@
 #pragma once
 #include <utility> // For move
 #include <initializer_list> // For initializer constructor
+#include <cstring> // For memset
+
+#ifndef assert
+#ifdef _DEBUG
+#define assert(cond) \
+{ \
+  if (!(cond)) { \
+    *static_cast<volatile int*>(nullptr) = 1; \
+  } \
+}
+#else
+#define assert(cond)
+#endif
+#endif
 
 template <typename T>
 T** NewDoubleArray(int width, int height) {
@@ -57,7 +71,12 @@ public:
   ~Vector() {
     if (_data != nullptr) delete[] _data;
   }
-  DELETE_RO3(Vector); // Copying should be done with .Copy(), to discourage accidental copying.
+
+  // Copying should be done with .Copy(), to discourage accidental copying.
+  Vector(const Vector& other) = delete; /* Copy constructor */
+  Vector& operator=(const Vector& other) = delete; /* Copy assignment */
+
+  // Moving is OK, we need it for when we have a Vector<Vector<>>
   Vector(Vector&& other) noexcept { /* Move constructor */
     _size = other._size;
     _capacity = other._capacity;
@@ -130,7 +149,7 @@ public:
     return _size == 0;
   }
 
-  // Get the vector size.
+  // Get the vector's size, aka the number of initialized elements.
   int Size() const {
     return _size;
   }
@@ -183,6 +202,11 @@ public:
     Vector<T> newVector(_capacity);
     for (const T& it : *this) newVector.Push(it);
     return newVector;
+  }
+
+  // Resize the vector to set its maximum capacity to |size| (or greater).
+  void Ensure(int size) {
+    Expand(_capacity + size);
   }
 
   // Resize the vector to increase its maximum capacity by |size|.
