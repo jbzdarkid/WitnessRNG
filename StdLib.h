@@ -239,9 +239,100 @@ template <typename T>
 bool operator==(const Vector<T>& a, const Vector<T>& b) {
   if (a._size != b._size) return false; // Different amounts of data => not equal.
   if (&a == &b) return true; // A and B are the same pointer (very unlikely)
-  if (a._data == b._data) return true; // A and B have the same data pointers (extremely unlikely)
-  for (int i=0; i<a._size; i++) {
+  if (a._data == b._data) return true; // A and B have the same data pointers (extremely unlikely if they are not also the same)
+  for (int i=0; i<a._size; i++) { // Finally, compare every element in A and B.
     if (a[i] != b[i]) return false;
   }
   return true;
 }
+
+// Adapated from Matt Kulukundis's (Google) CppCon 2017 talk
+using T = u32;
+class FlatHashSet {
+  enum Ctrl : s8 {
+    kEmpty = -128,    // 0b10000000
+    kDeleted = -2,    // 0b11111110
+    kSentinel = -1,   // 0b11111111
+    // kFull =           0b0xxxxxxx
+  };
+
+public:
+  // Construct an empty hashtable. This allocates space in memory (or on the stack) for the hashtable *container*,
+  // but does not allocate any memory for the hashtable *contents*.
+  FlatHashSet() { }
+  // Construct a hashtable of |capacity|. This allocates space in memory (or on the stack) for the hashtable *container*,
+  // AND allocates memory for the hashtable *contents*.
+  FlatHashSet(int capacity) {
+    _size = 0;
+    _capacity = capacity;
+    _ctrl = new u8[capacity];
+    _slots = new T[capacity];
+  }
+  ~FlatHashSet() {
+    if (_ctrl != nullptr) delete[] _ctrl;
+    if (_slots != nullptr) delete[] _slots;
+  }
+
+  // Copying should be done with .Copy(), to discourage accidental copying.
+  FlatHashSet(const FlatHashSet& other) = delete; /* Copy constructor */
+  FlatHashSet& operator=(const FlatHashSet& other) = delete; /* Copy assignment */
+
+  bool TryAdd(T value) {
+    u32 hash = triple32_hash(value);
+    size_t pos = H1(hash) % _size;
+    while (true) {
+      if (H2(hash) == _ctrl[pos] && value == _slots[pos]) return false; // Already exists
+      if (_ctrl[pos] == kEmpty) {
+        _ctrl[pos] = H2(hash);
+        _size++;
+        if (_size * 8 > _capacity * 7) Resize();
+        return true; // Just added
+      }
+      pos = (pos + 1) % _size;
+    }
+  }
+
+private:
+  // From https://nullprogram.com/blog/2018/07/31/
+  u32 triple32_hash(u32 x) {
+      x ^= x >> 17;
+      x *= 0xed5ad4bbU;
+      x ^= x >> 11;
+      x *= 0xac4c1b51U;
+      x ^= x >> 15;
+      x *= 0x31848babU;
+      x ^= x >> 14;
+      return x;
+  }
+
+  void Erase(size_t pos) {
+    _size--;
+    _ctrl[pos] = kDeleted;
+    _slots[pos].~T();
+  }
+
+  void Resize() {
+    // Abseil uses a "power of 2 minus 1" for capacities. Probably because they have a good chance of being prime or pseudo-prime.
+    FlatHashSet newTable(_capacity * 2 + 1);
+    for (int i=0; i<_capacity; i++) {
+      if (_ctrl[i] & kEmpty) continue; // High bit is set, so the associated slot had no real data.
+      T value = _slots[i];
+      newTable.TryAdd(value);
+    }
+
+    _capacity = newTable._capacity;
+    _ctrl = newTable._ctrl;
+    _slots = newTable._slots;
+    newTable._ctrl = nullptr;
+    newTable._slots = nullptr;
+  }
+
+  size_t H1(size_t hash) { return hash >> 7; }
+  u8 H2(size_t hash) { return (u8)(hash & 0x7F); }
+
+  int _size = 0;
+  int _capacity = 0;
+  u8* _ctrl = nullptr;
+  T* _slots = nullptr;
+};
+
