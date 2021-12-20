@@ -198,7 +198,7 @@ public:
   }
 
   // Copy the contents of the vector into a new vector with the same capacity.
-  Vector<T> Copy() {
+  Vector<T> Copy() const {
     Vector<T> newVector(_capacity);
     for (const T& it : *this) newVector.Push(it);
     return newVector;
