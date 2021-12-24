@@ -1,7 +1,7 @@
 #pragma once
 #include <utility> // For move
 #include <initializer_list> // For initializer constructor
-#include <cstring> // For memset
+#include <cstring> // For memset, memcpy
 
 #ifndef assert
 #ifdef _DEBUG
@@ -202,6 +202,22 @@ public:
     Vector<T> newVector(_capacity);
     for (const T& it : *this) newVector.Push(it);
     return newVector;
+  }
+
+  // Copy the contents of the vector into |dest|, a raw array containing |destSize| bytes
+  void CopyIntoArray(T* dest, size_t destSize) const {
+    size_t sizeInBytes = sizeof(T) * _size;
+    assert(destSize == sizeInBytes);
+    int err = memcpy_s(dest, destSize, &_data, sizeInBytes);
+    assert(err == 0);
+  }
+
+  // Set the contents of this vector from |dest|, a raw array containing |destSize| bytes
+  void CopyFromArray(const T* dest, size_t destSize) {
+    size_t sizeInBytes = sizeof(T) * _size;
+    assert(destSize == sizeInBytes);
+    int err = memcpy_s(&_data, sizeInBytes, dest, destSize);
+    assert(err == 0);
   }
 
   // Resize the vector to set its maximum capacity to |size| (or greater).
