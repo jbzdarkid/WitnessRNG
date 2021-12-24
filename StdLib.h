@@ -246,6 +246,87 @@ bool operator==(const Vector<T>& a, const Vector<T>& b) {
   return true;
 }
 
+template <typename T>
+class LinkedList {
+public:
+  // Default constructor for declaration purposes only
+  LinkedList() {}
+  LinkedList(T* head) : _head(head), _tail(head), _size(1) {}
+
+  T* Head() { return _head; }
+  T* Tail() { return _tail; }
+  int Size() { return _size; }
+
+  void AddToTail(T* newTail) {
+    assert(_tail);
+    assert(newTail);
+    _tail->next = newTail;
+    _tail = newTail;
+    _size++;
+  }
+
+  void AdvanceHead() {
+    assert(_head);
+    _head = _head->next;
+    _size--;
+  }
+
+private:
+  T* _head = nullptr;
+  T* _tail = nullptr;
+  int _size = 0;
+};
+
+template <typename T>
+class LinkedLoop {
+public:
+  // Default constructor for declaration purposes only
+  LinkedLoop() {}
+  LinkedLoop(T* node) { AddToHeadOrCreate(node); }
+
+  T* Previous() { return _previous; }
+  T* Current() { return _current; }
+  int Size() { return _size; }
+
+  void AddToHead(T* node) {
+    assert(node);
+    if (_current == nullptr) {
+      node->next = node;
+      _current = node;
+      _previous = node;
+      _size = 1;
+    } else {
+      node->next = _current;
+      _current = node;
+      _size++;
+    }
+    assert(_current->next);
+  }
+
+  void Advance() {
+    assert(_current);
+    _previous = _current;
+    _current = _current->next;
+    assert(_current->next);
+  }
+
+  void Pop() {
+    assert(_previous);
+    assert(_current);
+    T* next = _current->next;
+    assert(next);
+    _previous->next = next;
+    _current = next;
+    _size--;
+    assert(_current->next);
+  }
+
+private:
+  T* _previous = nullptr;
+  T* _current = nullptr;
+  int _size = 0;
+};
+
 // Adapated from Matt Kulukundis's (Google) CppCon 2017 talk
 using T = u32;
 class FlatHashSet {
