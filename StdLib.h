@@ -208,15 +208,15 @@ public:
   void CopyIntoArray(T* dest, size_t destSize) const {
     size_t sizeInBytes = sizeof(T) * _size;
     assert(destSize == sizeInBytes);
-    int err = memcpy_s(dest, destSize, &_data, sizeInBytes);
+    int err = memcpy_s(dest, destSize, _data, sizeInBytes);
     assert(err == 0);
   }
 
   // Set the contents of this vector from |dest|, a raw array containing |destSize| bytes
-  void CopyFromArray(const T* dest, size_t destSize) {
+  void CopyFromArray(const T* src, size_t srcSize) {
     size_t sizeInBytes = sizeof(T) * _size;
-    assert(destSize == sizeInBytes);
-    int err = memcpy_s(&_data, sizeInBytes, dest, destSize);
+    assert(srcSize == sizeInBytes);
+    int err = memcpy_s(_data, sizeInBytes, src, srcSize);
     assert(err == 0);
   }
 
