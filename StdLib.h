@@ -285,6 +285,7 @@ public:
     assert(_head);
     _head = _head->next;
     _size--;
+    assert(_size >= 0);
   }
 
 private:
