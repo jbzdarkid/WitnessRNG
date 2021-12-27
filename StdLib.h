@@ -66,7 +66,7 @@ public:
   }
   // Construct a vector from an initializer list. This allocates exactly enough space for the initializer contents.
   Vector(std::initializer_list<T> init) : Vector((int)init.size()) {
-    for (T it : init) UnsafePush(it);
+    for (const T& it : init) UnsafePush(it);
   }
   ~Vector() {
     if (_data != nullptr) delete[] _data;
@@ -299,7 +299,7 @@ class LinkedLoop {
 public:
   // Default constructor for declaration purposes only
   LinkedLoop() {}
-  LinkedLoop(T* node) { AddToHeadOrCreate(node); }
+  LinkedLoop(T* node) { AddToHead(node); }
 
   T* Previous() { return _previous; }
   T* Current() { return _current; }
@@ -313,6 +313,7 @@ public:
       _previous = node;
       _size = 1;
     } else {
+      _previous->next = node;
       node->next = _current;
       _current = node;
       _size++;
@@ -321,21 +322,43 @@ public:
   }
 
   void Advance() {
-    assert(_current);
     _previous = _current;
     _current = _current->next;
-    assert(_current->next);
   }
 
   void Pop() {
-    assert(_previous);
-    assert(_current);
     T* next = _current->next;
-    assert(next);
     _previous->next = next;
     _current = next;
     _size--;
-    assert(_current->next);
+  }
+
+  // Functions for range-based iteration
+  struct iterator {
+    iterator(T* node) : _node(node) {}
+
+    T* operator*() {
+      return _node;
+    }
+
+    void operator++() {
+      _first = false;
+      _node = _node->next;
+    }
+
+    bool operator!=(const iterator& other) {
+      return _first || _node != other._node;
+    }
+
+  private:
+    T* _node;
+    bool _first = true; // Required so that we don't immediately exit the loop (because begin() == end())
+  };
+  iterator begin() {
+    return iterator(_current);
+  }
+  iterator end() {
+    return iterator(_current);
   }
 
 private:
