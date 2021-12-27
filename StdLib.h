@@ -267,14 +267,15 @@ class LinkedList {
 public:
   // Default constructor for declaration purposes only
   LinkedList() {}
-  LinkedList(T* head) : _head(head), _tail(head), _size(1) {}
+  LinkedList(T* head) : _head(head), _tail(head), _size(1) {
+    assert(head);
+  }
 
   T* Head() { return _head; }
   T* Tail() { return _tail; }
   int Size() { return _size; }
 
   void AddToTail(T* newTail) {
-    assert(_tail);
     assert(newTail);
     _tail->next = newTail;
     _tail = newTail;
@@ -282,10 +283,9 @@ public:
   }
 
   void AdvanceHead() {
-    assert(_head);
+    assert(_size > 0);
     _head = _head->next;
     _size--;
-    assert(_size >= 0);
   }
 
 private:
@@ -318,7 +318,6 @@ public:
       _current = node;
       _size++;
     }
-    assert(_current->next);
   }
 
   void Advance() {
