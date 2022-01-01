@@ -8,7 +8,7 @@
 #define assert(cond) \
 { \
   if (!(cond)) { \
-    *static_cast<volatile int*>(nullptr) = 1; \
+    __debugbreak(); \
   } \
 }
 #else
