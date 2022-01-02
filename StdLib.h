@@ -184,9 +184,13 @@ public:
 
   /* Expensive functions */
 
-  // Fill the entire vector's contents with |value|. |T| should be a POD type.
-  void Fill(const T value) {
-    memset(_data, value, sizeof(T) * _capacity);
+  // Fill the entire vector's contents with |value|.
+  void Fill(const T& value) {
+    if constexpr (sizeof(T) == 1) {
+      memset(_data, value, sizeof(T) * _capacity);
+    } else { // Memset operates only on bytes, so we have to fall back if we want to set a larger type.
+      for (int i=0; i<_capacity; i++) _data[i] = value;
+    }
     _size = _capacity;
   }
 
@@ -299,13 +303,13 @@ class LinkedLoop {
 public:
   // Default constructor for declaration purposes only
   LinkedLoop() {}
-  LinkedLoop(T* node) { AddToHead(node); }
+  LinkedLoop(T* node) { AddCurrent(node); }
 
   T* Previous() { return _previous; }
   T* Current() { return _current; }
   int Size() { return _size; }
 
-  void AddToHead(T* node) {
+  void AddCurrent(T* node) {
     assert(node);
     if (_current == nullptr) {
       node->next = node;
