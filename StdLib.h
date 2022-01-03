@@ -93,15 +93,19 @@ public:
 
   // Functions for range-based iteration
   T* begin() {
+    if (_size == 0) return nullptr;
     return &_data[0];
   }
   const T* begin() const {
+    if (_size == 0) return nullptr;
     return &_data[0];
   }
   T* end() {
+    if (_size == 0) return nullptr;
     return &_data[_size];
   }
   const T* end() const {
+    if (_size == 0) return nullptr;
     return &_data[_size];
   }
 
