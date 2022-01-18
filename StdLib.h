@@ -2,6 +2,7 @@
 #include <utility> // For move
 #include <initializer_list> // For initializer constructor
 #include <cstring> // For memset, memcpy
+#include <new> // for std::bad_alloc
 
 #ifndef assert
 #ifdef _DEBUG
@@ -253,7 +254,7 @@ private:
   friend bool operator==(const Vector<T>& a, const Vector<T>& b);
 
   int _size = 0;
-  int _capacity = 0;
+  int _capacity = 0; // This class member should never be visible, it is an implementation detail.
   T* _data = nullptr;
 };
 
@@ -372,6 +373,66 @@ private:
   T* _previous = nullptr;
   T* _current = nullptr;
   int _size = 0;
+};
+
+
+template <typename T>
+class LinearAllocator {
+public:
+  LinearAllocator() {
+    _firstBucket = _lastBucket = Bucket::New(16);
+  }
+
+  ~LinearAllocator() {
+    Bucket* b = _firstBucket;
+    while (b) {
+      Bucket* next = b->next;
+      free(b);
+      b = next;
+    }
+  }
+
+  // Copying does not make sense for this type. Make a new one if you want another.
+  LinearAllocator(const LinearAllocator& other) = delete; /* Copy constructor */
+  LinearAllocator& operator=(const LinearAllocator& other) = delete; /* Copy assignment */
+
+  T* allocate(size_t n) {
+    assert(n == 1); // for now
+    if (_lastBucket->size + n > _lastBucket->capacity) NewBucket(_lastBucket->capacity * 2);
+    T* data = &_lastBucket->data;
+    T* addr = &data[_lastBucket->size];
+    _lastBucket->size += (u32)n;
+    return addr;
+  }
+
+  void deallocate(T* const addr, size_t n) {
+    // free!
+  }
+
+private:
+  struct Bucket {
+    static Bucket* New(u32 capacity) {
+      Bucket* b = (Bucket*)malloc(sizeof(Bucket) + sizeof(T) * (capacity - 1));
+      if (b == nullptr) throw std::bad_alloc();
+      b->size = 0;
+      b->capacity = capacity;
+      b->next = nullptr;
+      return b;
+    }
+    u32 size = 0;
+    u32 capacity = 0;
+    Bucket* next;
+    T data; // This is actually an array of length |capacity|.
+  };
+
+  void NewBucket(u32 capacity) {
+    Bucket* b = Bucket::New(capacity);
+    _lastBucket->next = b;
+    _lastBucket = b;
+  }
+
+  Bucket* _firstBucket;
+  Bucket* _lastBucket;
 };
 
 // Adapted from Matt Kulukundis's (Google) CppCon 2017 talk
@@ -503,14 +564,20 @@ public:
   // If |value| does not exist in the hashset, insert a copy of it.
   // This makes a copy of |value| on the heap.
   // The value (freshly inserted or not) is returned via |heapValue| (if not null).
-  bool AllocateAdd(const T& value, T** heapValue = nullptr) {
+  bool CopyAdd(const T& value, T** heapValue = nullptr) {
     size_t hash, pos;
     if (Find(&value, hash, pos)) { // Already exists
       if (heapValue) *heapValue = _slots[pos];
       return false;
     }
     
-    T* newValue = new T(value); // Allocation via copy constructor
+    T* newValue;
+    try {
+      newValue = _allocator.allocate(1);
+    } catch (std::bad_alloc&) {
+      return false;
+    }
+    newValue = new (newValue) T(value); // Allocation via copy constructor
     if (heapValue) *heapValue = newValue;
     Insert(pos, hash, newValue);
     return true; // Just added
@@ -582,32 +649,7 @@ private:
 
   int _size = 0;
   int _capacity = 0;
+  LinearAllocator<T> _allocator;
   u8* _ctrl = nullptr;
   T** _slots = nullptr;
-};
-
-template <typename T>
-class LinearAllocator {
-public:
-  void Reserve(u32 size) {
-
-  }
-
-private:
-  struct Bucket {
-    u32 size = 0;
-    u32 capacity = 0;
-    Bucket* next;
-    T[] data;
-  };
-
-  void NewBucket(u32 capacity) {
-    Bucket* b = (Bucket*)malloc(sizeof(Bucket) + sizeof(T) * capacity);
-    _lastBucket->next = b;
-    _lastBucket = b;
-  }
-
-  Bucket* _firstBucket;
-  Bucket* _lastBucket;
-  u64 _totalSize;
 };
