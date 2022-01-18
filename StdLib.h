@@ -374,26 +374,25 @@ private:
   int _size = 0;
 };
 
-// Adapated from Matt Kulukundis's (Google) CppCon 2017 talk
-using T = u32;
+// Adapted from Matt Kulukundis's (Google) CppCon 2017 talk
+template <typename T>
 class FlatHashSet {
-  enum Ctrl : s8 {
-    kEmpty = -128,    // 0b10000000
-    kDeleted = -2,    // 0b11111110
-    kSentinel = -1,   // 0b11111111
-    // kFull =           0b0xxxxxxx
+  static_assert(not std::is_pointer<T>());
+
+  enum Ctrl : u8 {
+    kEmpty =    0b10000000,
+    kDeleted =  0b11111110,
+    kSentinel = 0b11111111,
+    // kFull =  0b0xxxxxxx
   };
 
 public:
-  // Construct an empty hashtable. This allocates space in memory (or on the stack) for the hashtable *container*,
-  // but does not allocate any memory for the hashtable *contents*.
-  FlatHashSet() { }
-  // Construct a hashtable of |capacity|. This allocates space in memory (or on the stack) for the hashtable *container*,
-  // AND allocates memory for the hashtable *contents*.
-  FlatHashSet(int capacity) {
+  // Construct a hashtable of |capacity| (default 7).
+  FlatHashSet(int capacity = 7) {
     _size = 0;
     _capacity = capacity;
     _ctrl = new u8[capacity];
+    memset(_ctrl, kEmpty, capacity);
     _slots = new T[capacity];
   }
   ~FlatHashSet() {
@@ -406,42 +405,44 @@ public:
   FlatHashSet& operator=(const FlatHashSet& other) = delete; /* Copy assignment */
 
   bool TryAdd(T value) {
-    u32 hash = triple32_hash(value);
-    size_t pos = H1(hash) % _size;
-    while (true) {
-      if (H2(hash) == _ctrl[pos] && value == _slots[pos]) return false; // Already exists
-      if (_ctrl[pos] == kEmpty) {
-        _ctrl[pos] = H2(hash);
-        _size++;
-        if (_size * 8 > _capacity * 7) Resize();
-        return true; // Just added
-      }
-      pos = (pos + 1) % _size;
-    }
+    size_t hash = std::hash<T>()(value);
+    size_t pos = 0;
+    bool found = Find(value, hash, pos);
+    if (found) return false; // Already exists
+    
+    _ctrl[pos] = H2(hash);
+    _slots[pos] = value; // NB: Copies the value
+    _size++;
+    if (_size * 8 > _capacity * 7) Resize();
+    return true; // Just added
   }
 
 private:
-  // From https://nullprogram.com/blog/2018/07/31/
-  u32 triple32_hash(u32 x) {
-      x ^= x >> 17;
-      x *= 0xed5ad4bbU;
-      x ^= x >> 11;
-      x *= 0xac4c1b51U;
-      x ^= x >> 15;
-      x *= 0x31848babU;
-      x ^= x >> 14;
-      return x;
-  }
+  /*
+  void Remove(const T& value) {
+    size_t hash = std::hash<T>()(value);
+    size_t pos = 0;
+    bool found = Find(value, hash, pos);
+    if (!found) return;
 
-  void Erase(size_t pos) {
     _size--;
     _ctrl[pos] = kDeleted;
     _slots[pos].~T();
   }
+  */
+
+  bool Find(const T& value, size_t hash, size_t& pos) {
+    pos = H1(hash) % _capacity;
+    while (true) {
+      if (H2(hash) == _ctrl[pos] && value == _slots[pos]) return true; // Exists here!
+      if (_ctrl[pos] == kEmpty) return false; // Insert here!
+      pos = (pos + 1) % _capacity;
+    }
+  }
 
   void Resize() {
     // Abseil uses a "power of 2 minus 1" for capacities. Probably because they have a good chance of being prime or pseudo-prime.
-    FlatHashSet newTable(_capacity * 2 + 1);
+    FlatHashSet newTable((_capacity + 1) * 2 - 1);
     for (int i=0; i<_capacity; i++) {
       if (_ctrl[i] & kEmpty) continue; // High bit is set, so the associated slot had no real data.
       T value = _slots[i];
@@ -464,3 +465,149 @@ private:
   T* _slots = nullptr;
 };
 
+// Adapted from Matt Kulukundis's (Google) CppCon 2017 talk
+template <typename T>
+class NodeHashSet {
+  enum Ctrl : u8 {
+    kEmpty =    0b10000000,
+    kDeleted =  0b11111110,
+    kSentinel = 0b11111111,
+    // kFull =  0b0xxxxxxx
+  };
+
+public:
+  // Construct a hashtable of |capacity| (default 7).
+  NodeHashSet(int capacity = 7) {
+    _size = 0;
+    _capacity = capacity;
+    _ctrl = new u8[capacity];
+    memset(_ctrl, kEmpty, capacity);
+    _slots = new T*[capacity];
+  }
+  ~NodeHashSet() {
+    if (_slots != nullptr && _ctrl != nullptr) {
+      for (size_t pos = 0; pos < _capacity; pos++) {
+        if ((_ctrl[pos] & kEmpty) == 0) {
+          delete _slots[pos];
+        }
+      }
+    }
+    if (_slots != nullptr) delete[] _slots;
+    if (_ctrl != nullptr) delete[] _ctrl;
+  }
+
+  // Copying should be done with .Copy(), to discourage accidental copying.
+  NodeHashSet(const NodeHashSet& other) = delete; /* Copy constructor */
+  NodeHashSet& operator=(const NodeHashSet& other) = delete; /* Copy assignment */
+
+  // If |value| does not exist in the hashset, insert a copy of it.
+  // This makes a copy of |value| on the heap.
+  // The value (freshly inserted or not) is returned via |heapValue| (if not null).
+  bool AllocateAdd(const T& value, T** heapValue = nullptr) {
+    size_t hash, pos;
+    if (Find(&value, hash, pos)) { // Already exists
+      if (heapValue) *heapValue = _slots[pos];
+      return false;
+    }
+    
+    T* newValue = new T(value); // Allocation via copy constructor
+    if (heapValue) *heapValue = newValue;
+    Insert(pos, hash, newValue);
+    return true; // Just added
+  }
+
+  // If |value| does not exist in the hashset, insert it.
+  // This does not copy |value|, but it does assume that the pointer is heap-allocated.
+  bool TryAdd(T* value) {
+    size_t hash, pos;
+    if (Find(value, hash, pos)) return false; // Already exists
+
+    Insert(pos, hash, value); // Does not copy the value
+    return true; // Just added
+  }
+
+  size_t Size() const {
+    return _size;
+  }
+
+private:
+  /*
+  void Remove(const T* value) {
+    size_t hash = std::hash<T>()(*value);
+    size_t pos = 0;
+    bool found = Find(value, hash, pos);
+    if (!found) return;
+
+    _size--;
+    _ctrl[pos] = kDeleted;
+    _slots[pos] = nullptr; // Technically unnecessary.
+  }
+  */
+
+  bool Find(const T* value, size_t& hash, size_t& pos) {
+    hash = std::hash<T>()(*value);
+    pos = H1(hash) % _capacity;
+    while (true) {
+      if (H2(hash) == _ctrl[pos] && *value == *_slots[pos]) return true; // Exists here!
+      if (_ctrl[pos] == kEmpty) return false; // Insert here!
+      pos = (pos + 1) % _capacity;
+    }
+  }
+
+  void Insert(size_t pos, size_t hash, T* value) {
+    _ctrl[pos] = H2(hash);
+    _slots[pos] = value; 
+    _size++;
+    if (_size * 8 > _capacity * 7) Resize();
+  }
+
+  void Resize() {
+    // Abseil uses a "power of 2 minus 1" for capacities. Probably because they have a good chance of being prime or pseudo-prime.
+    NodeHashSet newTable((_capacity + 1) * 2 - 1);
+    for (int i=0; i<_capacity; i++) {
+      if (_ctrl[i] & kEmpty) continue; // High bit is set, so the associated slot had no real data.
+      T* value = _slots[i];
+      newTable.TryAdd(value);
+    }
+
+    _capacity = newTable._capacity;
+    _ctrl = newTable._ctrl;
+    _slots = newTable._slots;
+    newTable._ctrl = nullptr;
+    newTable._slots = nullptr;
+  }
+
+  size_t H1(size_t hash) { return hash >> 7; }
+  u8 H2(size_t hash) { return (u8)(hash & 0x7F); }
+
+  int _size = 0;
+  int _capacity = 0;
+  u8* _ctrl = nullptr;
+  T** _slots = nullptr;
+};
+
+template <typename T>
+class LinearAllocator {
+public:
+  void Reserve(u32 size) {
+
+  }
+
+private:
+  struct Bucket {
+    u32 size = 0;
+    u32 capacity = 0;
+    Bucket* next;
+    T[] data;
+  };
+
+  void NewBucket(u32 capacity) {
+    Bucket* b = (Bucket*)malloc(sizeof(Bucket) + sizeof(T) * capacity);
+    _lastBucket->next = b;
+    _lastBucket = b;
+  }
+
+  Bucket* _firstBucket;
+  Bucket* _lastBucket;
+  u64 _totalSize;
+};
