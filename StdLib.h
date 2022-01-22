@@ -617,7 +617,8 @@ private:
     while (true) {
       if (H2(hash) == _ctrl[pos] && *value == *_slots[pos]) return true; // Exists here!
       if (_ctrl[pos] == kEmpty) return false; // Insert here!
-      pos = (pos + 1) % _capacity;
+      ++pos;
+      if (pos > _capacity) pos -= _capacity; // Extremely obvious branch prediction is faster than modulo here.
     }
   }
 
