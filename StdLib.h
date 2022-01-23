@@ -135,7 +135,7 @@ public:
   }
 
   // Remove and return the last element from the vector. Call Pop() if you do not need the return value.
-  T PopValue() {
+  [[nodiscard]] T PopValue() {
     assert(_size >= 1);
     return _data[--_size];
   }
