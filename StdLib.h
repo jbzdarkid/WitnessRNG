@@ -494,6 +494,7 @@ public:
     return true; // Just added
   }
 
+  /*
   // If |value| does not exist in the hashset, insert it.
   // This does not copy |value|, but it does assume that the pointer is heap-allocated.
   bool TryAdd(T* value) {
@@ -503,6 +504,7 @@ public:
     Insert(pos, hash, value); // Does not copy the value
     return true; // Just added
   }
+  */
 
   size_t Size() const {
     return _size;
@@ -548,7 +550,7 @@ private:
     for (int i=0; i<_capacity; i++) {
       if (_ctrl[i] & kEmpty) continue; // High bit is set, so the associated slot had no real data.
       T* value = _slots[i];
-      newTable.TryAdd(value);
+      newTable.ResizeAdd(value);
     }
 
     _capacity = newTable._capacity;
@@ -556,6 +558,20 @@ private:
     _slots = newTable._slots;
     newTable._ctrl = nullptr;
     newTable._slots = nullptr;
+  }
+
+  // During a resize, we can avoid most of the safety checks. We know that the item doesn't yet exist,
+  // so we don't need to worry about hash collisions: If the slot is filled then it cannot be this value.
+  void ResizeAdd(T* value) {
+    size_t hash = std::hash<T>()(*value);
+    size_t pos = H1(hash) % _capacity;
+    while (true) {
+      if (_ctrl[pos] == kEmpty) break;
+      ++pos;
+      if (pos > _capacity) pos -= _capacity; // Extremely obvious branch prediction is faster than modulo here.
+    }
+    _ctrl[pos] = H2(hash);
+    _slots[pos] = value; 
   }
 
   size_t H1(size_t hash) { return hash >> 7; }
