@@ -221,6 +221,26 @@ public:
     assert(err == 0);
   }
 
+  // Sort and copy the contents of the vector into |dest|, a raw array containing |destSize| bytes
+  using CompareFunc = s8 (*)(const T&, const T&);
+  void SortedCopyIntoArray(T* dest, size_t destSize, CompareFunc cmp) const {
+    assert(destSize == _size * sizeof(T));
+
+    // Insertion sort, because it doesn't require any additional memory.
+    dest[0] = _data[0];
+    for (int i = 1; i<_size; i++) {
+      T& a = _data[i];
+      int j = i;
+      do {
+        T& b = dest[j-1];
+        if (cmp(a, b) >= 0) break; // a >= b
+        dest[j] = b;
+        j--;
+      } while (j > 0);
+      dest[j] = a;
+    }
+  }
+
   // Set the contents of this vector from |dest|, a raw array containing |destSize| bytes
   void CopyFromArray(const T* src, size_t srcSize) {
     size_t sizeInBytes = sizeof(T) * _size;
@@ -488,7 +508,7 @@ public:
     } catch (std::bad_alloc&) {
       return false;
     }
-    newValue = new (newValue) T(value); // Allocation via copy constructor
+    newValue = new (newValue) T(value); // Initialization via copy constructor
     if (heapValue) *heapValue = newValue;
     Insert(pos, hash, newValue);
     return true; // Just added
@@ -526,12 +546,32 @@ private:
     return true;
   }
 
+#if 0
+#define HIT _hits++
+#define MISS _misses++
+#define H1_COLLIDE _h1collisions++
+#define H2_COLLIDE _h2collisions++
+  u64 _hits = 0;
+  u64 _misses = 0;
+  u64 _h1collisions = 0;
+  u64 _h2collisions = 0;
+#else
+#define HIT
+#define MISS
+#define H1_COLLIDE
+#define H2_COLLIDE
+#endif
+
   bool Find(const T* value, size_t& hash, size_t& pos) {
     hash = std::hash<T>()(*value);
     pos = H1(hash) % _capacity;
     while (true) {
-      if (H2(hash) == _ctrl[pos] && *value == *_slots[pos]) return true; // Exists here!
-      if (_ctrl[pos] == kEmpty) return false; // Insert here!
+      if (H2(hash) == _ctrl[pos]) {
+        if (*value == *_slots[pos]) { HIT; return true; }
+        H2_COLLIDE;
+      }
+      if (_ctrl[pos] == kEmpty) { MISS; return false; }
+      H1_COLLIDE;
       ++pos;
       if (pos > _capacity) pos -= _capacity; // Extremely obvious branch prediction is faster than modulo here.
     }
