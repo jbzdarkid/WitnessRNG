@@ -551,6 +551,10 @@ private:
       if (_ctrl[i] & kEmpty) continue; // High bit is set, so the associated slot had no real data.
       T* value = _slots[i];
       newTable.ResizeAdd(value);
+#if _DEBUG
+      _slots[i] = nullptr;
+      _ctrl[i] = kDeleted;
+#endif
     }
 
     _capacity = newTable._capacity;
