@@ -437,97 +437,6 @@ private:
 
 // Adapted from Matt Kulukundis's (Google) CppCon 2017 talk
 template <typename T>
-class FlatHashSet {
-  static_assert(not std::is_pointer<T>());
-
-  enum Ctrl : u8 {
-    kEmpty =    0b10000000,
-    kDeleted =  0b11111110,
-    kSentinel = 0b11111111,
-    // kFull =  0b0xxxxxxx
-  };
-
-public:
-  // Construct a hashtable of |capacity| (default 7).
-  FlatHashSet(int capacity = 7) {
-    _size = 0;
-    _capacity = capacity;
-    _ctrl = new u8[capacity];
-    memset(_ctrl, kEmpty, capacity);
-    _slots = new T[capacity];
-  }
-  ~FlatHashSet() {
-    if (_ctrl != nullptr) delete[] _ctrl;
-    if (_slots != nullptr) delete[] _slots;
-  }
-
-  // Copying should be done with .Copy(), to discourage accidental copying.
-  FlatHashSet(const FlatHashSet& other) = delete; /* Copy constructor */
-  FlatHashSet& operator=(const FlatHashSet& other) = delete; /* Copy assignment */
-
-  bool TryAdd(T value) {
-    size_t hash = std::hash<T>()(value);
-    size_t pos = 0;
-    bool found = Find(value, hash, pos);
-    if (found) return false; // Already exists
-    
-    _ctrl[pos] = H2(hash);
-    _slots[pos] = value; // NB: Copies the value
-    _size++;
-    if (_size * 8 > _capacity * 7) Resize();
-    return true; // Just added
-  }
-
-private:
-  /*
-  void Remove(const T& value) {
-    size_t hash = std::hash<T>()(value);
-    size_t pos = 0;
-    bool found = Find(value, hash, pos);
-    if (!found) return;
-
-    _size--;
-    _ctrl[pos] = kDeleted;
-    _slots[pos].~T();
-  }
-  */
-
-  bool Find(const T& value, size_t hash, size_t& pos) {
-    pos = H1(hash) % _capacity;
-    while (true) {
-      if (H2(hash) == _ctrl[pos] && value == _slots[pos]) return true; // Exists here!
-      if (_ctrl[pos] == kEmpty) return false; // Insert here!
-      pos = (pos + 1) % _capacity;
-    }
-  }
-
-  void Resize() {
-    // Abseil uses a "power of 2 minus 1" for capacities. Probably because they have a good chance of being prime or pseudo-prime.
-    FlatHashSet newTable((_capacity + 1) * 2 - 1);
-    for (int i=0; i<_capacity; i++) {
-      if (_ctrl[i] & kEmpty) continue; // High bit is set, so the associated slot had no real data.
-      T value = _slots[i];
-      newTable.TryAdd(value);
-    }
-
-    _capacity = newTable._capacity;
-    _ctrl = newTable._ctrl;
-    _slots = newTable._slots;
-    newTable._ctrl = nullptr;
-    newTable._slots = nullptr;
-  }
-
-  size_t H1(size_t hash) { return hash >> 7; }
-  u8 H2(size_t hash) { return (u8)(hash & 0x7F); }
-
-  int _size = 0;
-  int _capacity = 0;
-  u8* _ctrl = nullptr;
-  T* _slots = nullptr;
-};
-
-// Adapted from Matt Kulukundis's (Google) CppCon 2017 talk
-template <typename T>
 class NodeHashSet {
   enum Ctrl : u8 {
     kEmpty =    0b10000000,
@@ -548,8 +457,10 @@ public:
   ~NodeHashSet() {
     if (_slots != nullptr && _ctrl != nullptr) {
       for (size_t pos = 0; pos < _capacity; pos++) {
-        if ((_ctrl[pos] & kEmpty) == 0) {
-          delete _slots[pos];
+        if ((_ctrl[pos] & kEmpty) == 0) { // High bit is not set so the slot is not empty
+          assert(_slots[pos] != nullptr);
+          _slots[pos]->~T();
+          _allocator.deallocate(_slots[pos], sizeof(T));
         }
       }
     }
@@ -598,18 +509,20 @@ public:
   }
 
 private:
-  /*
-  void Remove(const T* value) {
-    size_t hash = std::hash<T>()(*value);
-    size_t pos = 0;
-    bool found = Find(value, hash, pos);
-    if (!found) return;
+  bool Remove(const T* value) {
+    size_t hash, pos;
+    if (!Find(value, hash, pos)) return false; // Doesn't exist
 
-    _size--;
+    // I have not fully thought out the implications of setting something to kDeleted.
+    // Until then, do not use this function.
+    assert(false);
     _ctrl[pos] = kDeleted;
-    _slots[pos] = nullptr; // Technically unnecessary.
+#if _DEBUG
+    _slots[pos] = nullptr;
+#endif
+    _size--;
+    return true;
   }
-  */
 
   bool Find(const T* value, size_t& hash, size_t& pos) {
     hash = std::hash<T>()(*value);
