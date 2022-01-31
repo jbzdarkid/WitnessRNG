@@ -18,39 +18,76 @@
 #endif
 
 template <typename T>
-T** NewDoubleArray(int width, int height) {
-  // Single allocation for the grid for perf reasons.
-  T* raw = new T[width * height];
-  memset(raw, 0, sizeof(T) * width * height);
+class NArray {
+public:
+  NArray() {}
+  NArray(u8 maxA, u8 maxB=1, u8 maxC=1, u8 maxD=1) {
+    assert(maxA > 0);
+    assert(maxB > 0);
+    assert(maxC > 0);
+    assert(maxD > 0);
+    _maxA = maxA;
+    _maxB = maxB;
+    _maxC = maxC;
+    _maxD = maxD;
+    _data = (T*)malloc(sizeof(T) * maxA * maxB * maxC * maxD);
+    int k = 1;
+  }
+  ~NArray() {
+    if (_data != nullptr) free(_data);
+  }
+  // Copy constructors do not work if your class has raw pointers.
+  NArray(const NArray& other) = delete; /* Copy constructor */
+  NArray& operator=(const NArray& other) = delete; /* Copy assignment */
 
-  T** arr = new T*[width];
-  for (int x=0; x<width; x++) arr[x] = (raw + height * x);
-  return arr;
-}
+  // So set up move operators instead
+  NArray(NArray&& other) noexcept { /* Move constructor */
+    other = std::move(this);
+  }
+  NArray& operator=(NArray&& other) noexcept { /* Move assignment */
+    _maxA = other._maxA;
+    _maxB = other._maxB;
+    _maxC = other._maxC;
+    _maxD = other._maxD;
+    _data = other._data;
+    other._data = nullptr;
+    return *this;
+   }
 
-template <typename T>
-void DeleteDoubleArray(T** arr) {
-  delete arr[0]; // The grid was allocated as one contiguous region.
-  delete[] arr;
-}
+  const T& Get(u8 a, u8 b=0, u8 c=0, u8 d=0) const {
+    assert(a < _maxA);
+    assert(b < _maxB);
+    assert(c < _maxC);
+    assert(d < _maxD);
+    int index = ((a * _maxB + b) * _maxC + c) * _maxD + d;
+    assert(index < _maxA * _maxB * _maxC * _maxD);
+    return _data[index];
+  }
 
-template <typename T>
-T** NewDoubleArray2(int width, int height) {
-  // Single allocation for the grid for perf reasons.
-  T* raw = (T*)malloc(sizeof(T) * width * height);
-  if (raw == nullptr) return nullptr;
-  memset(raw, 0, sizeof(T) * width * height);
+  T& Get(u8 a, u8 b=0, u8 c=0, u8 d=0) {
+    const auto& const_this = const_cast<const NArray<T>&>(*this); // Create a const copy of ourselves, so the compiler knows to call the other overload
+    const T& const_ret = const_this.Get(a, b, c, d); // Call the const method, which returns const data
+    return const_cast<T&>(const_ret); // But we know we weren't actually const, so return a mutable copy.
+  }
 
-  T** arr = new T*[width];
-  for (int x=0; x<width; x++) arr[x] = (raw + height * x);
-  return arr;
-}
+  void Fill(const T& value) {
+    assert(_data != nullptr);
+    size_t size = _maxA * _maxB * _maxC * _maxD;
+    if constexpr (sizeof(T) == 1) {
+      memset(_data, value, size);
+    } else { // Memset operates only on bytes, so we have to fall back if we want to set a larger type.
+      for (int i=0; i<size; i++) _data[i] = value;
+    }
+  }
 
-template <typename T>
-void DeleteDoubleArray2(T** arr) {
-  free(arr[0]); // The grid was allocated as one contiguous region.
-  delete[] arr;
-}
+private:
+  int _maxA = 0;
+  int _maxB = 0;
+  int _maxC = 0;
+  int _maxD = 0;
+  T* _data = nullptr;
+};
+
 
 template <typename T>
 class Vector {
@@ -192,7 +229,7 @@ public:
   // Fill the entire vector's contents with |value|.
   void Fill(const T& value) {
     if constexpr (sizeof(T) == 1) {
-      memset(_data, value, sizeof(T) * _capacity);
+      memset(_data, value, _capacity);
     } else { // Memset operates only on bytes, so we have to fall back if we want to set a larger type.
       for (int i=0; i<_capacity; i++) _data[i] = value;
     }
