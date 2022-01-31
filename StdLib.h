@@ -70,6 +70,14 @@ public:
     return const_cast<T&>(const_ret); // But we know we weren't actually const, so return a mutable copy.
   }
 
+  const T& operator()(u8 a, u8 b=0, u8 c=0, u8 d=0) const {
+    return Get(a, b, c, d);
+  }
+
+  T& operator()(u8 a, u8 b=0, u8 c=0, u8 d=0) {
+    return Get(a, b, c, d);
+  }
+
   void Fill(const T& value) {
     assert(_data != nullptr);
     size_t size = _maxA * _maxB * _maxC * _maxD;
