@@ -234,12 +234,13 @@ public:
 
   /* Expensive functions */
 
-  // Fill the entire vector's contents with |value|.
+  // Fill the vector up to its size with |value|. Does not change the vector's capacity.
   void Fill(const T& value) {
+    assert(_size <= _capacity);
     if constexpr (sizeof(T) == 1) {
-      memset(_data, value, _capacity);
+      memset(_data, value, _size);
     } else { // Memset operates only on bytes, so we have to fall back if we want to set a larger type.
-      for (int i=0; i<_capacity; i++) _data[i] = value;
+      for (int i=0; i<_size; i++) _data[i] = value;
     }
     _size = _capacity;
   }
