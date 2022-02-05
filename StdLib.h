@@ -232,7 +232,18 @@ public:
     return _data[index];
   }
 
-  /* Expensive functions */
+  /* Moderately expensive functions */
+
+  bool Contains(const T& value) const {
+    return IndexOf(value) != -1;
+  }
+
+  int IndexOf(const T& value) const {
+    for (int i=0; i<_size; i++) {
+      if (_data[i] == value) return i;
+    }
+    return -1;
+  }
 
   // Fill the vector up to its size with |value|. Does not change the vector's capacity.
   void Fill(const T& value) {
@@ -244,6 +255,8 @@ public:
     }
     _size = _capacity;
   }
+
+  /* Expensive functions */
 
   // Copy the contents of |other| into the end of this vector, resizing if needed.
   void Append(const Vector<T>& other) {
