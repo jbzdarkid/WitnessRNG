@@ -560,7 +560,7 @@ public:
       if (heapValue) *heapValue = _slots[pos];
       return false;
     }
-    
+  
     T* newValue;
     try {
       newValue = _allocator.allocate(1);
