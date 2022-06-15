@@ -4,6 +4,13 @@
 #include <cstring> // For memset, memcpy
 #include <new> // for std::bad_alloc
 
+using u8 = unsigned char;
+using s8 = signed char;
+using u16 = unsigned short;
+using u32 = unsigned int;
+using u64 = unsigned long long;
+using s64 = long long;
+
 #ifndef assert
 #ifdef _DEBUG
 #define assert(cond) \
@@ -15,7 +22,7 @@
 #else
 #define assert(cond)
 #endif
-#endif
+#endif // #ifndef assert
 
 template <typename T>
 class NArray {
@@ -37,14 +44,14 @@ public:
     if (_data != nullptr) free(_data);
   }
   // Copy constructors do not work if your class has raw pointers.
-  NArray(const NArray& other) = delete; /* Copy constructor */
-  NArray& operator=(const NArray& other) = delete; /* Copy assignment */
+  NArray(const NArray& other) = delete; // Copy constructor
+  NArray& operator=(const NArray& other) = delete; // Copy assignment
 
   // So set up move operators instead
-  NArray(NArray&& other) noexcept { /* Move constructor */
+  NArray(NArray&& other) noexcept { // Move constructor
     other = std::move(this);
   }
-  NArray& operator=(NArray&& other) noexcept { /* Move assignment */
+  NArray& operator=(NArray&& other) noexcept { // Move assignment
     _maxA = other._maxA;
     _maxB = other._maxB;
     _maxC = other._maxC;
@@ -119,17 +126,17 @@ public:
   }
 
   // Copying should be done with .Copy(), to discourage accidental copying.
-  Vector(const Vector& other) = delete; /* Copy constructor */
-  Vector& operator=(const Vector& other) = delete; /* Copy assignment */
+  Vector(const Vector& other) = delete; // Copy constructor
+  Vector& operator=(const Vector& other) = delete; // Copy assignment
 
   // Moving is OK, we need it for when we have a Vector<Vector<>>
-  Vector(Vector&& other) noexcept { /* Move constructor */
+  Vector(Vector&& other) noexcept { // Move constructor
     _size = other._size;
     _capacity = other._capacity;
     _data = other._data;
     other._data = nullptr;
   }
-  Vector& operator=(Vector&& other) noexcept { /* Move assignment */
+  Vector& operator=(Vector&& other) noexcept { // Move assignment
     _size = other._size;
     _capacity = other._capacity;
     _data = other._data;
@@ -155,7 +162,7 @@ public:
     return &_data[_size];
   }
 
-  /* Cheap functions I use */
+  // *** Cheap functions I use *** //
 
   // Copy |value| onto the end of the vector. |T| should be a POD type to avoid unnecessary copying.
   // WARNING: This method does not check capacity! Do not call it unless you know there is sufficient capacity.
@@ -232,7 +239,7 @@ public:
     return _data[index];
   }
 
-  /* Moderately expensive functions */
+  // *** Moderately expensive functions *** //
 
   bool Contains(const T& value) const {
     return IndexOf(value) != -1;
@@ -256,7 +263,7 @@ public:
     _size = _capacity;
   }
 
-  /* Expensive functions */
+  // *** Expensive functions *** //
 
   // Copy the contents of |other| into the end of this vector, resizing if needed.
   void Append(const Vector<T>& other) {
@@ -376,6 +383,32 @@ public:
     _size--;
   }
 
+  // Functions for range-based iteration
+  struct iterator {
+    iterator(T* node) : _node(node) {}
+
+    T* operator*() {
+      return _node;
+    }
+
+    void operator++() {
+      _node = _node->next;
+    }
+
+    bool operator!=(const iterator& other) {
+      return _node != other._node;
+    }
+
+  private:
+    T* _node;
+  };
+  iterator begin() {
+    return iterator(_head);
+  }
+  iterator end() {
+    return iterator(_tail);
+  }
+
 private:
   T* _head = nullptr;
   T* _tail = nullptr;
@@ -472,8 +505,8 @@ public:
   }
 
   // Copying does not make sense for this type. Make a new one if you want another.
-  LinearAllocator(const LinearAllocator& other) = delete; /* Copy constructor */
-  LinearAllocator& operator=(const LinearAllocator& other) = delete; /* Copy assignment */
+  LinearAllocator(const LinearAllocator& other) = delete; // Copy constructor
+  LinearAllocator& operator=(const LinearAllocator& other) = delete; // Copy assignment
 
   T* allocate(size_t n) {
     assert(n == 1); // for now
@@ -548,11 +581,11 @@ public:
   }
 
   // Copying should be done with .Copy(), to discourage accidental copying.
-  NodeHashSet(const NodeHashSet& other) = delete; /* Copy constructor */
-  NodeHashSet& operator=(const NodeHashSet& other) = delete; /* Copy assignment */
+  NodeHashSet(const NodeHashSet& other) = delete; // Copy constructor
+  NodeHashSet& operator=(const NodeHashSet& other) = delete; // Copy assignment
 
   // If |value| does not exist in the hashset, insert a copy of it.
-  // This makes a copy of |value| on the heap.
+  // This makes a copy of |value| on the heap, using a private LinearAllocator.
   // The value (freshly inserted or not) is returned via |heapValue| (if not null).
   bool CopyAdd(const T& value, T** heapValue = nullptr) {
     size_t hash, pos;
@@ -573,7 +606,7 @@ public:
     return true; // Just added
   }
 
-  /*
+#if 0
   // If |value| does not exist in the hashset, insert it.
   // This does not copy |value|, but it does assume that the pointer is heap-allocated.
   bool TryAdd(T* value) {
@@ -583,7 +616,7 @@ public:
     Insert(pos, hash, value); // Does not copy the value
     return true; // Just added
   }
-  */
+#endif
 
   size_t Size() const {
     return _size;
