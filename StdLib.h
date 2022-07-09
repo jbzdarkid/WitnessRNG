@@ -252,6 +252,14 @@ public:
     return -1;
   }
 
+
+  // Special case of Fill which also works on Vectors of nontrivial types.
+  // Sets all bytes in the entire vector to |byte|.
+  void Fill(u8 byte) {
+    assert(_size <= _capacity);
+    memset(_data, byte, _size * sizeof(T));
+  }
+
   // Fill the vector up to its size with |value|. Does not change the vector's capacity.
   void Fill(const T& value) {
     assert(_size <= _capacity);
@@ -260,7 +268,6 @@ public:
     } else { // Memset operates only on bytes, so we have to fall back if we want to set a larger type.
       for (int i=0; i<_size; i++) _data[i] = value;
     }
-    _size = _capacity;
   }
 
   // *** Expensive functions *** //
@@ -316,9 +323,9 @@ public:
   }
 
   // Resize the vector to set its maximum capacity to |size| (or greater).
-  void Ensure(int size) {
-    Expand(_capacity + size);
-  }
+  // void Ensure(int size) {
+  //   Expand(_capacity + size); // wait, what? Isn't it size - _capacity?
+  // }
 
   // Resize the vector to increase its maximum capacity by |size|.
   void Expand(int size) {
