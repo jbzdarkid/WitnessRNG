@@ -291,6 +291,23 @@ void Puzzle::CutRandomEdges(Random& rng, u8 numCuts) {
   }
 }
 
+void Puzzle::AddRandomDots(Random& rng, u8 numDots) {
+  u8 numConnections = _numConnections; // TW stores the value of this before making cuts.
+  for (int i = 0; i < numDots; i++) {
+    int rand = rng.Get() % numConnections;
+
+    // In TW, additional connections are added whenever a cut is made. So, we continue if the RNG is larger than the true connection size.
+    if (rand * 2 >= _connections->Size()) continue;
+
+    u8 x = _connections->At(rand * 2);
+    u8 y = _connections->At(rand * 2 + 1);
+    if (_grid->Get(x, y).dot == Dot::None) {
+      _numConnections++;
+      _grid->Get(x, y).dot = Dot::Black;
+    }
+  }
+}
+
 Cell* Puzzle::GetEmptyCell(Random& rng) {
   while (true) {
     int rand = rng.Get() % (_origWidth * _origHeight);

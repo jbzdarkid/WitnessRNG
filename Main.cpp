@@ -349,6 +349,14 @@ int main(int argc, char* argv[]) {
     cout << "The values ranged from 0x" << hex << uppercase << setfill('0') << setw(8) << *min_element(&minValues[0], &minValues[numThreads]);
     cout << " to 0x" << hex << uppercase << setfill('0') << setw(8) << *max_element(&maxValues[0], &maxValues[numThreads]) << endl;
 
+  } else if (argc > 1 && strcmp(argv[1], "seed") == 0) {
+    Random rng;
+    // rng.Set(0);
+    Vector<Puzzle*> challenge = rng.GenerateChallenge();
+    for (auto puzzle : challenge) {
+      cout << puzzle->ToString() << endl;
+      delete puzzle;
+    }
   } else if (argc > 1 && strcmp(argv[1], "rand") == 0) {
     Random rng;
     rng.Set(806297464);
@@ -421,7 +429,7 @@ int main(int argc, char* argv[]) {
   } else if (argc > 1 && strcmp(argv[1], "merge") == 0) {
     Vector<u16> finalData(1 << 27); // A single bit per seed
     std::mutex dataLock;
-    finalData.Fill(0xFF);
+    finalData.Fill((u8)0xFF);
 
 #if _DEBUG
     const int numThreads = 1;

@@ -67,7 +67,7 @@ public:
 
   // RNG functions (from TW)
   void CutRandomEdges(Random& rng, u8 numCuts);
-  // void AddRandomDots(Random& rng, int numDots);
+  void AddRandomDots(Random& rng, u8 numDots);
   Cell* GetEmptyCell(Random& rng);
 
 private:
