@@ -22,6 +22,7 @@ class Puzzle;
 class Random;
 struct RegionData;
 template <typename T> class Vector;
+template <typename T> class NArray;
 
 using Region = Vector<Cell*>;
 using Path = Vector<u8>;

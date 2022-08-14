@@ -38,7 +38,6 @@ public:
     _maxC = maxC;
     _maxD = maxD;
     _data = (T*)malloc(sizeof(T) * maxA * maxB * maxC * maxD);
-    int k = 1;
   }
   ~NArray() {
     if (_data != nullptr) free(_data);
@@ -61,24 +60,37 @@ public:
     return *this;
    }
 
-  const T& Get(u8 a, u8 b=0, u8 c=0, u8 d=0) const {
-    assert(a < _maxA);
-    assert(b < _maxB);
-    assert(c < _maxC);
-    assert(d < _maxD);
-    int index = ((a * _maxB + b) * _maxC + c) * _maxD + d;
-    assert(index < _maxA * _maxB * _maxC * _maxD);
-    return _data[index];
+  const T& Get(u8 a, u8 b = 0, u8 c = 0, u8 d = 0) const {
+      assert(a < _maxA);
+      assert(b < _maxB);
+      assert(c < _maxC);
+      assert(d < _maxD);
+      int index = ((a * _maxB + b) * _maxC + c) * _maxD + d;
+      assert(index < _maxA* _maxB* _maxC* _maxD);
+      return _data[index];
   }
 
-  T& Get(u8 a, u8 b=0, u8 c=0, u8 d=0) {
+  const T* GetRow(u8 a, u8 b = 0, u8 c = 0, u8 d = 0) const {
+    if (c != 0) assert(d == 0) // Accessing a 3D row as a 4D array
+    else if (b != 0) assert(c == 0 && _maxD == 1) // Accessing a 2D row in a 3D array
+    else if (a != 0) assert(b == 0 && _maxC == 1) // Accessing a 1D row in a 2D array
+    return &Get(a, b, c, d);
+  }
+
+  const T& operator()(u8 a, u8 b=0, u8 c=0, u8 d=0) const {
+    return Get(a, b, c, d);
+  }
+
+  T& Get(u8 a, u8 b = 0, u8 c = 0, u8 d = 0) {
     const auto& const_this = const_cast<const NArray<T>&>(*this); // Create a const copy of ourselves, so the compiler knows to call the other overload
     const T& const_ret = const_this.Get(a, b, c, d); // Call the const method, which returns const data
     return const_cast<T&>(const_ret); // But we know we weren't actually const, so return a mutable copy.
   }
 
-  const T& operator()(u8 a, u8 b=0, u8 c=0, u8 d=0) const {
-    return Get(a, b, c, d);
+  T* GetRow(u8 a, u8 b = 0, u8 c = 0, u8 d = 0) {
+    const auto& const_this = const_cast<const NArray<T>&>(*this); // Create a const copy of ourselves, so the compiler knows to call the other overload
+    const T* const_ret = const_this.GetRow(a, b, c, d); // Call the const method, which returns const data
+    return const_cast<T*>(const_ret); // But we know we weren't actually const, so return a mutable copy.
   }
 
   T& operator()(u8 a, u8 b=0, u8 c=0, u8 d=0) {
@@ -89,7 +101,7 @@ public:
     assert(_data != nullptr);
     size_t size = _maxA * _maxB * _maxC * _maxD;
     if constexpr (sizeof(T) == 1) {
-      memset(_data, value, size);
+      memset(_data, (s8)value, size);
     } else { // Memset operates only on bytes, so we have to fall back if we want to set a larger type.
       for (int i=0; i<size; i++) _data[i] = value;
     }

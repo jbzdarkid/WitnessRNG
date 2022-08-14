@@ -28,8 +28,8 @@ public:
   u8 _width = 0;
   u8 _numConnections = 0;
   u8 _symmetry = 0;
-  Cell** _grid;
-  Masked** _maskedGrid;
+  NArray<Cell>* _grid;
+  NArray<Masked>* _maskedGrid;
   Vector<u8>* _connections;
   std::string _name;
   bool _pillar = false;

@@ -112,8 +112,8 @@ Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible) {
 
   rerollPuzzle:
   {
-    p->_grid[0][8].start = true;
-    p->_grid[8][0].end = End::Right; p->_numConnections++;
+    p->_grid->Get(0, 8).start = true;
+    p->_grid->Get(8, 0).end = End::Right; p->_numConnections++;
     bool solvable = IsSolvable(_seed);
     (void)solvable;
 
@@ -173,6 +173,7 @@ bool Random::IsSolvable(int seed) {
       solvability.Expand(1 << 27);
       solvability.Resize(1 << 27);
       HANDLE file = CreateFileA("puzzle_solvability.dat", FILE_GENERIC_READ, NULL, nullptr, OPEN_EXISTING, NULL, nullptr);
+      assert(file != INVALID_HANDLE_VALUE)
       ReadFile((HANDLE)file, &solvability[0], solvability.Size() * sizeof(solvability[0]), nullptr, nullptr);
       CloseHandle(file);
     }

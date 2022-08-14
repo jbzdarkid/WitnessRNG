@@ -3,8 +3,8 @@
 #ifdef _DEBUG
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
-#define DEBUG_NEW new(_NORMAL_BLOCK, __FILE__, __LINE__)
-#define new DEBUG_NEW
+#define DEBUG_NEW(...) new(__VA_ARGS__, _NORMAL_BLOCK, __FILE__, __LINE__)
+#define new(...) DEBUG_NEW(__VA_ARGS__)
 
 #undef assert
 #define assert(cond) \
@@ -14,7 +14,7 @@
   } \
 }
 #else
-#define assert(cond) 
+#define assert(cond)
 #endif
 
 #include "Polyominos.h"

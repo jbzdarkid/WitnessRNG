@@ -17,7 +17,7 @@ Vector<Path> Solver::Solve(int maxSolutions) {
   puzzle->_hasPolyominos = false;
   for (u8 x=0; x<puzzle->_width; x++) {
     for (u8 y=0; y<puzzle->_height; y++) {
-      Cell* cell = &puzzle->_grid[x][y];
+      Cell* cell = &puzzle->_grid->Get(x, y);
       if (cell->type == Type::Null) continue;
       if (cell->start == true) {
         startPoints.Push(cell);

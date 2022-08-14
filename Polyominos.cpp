@@ -72,38 +72,34 @@ bool Polyominos::PolyFit(const Region& region, const Puzzle& puzzle) {
 
   // For polyominos, we clear the grid to mark it up again:
   // First, we mark all cells as 0: Cells outside the target region should be unaffected.
-  s8** polyGrid = NewDoubleArray2<s8>(puzzle._width, puzzle._height);
+  NArray<s8> polyGrid = NArray<s8>(puzzle._width, puzzle._height);
 
   // In the normal case, we mark every cell as -1: It needs to be covered by one poly
   if (polyCount > 0) {
-    for (Cell* cell : region) polyGrid[cell->x][cell->y] = -1;
+    for (Cell* cell : region) polyGrid(cell->x, cell->y) = -1;
   }
   // In the exact match case, we leave every cell marked 0: Polys and ylops need to cancel.
 
-  bool ret = PlaceYlops(ylops, 0, polys, puzzle, polyGrid);
-
-  DeleteDoubleArray2(polyGrid);
-
-  return ret;
+  return PlaceYlops(ylops, 0, polys, puzzle, polyGrid);
 }
 
-bool Polyominos::TryPlacePolyshape(const Polyomino& cells, u8 x, u8 y, const Puzzle& puzzle, s8** polyGrid, s8 sign) {
+bool Polyominos::TryPlacePolyshape(const Polyomino& cells, u8 x, u8 y, const Puzzle& puzzle, NArray<s8>& polyGrid, s8 sign) {
   console.spam("Placing at", x, y, "with sign", sign);
   Vector<s8> values((int)cells.size());
   for (u8 i=0; i<cells.size(); i++) {
     auto [cellX, cellY] = cells[i];
     if (puzzle.GetCell(cellX + x, cellY + y) == nullptr) return false;
-    s8 puzzleCell = polyGrid[cellX + x][cellY + y];
+    s8 puzzleCell = polyGrid(cellX + x, cellY + y);
     values.UnsafePush(puzzleCell);
   }
   for (u8 i=0; i<cells.size(); i++) {
     auto [cellX, cellY] = cells[i];
-    polyGrid[cellX + x][cellY + y] = values[i] + sign;
+    polyGrid(cellX + x, cellY + y) = values[i] + sign;
   }
   return true;
 }
 
-bool Polyominos::PlaceYlops(const vector<Cell*>& ylops, u8 i, vector<Cell*>& polys, const Puzzle& puzzle, s8** polyGrid) {
+bool Polyominos::PlaceYlops(const vector<Cell*>& ylops, u8 i, vector<Cell*>& polys, const Puzzle& puzzle, NArray<s8>& polyGrid) {
   // Base case: No more ylops to place, start placing polys
   if (i == ylops.size()) return PlacePolys(polys, puzzle, polyGrid);
 
@@ -111,12 +107,12 @@ bool Polyominos::PlaceYlops(const vector<Cell*>& ylops, u8 i, vector<Cell*>& pol
   return false;
 }
 
-bool Polyominos::PlacePolys(std::vector<Cell*>& polys, const Puzzle& puzzle, s8** polyGrid) {
+bool Polyominos::PlacePolys(std::vector<Cell*>& polys, const Puzzle& puzzle, NArray<s8>& polyGrid) {
   // Check for overlapping polyominos, and handle exit cases for all polyominos placed.
   bool allPolysPlaced = (polys.size() == 0);
   for (u8 x=0; x<puzzle._width; x++) {
     for (u8 y=0; y<puzzle._height; y++) {
-      s8 cell = polyGrid[x][y];
+      s8 cell = polyGrid(x, y);
       if (cell > 0) {
         console.log("Cell", x, y, "has been overfilled and no ylops left to place");
         return false;
@@ -139,7 +135,7 @@ bool Polyominos::PlacePolys(std::vector<Cell*>& polys, const Puzzle& puzzle, s8*
   Vector<pair<u8, u8>> openCells(puzzle._pillar ? puzzle._width : 0);
   for (u8 y=1; y<puzzle._height; y+=2) {
     for (u8 x=1; x<puzzle._width; x+=2) {
-      if (polyGrid[x][y] >= 0) continue;
+      if (polyGrid(x, y) >= 0) continue;
       openCells.Emplace({x, y});
       if (puzzle._pillar == false) break;
     }

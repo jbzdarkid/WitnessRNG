@@ -9,12 +9,14 @@ Puzzle::Puzzle(u8 width, u8 height, bool pillar) {
   _height = 2*height+1;
   _numConnections = (width+1)*height + width*(height+1);
 
-  _grid = NewDoubleArray2<Cell>(_width, _height);
-  _maskedGrid = NewDoubleArray2<Masked>(_width, _height);
+  _grid = new NArray<Cell>(_width, _height);
+  _grid->Fill(Cell{});
+  _maskedGrid = new NArray<Masked>(_width, _height);
+  _maskedGrid->Fill(Masked::Uncounted);
 
   for (u8 x=0; x<_width; x++) {
     for (u8 y=0; y<_height; y++) {
-      Cell* cell = &_grid[x][y];
+      Cell* cell = &_grid->Get(x, y);
       cell->x = x;
       cell->y = y;
       if (x%2 != 1 || y%2 != 1) cell->type = Type::Line;
@@ -44,15 +46,15 @@ Puzzle::Puzzle(u8 width, u8 height, bool pillar) {
 }
 
 Puzzle::~Puzzle() {
-  DeleteDoubleArray2(_grid);
-  DeleteDoubleArray2(_maskedGrid);
+  if (_grid) delete _grid;
+  if (_maskedGrid) delete _maskedGrid;
   delete _connections;
 }
 
 Cell* Puzzle::GetCell(s8 x, s8 y) const {
   x = _mod(x);
   if (!_safeCell(x, y)) return nullptr;
-  return &_grid[x][y];
+  return &_grid->Get(x, y);
 }
 
 pair<u8, u8> Puzzle::GetSymmetricalPos(s8 x, s8 y) {
@@ -76,7 +78,7 @@ pair<u8, u8> Puzzle::GetSymmetricalPos(s8 x, s8 y) {
 
 Cell* Puzzle::GetSymmetricalCell(Cell* cell) {
   auto [x, y] = GetSymmetricalPos(cell->x, cell->y);
-  return &_grid[x][y];
+  return &_grid->Get(x, y);
 }
 
 bool Puzzle::MatchesSymmetricalPos(s8 x1, s8 y1, s8 x2, s8 y2) {
@@ -104,7 +106,7 @@ Line Puzzle::GetLine(s8 x, s8 y) const {
 void Puzzle::ClearGrid(bool linesOnly) {
   for (u8 x=0; x<_width; x++) {
     for (u8 y=0; y<_width; y++) {
-      Cell* cell = &_grid[x][y];
+      Cell* cell = &_grid->Get(x, y);
       cell->line = Line::None;
       if (!linesOnly) {
         if (x % 2 == 1 && y % 2 == 1) cell->type = Type::Null;
@@ -123,12 +125,12 @@ void Puzzle::ClearGrid(bool linesOnly) {
 }
 
 void Puzzle::_floodFill(u8 x, u8 y, Region& region) {
-  Masked cell = _maskedGrid[x][y];
+  Masked cell = _maskedGrid->Get(x, y);
   if (cell == Masked::Processed) return;
   if (cell != Masked::Uncounted) {
-    region.Emplace(&_grid[x][y]);
+    region.Emplace(&_grid->Get(x, y));
   }
-  _maskedGrid[x][y] = Masked::Processed;
+  _maskedGrid->Get(x, y) = Masked::Processed;
 
   if (y < _height - 1)       _floodFill(x,        y + 1, region);
   if (y > 0)                 _floodFill(x,        y - 1, region);
@@ -142,7 +144,7 @@ void Puzzle::GenerateMaskedGrid() {
   // Override all elements with empty lines -- this means that flood fill is just
   // looking for lines with line=0.
   for (u8 x=0; x<_width; x++) {
-    Masked* row = _maskedGrid[x];
+    Masked* row = _maskedGrid->GetRow(x);
     u8 skip = 1;
     if (x%2 == 1) { // Cells are always part of the region
       for (u8 y = 1; y < _height; y += 2) row[y] = Masked::Counted;
@@ -150,7 +152,7 @@ void Puzzle::GenerateMaskedGrid() {
     }
 
     for (u8 y=0; y<_height; y+=skip) {
-      Cell* cell = &_grid[x][y];
+      Cell* cell = &_grid->Get(x, y);
       if (cell->line != Line::None) {
         row[y] = Masked::Processed; // Traced lines should not be a part of the region
       } else if (cell->gap == Gap::Full) {
@@ -167,17 +169,17 @@ void Puzzle::GenerateMaskedGrid() {
   if (_startPoint != nullptr && _startPoint->x%2 != _startPoint->y%2) {
     if (false /* _settings.FAT_STARTPOINTS */) {
       // This segment is not in any region (acts as a barrier)
-      _maskedGrid[_startPoint->x][_startPoint->y] = Masked::OutOfBounds;
+      _maskedGrid->Get(_startPoint->x, _startPoint->y) = Masked::OutOfBounds;
     } else {
       // This segment is part of this region (acts as an empty cell)
-      _maskedGrid[_startPoint->x][_startPoint->y] = Masked::Uncounted;
+      _maskedGrid->Get(_startPoint->x, _startPoint->y) = Masked::Uncounted;
     }
   }
 
   // Ending at a mid-segment endpoint
   if (_endPoint != nullptr && _endPoint->x%2 != _endPoint->y%2) {
     // This segment is part of this region (acts as an empty cell)
-    _maskedGrid[_endPoint->x][_endPoint->y] = Masked::Uncounted;
+    _maskedGrid->Get(_endPoint->x, _endPoint->y) = Masked::Uncounted;
   }
 
   // Mark all outside cells as 'not in any region' (aka null)
@@ -208,7 +210,7 @@ Vector<Region> Puzzle::GetRegions() {
 
   for (u8 x=0; x<_width; x++) {
     for (u8 y=0; y<_height; y++) {
-      if (_maskedGrid[x][y] == Masked::Processed) continue;
+      if (_maskedGrid->Get(x, y) == Masked::Processed) continue;
 
       // If this cell is empty (aka hasn't already been used by a region), then create a new one
       // This will also mark all lines inside the new region as used.
@@ -230,7 +232,7 @@ Region Puzzle::GetRegion(s8 x, s8 y) {
   x = cell->x; // Hacky, substitute for calling _mod.
 
   GenerateMaskedGrid();
-  if (_maskedGrid[x][y] != Masked::Processed) {
+  if (_maskedGrid->Get(x, y) != Masked::Processed) {
     // If the masked grid hasn't been used at this point, then create a new region.
     // This will also mark all lines inside the new region as used.
     _floodFill(x, y, region);
@@ -242,7 +244,7 @@ Region Puzzle::GetRegion(s8 x, s8 y) {
 u64 Puzzle::GetPolyishFromMaskedGrid(u8 rotation, bool flip) {
   u64 polyish = 0;
   for (u8 x=1; x<_width; x+=2) {
-    Masked* col = _maskedGrid[x];
+    Masked* col = _maskedGrid->GetRow(x);
     for (u8 y=1; y<_height; y+=2) {
       if (col[y] != Masked::Processed) continue;
 
@@ -282,9 +284,9 @@ void Puzzle::CutRandomEdges(Random& rng, u8 numCuts) {
 
     u8 x = _connections->At(rand*2);
     u8 y = _connections->At(rand*2 + 1);
-    if (_grid[x][y].gap == Gap::None) {
+    if (_grid->Get(x, y).gap == Gap::None) {
       _numConnections++;
-      _grid[x][y].gap = Gap::Break;
+      _grid->Get(x, y).gap = Gap::Break;
     }
   }
 }
@@ -296,7 +298,9 @@ Cell* Puzzle::GetEmptyCell(Random& rng) {
     // This converts to WitnessPuzzles grid references.
     int x = (rand % _origWidth)*2 + 1;
     int y = (_origHeight - rand/_origWidth)*2 - 1;
-    Cell* cell = &_grid[x][y];
+    assert((u8)x == x);
+    assert((u8)y == y);
+    Cell* cell = &_grid->Get((u8)x, (u8)y);
     if (cell->type == Type::Null) return cell;
   }
 }
@@ -364,10 +368,10 @@ std::string Cell::ToString() {
 string Puzzle::ToString() {
   stringstream grid;
   grid << '[';
-  for (int x=0; x<_width; x++) {
+  for (u8 x=0; x<_width; x++) {
     grid << '[';
-    for (int y=0; y<_height; y++) {
-      grid << _grid[x][y].ToString();
+    for (u8 y=0; y<_height; y++) {
+      grid << _grid->Get(x, y).ToString();
       if (y < _height-1) grid << ',';
     }
     grid << ']';
@@ -385,7 +389,7 @@ string Puzzle::ToString() {
 void Puzzle::LogGrid() {
   for (u8 y=0; y<_height; y++) {
     for (u8 x=0; x<_width; x++) {
-      Cell* cell = &_grid[x][y];
+      Cell* cell = &_grid->Get(x, y);
       if (cell == nullptr)               cout << ' ';
       else if (cell->type == Type::Null) cout << ' ';
       else if (cell->start == true)      cout << 'S';

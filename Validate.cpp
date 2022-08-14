@@ -13,7 +13,7 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
   // Validate gap failures as an early exit.
   for (u8 x=0; x<puzzle._width; x++) {
     for (u8 y=0; y<puzzle._height; y++) {
-      Cell* cell = &puzzle._grid[x][y];
+      Cell* cell = &puzzle._grid->Get(x, y);
       switch (cell->type) {
         case Type::Nega:
           puzzle._hasNegations = true;
@@ -56,7 +56,7 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
     Region monoRegion(monoRegionSize);
     for (u8 x=0; x<puzzle._width; x++) {
       for (u8 y=0; y<puzzle._height; y++) {
-        Cell* cell = &puzzle._grid[x][y];
+        Cell* cell = &puzzle._grid->Get(x, y);
         if (cell->line == Line::None) monoRegion.UnsafePush(cell);
       }
     }
