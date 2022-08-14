@@ -67,8 +67,11 @@ public:
 
   // RNG functions (from TW)
   void CutRandomEdges(Random& rng, u8 numCuts);
-  void AddRandomDots(Random& rng, u8 numDots);
+  void AddRandomDots(Random& rng, u8 numDots, Dot color = (Dot)1 /* Dot::Black */);
   Cell* GetEmptyCell(Random& rng);
+  Cell* GetRandomCell(Random& rng);
+  // Non-RNG, also from TW
+  bool TestStonesEarlyFail();
 
 private:
   u8 _mod(s8 x) const;

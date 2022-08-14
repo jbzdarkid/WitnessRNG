@@ -22,9 +22,9 @@ public:
   Puzzle* GenerateHardMaze(bool rerollOnImpossible);
   Puzzle* GenerateStones(bool rerollOnImpossible);
   Puzzle* GeneratePedestal(bool rerollOnImpossible);
-  Puzzle* GenerateSymmetry(bool rerollOnImpossible);
   Puzzle* GeneratePolyominos(bool rerollOnImpossible);
   Puzzle* GenerateStars(bool rerollOnImpossible);
+  Puzzle* GenerateSymmetry(bool rerollOnImpossible);
   Puzzle* GenerateTriple2(bool solvable);
   Puzzle* GenerateTriple3(bool solvable);
   Puzzle* GenerateTriangles(u8 count, bool rerollOnImpossible);

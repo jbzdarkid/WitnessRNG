@@ -291,7 +291,7 @@ void Puzzle::CutRandomEdges(Random& rng, u8 numCuts) {
   }
 }
 
-void Puzzle::AddRandomDots(Random& rng, u8 numDots) {
+void Puzzle::AddRandomDots(Random& rng, u8 numDots, Dot color) {
   u8 numConnections = _numConnections; // TW stores the value of this before making cuts.
   for (int i = 0; i < numDots; i++) {
     int rand = rng.Get() % numConnections;
@@ -303,7 +303,7 @@ void Puzzle::AddRandomDots(Random& rng, u8 numDots) {
     u8 y = _connections->At(rand * 2 + 1);
     if (_grid->Get(x, y).dot == Dot::None) {
       _numConnections++;
-      _grid->Get(x, y).dot = Dot::Black;
+      _grid->Get(x, y).dot = color;
     }
   }
 }
@@ -320,6 +320,37 @@ Cell* Puzzle::GetEmptyCell(Random& rng) {
     Cell* cell = &_grid->Get((u8)x, (u8)y);
     if (cell->type == Type::Null) return cell;
   }
+}
+
+Cell* Puzzle::GetRandomCell(Random& /*rng*/) {
+  return nullptr;
+}
+
+bool Puzzle::TestStonesEarlyFail() {
+  for (u8 x = 1; x < _width - 2; x += 2) {
+    for (u8 y = 1; y < _height - 2; y += 2) {
+      Cell* c1 = &_grid->Get(x+0, y+0);
+      Cell* c2 = &_grid->Get(x+0, y+2);
+      Cell* c3 = &_grid->Get(x+2, y+0);
+      Cell* c4 = &_grid->Get(x+2, y+2);
+
+      if (c1->type == Type::Square && c2->type == Type::Square && c1->color != c2->color) {
+        if (c3->type == Type::Square && c3->color != c1->color && c3->color != c2->color) return true;
+        if (c4->type == Type::Square && c4->color != c1->color && c4->color != c2->color) return true;
+      } else if (c2->type == Type::Square && c3->type == Type::Square && c2->color != c3->color) {
+        if (c4->type == Type::Square && c4->color != c2->color && c4->color != c3->color) return true;
+        if (c1->type == Type::Square && c1->color != c2->color && c1->color != c3->color) return true;
+      } else if (c3->type == Type::Square && c4->type == Type::Square && c3->color != c4->color) {
+        if (c1->type == Type::Square && c1->color != c3->color && c1->color != c4->color) return true;
+        if (c2->type == Type::Square && c2->color != c3->color && c2->color != c4->color) return true;
+      } else if (c4->type == Type::Square && c1->type == Type::Square && c4->color != c1->color) {
+        if (c2->type == Type::Square && c2->color != c4->color && c2->color != c1->color) return true;
+        if (c3->type == Type::Square && c3->color != c4->color && c3->color != c1->color) return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 #define PRINTF(variable, format, ...) \
