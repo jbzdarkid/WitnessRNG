@@ -310,20 +310,20 @@ void Puzzle::AddRandomDots(Random& rng, u8 numDots, Dot color) {
 
 Cell* Puzzle::GetEmptyCell(Random& rng) {
   while (true) {
-    int rand = rng.Get() % (_origWidth * _origHeight);
-
-    // This converts to WitnessPuzzles grid references.
-    int x = (rand % _origWidth)*2 + 1;
-    int y = (_origHeight - rand/_origWidth)*2 - 1;
-    assert((u8)x == x);
-    assert((u8)y == y);
-    Cell* cell = &_grid->Get((u8)x, (u8)y);
+    Cell* cell = GetRandomCell(rng);
     if (cell->type == Type::Null) return cell;
   }
 }
 
-Cell* Puzzle::GetRandomCell(Random& /*rng*/) {
-  return nullptr;
+Cell* Puzzle::GetRandomCell(Random& rng) {
+  int rand = rng.Get() % (_origWidth * _origHeight);
+
+  // This converts to WitnessPuzzles grid references.
+  int x = (rand % _origWidth)*2 + 1;
+  int y = (_origHeight - rand/_origWidth)*2 - 1;
+  assert((u8)x == x);
+  assert((u8)y == y);
+  return &_grid->Get((u8)x, (u8)y);
 }
 
 bool Puzzle::TestStonesEarlyFail() {

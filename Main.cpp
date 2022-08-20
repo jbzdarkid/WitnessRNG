@@ -17,6 +17,16 @@ using namespace std;
 
 Console console;
 
+// Functions I wish std::string had
+bool Contains(const std::string_view& str, const std::string_view& substr) {
+  if (substr.size() > str.size()) return false;
+  if (substr.size() == str.size()) return substr == str;
+  for (int i = 0; i < str.size() - substr.size(); i++) {
+    if (str.substr(i, substr.size()) == substr) return true;
+  }
+  return false;
+}
+
 // TODO: I'm a little worried about the _numConnections overflow. Double-check (ugh) with TW.
 
 // Ideas to bring back to the javascript version:
@@ -351,8 +361,22 @@ int main(int argc, char* argv[]) {
 
   } else if (argc > 1 && strcmp(argv[1], "seed") == 0) {
     Random rng;
-    // rng.Set(0);
+    rng.Set(10);
     Vector<Puzzle*> challenge = rng.GenerateChallenge();
+    // For seed 10, we expect:
+    // Stars, top right
+    assert(Contains(challenge[4]->_name, "stars"));
+    // Symmetry, top left
+    assert(Contains(challenge[5]->_name, "symmetry"));
+    // Polys, bottom left
+    assert(Contains(challenge[6]->_name, "poly"));
+    // Maze, back
+    assert(Contains(challenge[7]->_name, "maze"));
+    // Right b/w
+    assert(Contains(challenge[10]->_name, "(solvable)"));
+    // Center 3col
+    assert(Contains(challenge[12]->_name, "(solvable)"));
+
     for (auto puzzle : challenge) {
       cout << puzzle->ToString() << endl;
       delete puzzle;

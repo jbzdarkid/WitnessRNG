@@ -18,19 +18,20 @@ public:
   int CheckStarsFailure();
 
   Vector<Puzzle*> GenerateChallenge();
-  Puzzle* GenerateEasyMaze(bool rerollOnImpossible);
-  Puzzle* GenerateHardMaze(bool rerollOnImpossible);
-  Puzzle* GenerateStones(bool rerollOnImpossible);
-  Puzzle* GeneratePedestal(bool rerollOnImpossible);
+  Puzzle* GenerateSimpleMaze();
+  Puzzle* GenerateHardMaze();
+  Puzzle* GenerateStones();
+  Puzzle* GeneratePedestal();
   Puzzle* GeneratePolyominos(bool rerollOnImpossible);
-  Puzzle* GenerateStars(bool rerollOnImpossible);
-  Puzzle* GenerateSymmetry(bool rerollOnImpossible);
-  Puzzle* GenerateTriple2(bool solvable);
-  Puzzle* GenerateTriple3(bool solvable);
-  Puzzle* GenerateTriangles(u8 count, bool rerollOnImpossible);
-  Puzzle* GenerateDotsPillar(bool rerollOnImpossible);
-  Puzzle* GenerateStonesPillar(bool rerollOnImpossible);
+  Puzzle* GenerateStars();
+  Puzzle* GenerateSymmetry();
+  Puzzle* GenerateTriple2(bool shouldBeSolvable);
+  Puzzle* GenerateTriple3(bool shouldBeSolvable);
+  Puzzle* GenerateTriangles(u8 count);
+  Puzzle* GenerateDotsPillar();
+  Puzzle* GenerateStonesPillar();
   static bool IsSolvable(int seed);
+  static bool IsSolvable(Puzzle* p);
 
 private:
   int _seed = 0;

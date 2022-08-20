@@ -29,7 +29,9 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
           needsRegions = true;
           break;
         case Type::Line:
-          if (cell->line != Line::None) {
+          if (cell->line == Line::None) {
+            monoRegionSize++;
+          } else {
             if (cell->gap != Gap::None) {
               console.log("Solution line goes over a gap at", x, y);
               puzzleData.veryInvalidElements.Push(cell);
@@ -41,8 +43,6 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
               puzzleData.veryInvalidElements.Push(cell);
               if (quick) return puzzleData;
             }
-          } else {
-            monoRegionSize++;
           }
           break;
       }
@@ -57,7 +57,7 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
     for (u8 x=0; x<puzzle._width; x++) {
       for (u8 y=0; y<puzzle._height; y++) {
         Cell* cell = &puzzle._grid->Get(x, y);
-        if (cell->line == Line::None) monoRegion.UnsafePush(cell);
+        if (cell->type == Type::Line && cell->line == Line::None) monoRegion.UnsafePush(cell);
       }
     }
     regions.Emplace(move(monoRegion));

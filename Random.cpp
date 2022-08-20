@@ -31,7 +31,7 @@ void Random::Set(int seed) {
 
 void Random::ShuffleInt(Vector<int>& arr) {
   int size = arr.Size();
-  for (int i=0; i<size; i++) {
+  for (int i = 0; i < size; i++) {
     int rng1 = Get() % size;
     int rng2 = Get() % size;
     int tmp = arr[rng1];
@@ -44,8 +44,8 @@ void Random::ShuffleIntegers(Vector<int>& arr) {
   for (int size = arr.Size(); size > 1; size--) {
     int rng = Get() % size;
     int tmp = arr[rng];
-    arr[rng] = arr[size-1];
-    arr[size-1] = tmp;
+    arr[rng] = arr[size - 1];
+    arr[size - 1] = tmp;
   }
 }
 
@@ -63,7 +63,7 @@ u16 Random::RandomPolyshape() {
 
     // Note: This can overflow if you roll the same cursor 5 times in a row.
     // This means that a 5-J or a 4-I is produced instead of a 5-I.
-    polyshape |= 1 << (cursorX*4 + cursorY);
+    polyshape |= 1 << (cursorX * 4 + cursorY);
   }
 
   // Slight adjustment here due to differences in rotation between WitnessPuzzles and The Witness.
@@ -77,21 +77,21 @@ u16 Random::RandomPolyshape() {
 
 int Random::CheckStarsFailure() {
   int rngBefore = _seed;
-  for (int k=0; k<11; k++) Get(); // Initial color generation
+  for (int k = 0; k < 11; k++) Get(); // Initial color generation
 
   int i = 0;
 
   // hacky, stolen from puzzle
   while (true) {
     int rand = Get() % (4 * 4); i++;
-    int x1 = (rand % 4)*2 + 1;
-    int y1 = (4 - rand/4)*2 - 1;
+    int x1 = (rand % 4) * 2 + 1;
+    int y1 = (4 - rand / 4) * 2 - 1;
 
     int x2, y2;
     do {
       rand = Get() % (4 * 4); i++;
-      x2 = (rand % 4)*2 + 1;
-      y2 = (4 - rand/4)*2 - 1;
+      x2 = (rand % 4) * 2 + 1;
+      y2 = (4 - rand / 4) * 2 - 1;
     } while (x1 == x2 && y1 == y2);
 
     if (abs(x1 - x2) + abs(y1 - y2) >= 6) break;
@@ -102,21 +102,28 @@ int Random::CheckStarsFailure() {
 }
 
 Vector<Puzzle*> Random::GenerateChallenge() {
+  u8 triple2 = (Get() >> 10) % 3;
+  u8 triple3 = (Get() >> 10) % 3;
+
+  Vector<int> visitOrder = {0, 1, 2, 3};
+  Vector<int> puzzleOrder = {0, 1, 2, 3};
+  ShuffleIntegers(visitOrder);
+  ShuffleIntegers(puzzleOrder);
+
   Vector<Puzzle*> challenge(18); // 3 + 1 + 4 + 6 + 2 + 2
+  challenge.UnsafePush(GenerateSimpleMaze());
+  challenge.UnsafePush(GenerateHardMaze());
+  challenge.UnsafePush(GenerateStones());
 
-  u8 triple2 = Get() % 3;
-  u8 triple3 = Get() % 3;
+  challenge.UnsafePush(GeneratePedestal());
 
-  challenge.UnsafePush(GenerateEasyMaze(true));
-  challenge.UnsafePush(GenerateHardMaze(true));
-  challenge.UnsafePush(GenerateStones(true));
-  challenge.UnsafePush(GeneratePedestal(true));
-
-  // Pillar order, somehow
-  challenge.UnsafePush(GeneratePolyominos(true));
-  challenge.UnsafePush(GenerateStars(true));
-  challenge.UnsafePush(GenerateSymmetry(true));
-  challenge.UnsafePush(GenerateHardMaze(true));
+  // Note that we don't actually care about the visit order (aka locations), but they would apply here too.
+  for (u8 i = 0; i < 4; i++) {
+    if (puzzleOrder[i] == 0) challenge.UnsafePush(GeneratePolyominos(true));
+    if (puzzleOrder[i] == 1) challenge.UnsafePush(GenerateStars());
+    if (puzzleOrder[i] == 2) challenge.UnsafePush(GenerateSymmetry());
+    if (puzzleOrder[i] == 3) challenge.UnsafePush(GenerateHardMaze());
+  }
 
   challenge.UnsafePush(GenerateTriple2(triple2 == 0));
   challenge.UnsafePush(GenerateTriple2(triple2 == 1));
@@ -126,120 +133,84 @@ Vector<Puzzle*> Random::GenerateChallenge() {
   challenge.UnsafePush(GenerateTriple3(triple3 == 1));
   challenge.UnsafePush(GenerateTriple3(triple3 == 2));
 
-  challenge.UnsafePush(GenerateTriangles(6, true));
-  challenge.UnsafePush(GenerateTriangles(8, true));
+  challenge.UnsafePush(GenerateTriangles(6));
+  challenge.UnsafePush(GenerateTriangles(8));
 
-  challenge.UnsafePush(GenerateDotsPillar(true));
-  challenge.UnsafePush(GenerateStonesPillar(true));
+  challenge.UnsafePush(GenerateDotsPillar());
+  challenge.UnsafePush(GenerateStonesPillar());
 
   return challenge;
 }
 
-Puzzle* Random::GenerateEasyMaze(bool rerollOnImpossible) {
+Puzzle* Random::GenerateSimpleMaze() {
   Puzzle* p = new Puzzle(3, 3);
   p->_name = "Random easy maze #" + std::to_string(_seed);
 
-  rerollPuzzle:
-  {
+  do {
+    p->ClearGrid();
     p->_grid->Get(0, 6).start = true;
     p->_grid->Get(6, 0).end = End::Right; p->_numConnections++;
 
     p->CutRandomEdges(*this, 9);
-
-    if (rerollOnImpossible) {
-      bool unsolvable = Solver(p).Solve(1).Empty();
-
-      if (unsolvable) {
-        p->ClearGrid();
-        goto rerollPuzzle;
-      }
-    }
-  }
+  } while (!IsSolvable(p));
 
   return p;
 }
 
-Puzzle* Random::GenerateHardMaze(bool rerollOnImpossible) {
+Puzzle* Random::GenerateHardMaze() {
   Puzzle* p = new Puzzle(7, 7);
   p->_name = "Random hard maze #" + std::to_string(_seed);
 
-  rerollPuzzle:
-  {
+  do {
+    p->ClearGrid();
     p->_grid->Get(0, 14).start = true;
     p->_grid->Get(14, 0).end = End::Right; p->_numConnections++;
 
     p->CutRandomEdges(*this, 57);
-
-    if (rerollOnImpossible) {
-      bool unsolvable = Solver(p).Solve(1).Empty();
-
-      if (unsolvable) {
-        p->ClearGrid();
-        goto rerollPuzzle;
-      }
-    }
-  }
+  } while (!IsSolvable(p));
 
   return p;
 }
 
-Puzzle* Random::GenerateStones(bool rerollOnImpossible) {
+Puzzle* Random::GenerateStones() {
   Puzzle* p = new Puzzle(4, 4);
   p->_name = "Random stones #" + std::to_string(_seed);
 
-  rerollPuzzle:
-  {
+  do {
+    p->ClearGrid();
     p->_grid->Get(0, 8).start = true;
     p->_grid->Get(8, 0).end = End::Right; p->_numConnections++;
 
-    for (int i=0; i<7; i++) {
+    for (int i = 0; i < 7; i++) {
       Cell* cell = p->GetRandomCell(*this);
       cell->type = Type::Square;
-      cell->color = 0xFFFFFF; // White
+      cell->color = 0x2; // White
     }
-    
-    for (int i=0; i<4; i++) {
+
+    for (int i = 0; i < 4; i++) {
       Cell* cell = p->GetRandomCell(*this);
       cell->type = Type::Square;
-      cell->color = 0x000000; // Black
+      cell->color = 0x1; // Black
     }
-    
+
     p->CutRandomEdges(*this, 5);
-
-    if (rerollOnImpossible) {
-      bool unsolvable = Solver(p).Solve(1).Empty();
-
-      if (unsolvable) {
-        p->ClearGrid();
-        goto rerollPuzzle;
-      }
-    }
-  }
+  } while (!IsSolvable(p));
 
   return p;
 }
 
-Puzzle* Random::GeneratePedestal(bool rerollOnImpossible) {
+Puzzle* Random::GeneratePedestal() {
   Puzzle* p = new Puzzle(5, 5);
   p->_name = "Random pedastal #" + std::to_string(_seed);
 
-  rerollPuzzle:
-  {
+  do {
+    p->ClearGrid();
     p->_grid->Get(0, 10).start = true;
     p->_grid->Get(10, 0).end = End::Right; p->_numConnections++;
 
     p->CutRandomEdges(*this, 25);
     p->AddRandomDots(*this, 2);
-
-    if (rerollOnImpossible) {
-      bool unsolvable = Solver(p).Solve(1).Empty();
-
-      if (unsolvable) {
-        p->ClearGrid();
-        goto rerollPuzzle;
-      }
-    }
-  }
+  } while (!IsSolvable(p));
 
   return p;
 }
@@ -285,9 +256,7 @@ Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible) {
     poly2->polyshape = polyshape2;
 
     if (rerollOnImpossible) {
-      bool unsolvable = Solver(p).Solve(1).Empty();
-
-      if (unsolvable) {
+      if (!IsSolvable(p)) {
         if (_seed == 0x7db993b5) { // This seed is known to be solvable (and is used by the tests)
           auto solutions = Solver(p).Solve();
           assert(false);
@@ -301,42 +270,37 @@ Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible) {
   return p;
 }
 
-Puzzle* Random::GenerateStars(bool rerollOnImpossible) {
+Puzzle* Random::GenerateStars() {
   Puzzle* p = new Puzzle(4, 4);
   p->_name = "Random stars #" + std::to_string(_seed);
 
-  rerollPuzzle:
-  {
+  do {
+    p->ClearGrid();
     p->_grid->Get(0, 8).start = true;
     p->_grid->Get(8, 0).end = End::Right; p->_numConnections++;
 
-    for (int i=0; i<4; i++) {
+    p->CutRandomEdges(*this, 10);
+
+    for (int i = 0; i < 4; i++) {
       Cell* cell = p->GetEmptyCell(*this);
       cell->type = Type::Star;
-      cell->color = 0x00FF00; // Green
+      cell->color = 0x5; // Green
     }
 
+    // This uses 'get_empty_dot_spot' instead of 'add_exactly_this_many_bisection_dots', may matter.
     p->AddRandomDots(*this, 4);
-
-    if (rerollOnImpossible) {
-      bool unsolvable = Solver(p).Solve(1).Empty();
-
-      if (unsolvable) {
-        p->ClearGrid();
-        goto rerollPuzzle;
-      }
-    }
-  }
+  } while (!IsSolvable(p));
 
   return p;
 }
 
-Puzzle* Random::GenerateSymmetry(bool rerollOnImpossible) {
+Puzzle* Random::GenerateSymmetry() {
   Puzzle* p = new Puzzle(6, 6);
   p->_name = "Random symmetry #" + std::to_string(_seed);
+  p->_symmetry = SYM_XY;
 
-  rerollPuzzle:
-  {
+  do {
+    p->ClearGrid();
     p->_grid->Get(0, 12).start = true;
     p->_grid->Get(12, 0).start = true;
     p->_grid->Get(12, 12).end = End::Right; p->_numConnections++;
@@ -344,103 +308,82 @@ Puzzle* Random::GenerateSymmetry(bool rerollOnImpossible) {
 
     p->CutRandomEdges(*this, 6);
 
+    // This uses 'get_empty_dot_spot' instead of 'add_exactly_this_many_bisection_dots', may matter.
     p->AddRandomDots(*this, 2, Dot::Blue);
     p->AddRandomDots(*this, 2, Dot::Yellow);
     p->AddRandomDots(*this, 2, Dot::Black);
-
-    if (rerollOnImpossible) {
-      bool unsolvable = Solver(p).Solve(1).Empty();
-
-      if (unsolvable) {
-        p->ClearGrid();
-        goto rerollPuzzle;
-      }
-    }
-  }
+  } while (!IsSolvable(p));
 
   return p;
 }
 
 Puzzle* Random::GenerateTriple2(bool shouldBeSolvable) {
   Puzzle* p = new Puzzle(4, 4);
-  p->_name = "Random triple2 #" + std::to_string(_seed);
+  p->_name = "Random triple2 #" + std::to_string(_seed) + (shouldBeSolvable ? " (solvable)" : " (unsolvable)");
 
-  rerollPuzzle:
-  {
+  do {
+    p->ClearGrid();
     p->_grid->Get(0, 8).start = true;
     p->_grid->Get(8, 0).end = End::Right; p->_numConnections++;
 
-    for (int i=0; i<6; i++) {
+    for (int i = 0; i < 6; i++) {
       Cell* cell = p->GetEmptyCell(*this);
       cell->type = Type::Square;
-      cell->color = 0x000000; // White
-    }
-    
-    for (int i=0; i<6; i++) {
-      Cell* cell = p->GetEmptyCell(*this);
-      cell->type = Type::Square;
-      cell->color = 0xFFFFFF; // Black
+      cell->color = 0x2; // White
     }
 
-    bool solvable = !Solver(p).Solve(1).Empty();
-    if (solvable != shouldBeSolvable) {
-      p->ClearGrid();
-      goto rerollPuzzle;
+    for (int i = 0; i < 6; i++) {
+      Cell* cell = p->GetEmptyCell(*this);
+      cell->type = Type::Square;
+      cell->color = 0x1; // Black
     }
-  }
+  } while (!IsSolvable(p));
+  // } while (IsSolvable(p) != shouldBeSolvable);
 
   return p;
 }
 
 Puzzle* Random::GenerateTriple3(bool shouldBeSolvable) {
   Puzzle* p = new Puzzle(4, 4);
-  p->_name = "Random triple3 #" + std::to_string(_seed);
+  p->_name = "Random triple3 #" + std::to_string(_seed) + (shouldBeSolvable ? " (solvable)" : " (unsolvable)");
 
-  rerollPuzzle:
-  {
+  do {
+    p->ClearGrid();
     p->_grid->Get(0, 8).start = true;
     p->_grid->Get(8, 0).end = End::Right; p->_numConnections++;
 
-    for (int i=0; i<5; i++) {
+    for (int i = 0; i < 5; i++) {
       Cell* cell = p->GetEmptyCell(*this);
       cell->type = Type::Square;
-      cell->color = 0x000000; // White
-    }
-    
-    for (int i=0; i<2; i++) {
-      Cell* cell = p->GetEmptyCell(*this);
-      cell->type = Type::Square;
-      cell->color = 0xFF00FF; // Purple
+      cell->color = 0x2; // White
     }
 
-    for (int i=0; i<2; i++) {
+    for (int i = 0; i < 2; i++) {
       Cell* cell = p->GetEmptyCell(*this);
       cell->type = Type::Square;
-      cell->color = 0xFF0000; // Green
+      cell->color = 0x4; // Purple
     }
-    
+
+    for (int i = 0; i < 2; i++) {
+      Cell* cell = p->GetEmptyCell(*this);
+      cell->type = Type::Square;
+      cell->color = 0x5; // Green
+    }
+
     // TW does not allow for L shapes of 3 different colors, in both solvable and non-solvable triples.
-    if (p->TestStonesEarlyFail()) {
-      p->ClearGrid();
-      goto rerollPuzzle;
-    }
-
-    bool solvable = !Solver(p).Solve(1).Empty();
-    if (solvable != shouldBeSolvable) {
-      p->ClearGrid();
-      goto rerollPuzzle;
-    }
-  }
+    if (p->TestStonesEarlyFail()) continue;
+  } while (!IsSolvable(p));
+  // } while (IsSolvable(p) != shouldBeSolvable);
 
   return p;
 }
 
-Puzzle* Random::GenerateTriangles(u8 count, bool rerollOnImpossible) {
+Puzzle* Random::GenerateTriangles(u8 count) {
   Puzzle* p = new Puzzle(4, 4);
   p->_name = "Random " + std::to_string(count) + " triangle #" + std::to_string(_seed);
 
-  rerollPuzzle:
-  {
+  do {
+    p->ClearGrid();
     p->_grid->Get(0, 8).start = true;
     p->_grid->Get(8, 0).end = End::Right; p->_numConnections++;
 
@@ -448,32 +391,81 @@ Puzzle* Random::GenerateTriangles(u8 count, bool rerollOnImpossible) {
       Cell* cell = p->GetEmptyCell(*this);
       cell->type = Type::Triangle;
       u8 rng = Get() % 100;
-      if (rng > 0x55)       cell->count = 3;
-      else if (rng > 0x32)  cell->count = 2;
-      else                  cell->count = 1;
+      if (rng > 85)       cell->count = 3;
+      else if (rng > 50)  cell->count = 2;
+      else                cell->count = 1;
     }
-
-    if (rerollOnImpossible) {
-      bool unsolvable = Solver(p).Solve(1).Empty();
-
-      if (unsolvable) {
-        p->ClearGrid();
-        goto rerollPuzzle;
-      }
-    }
-  }
+  } while (!IsSolvable(p));
 
   return p;
 }
 
-Puzzle* Random::GenerateDotsPillar(bool /*rerollOnImpossible*/) {
-  // 0000000140158723
-  return nullptr;
+Puzzle* Random::GenerateDotsPillar() {
+  Puzzle* p = new Puzzle(6, 6, true);
+  p->_name = "Random dots pillar #" + std::to_string(_seed);
+  if (Get() & 0x01) p->_symmetry |= SYM_X; // Horizontal symmetry
+  if (Get() & 0x01) p->_symmetry |= SYM_Y; // Vertical symmetry
+
+  do {
+    p->ClearGrid();
+    Cell* start = &p->_grid->Get(0, 0);
+    start->start = true;
+    p->GetSymmetricalCell(start)->start = true;
+
+    Cell* end = &p->_grid->Get(0, 12);
+    end->end = End::Top; p->_numConnections++;
+    p->GetSymmetricalCell(end)->end = End::Top; p->_numConnections++;
+
+    for (u8 i = 0; i < 8; i++) {
+      if ((Get() & 0x01) != 0) {
+        // u8 v62 = Get() % 7;
+        // u8 v63 = Get() % 6;
+        // u8 v64 = 6 * (v63 + 6 * v62) + 2;
+        // u8 v65 = 6 * (v63 + 6 * v62) + 3;
+        // bisect_for_touch_me(this, vertex_map[v64], vertex_map[v65], 0, 0i64, 0i64);
+      } else {
+        // u8 v66 = Get() % 6;
+        // u8 v67 = Get() % 6;
+        // u8 v64 = 6 * (v67 + 6 * v66);
+        // u8 v65 = 6 * (v67 + 6 * v66) + 36;
+        // bisect_for_touch_me(this, vertex_map[v64], vertex_map[v65], 0, 0i64, 0i64);
+      }
+    }
+  } while (!IsSolvable(p));
+
+  return p;
 }
 
-Puzzle* Random::GenerateStonesPillar(bool /*rerollOnImpossible*/) {
-  // 00000001401589C4
-  return nullptr;
+Puzzle* Random::GenerateStonesPillar() {
+  Puzzle* p = new Puzzle(6, 6, true);
+  p->_name = "Random stones pillar #" + std::to_string(_seed);
+  if (Get() & 0x01) p->_symmetry |= SYM_X; // Horizontal symmetry
+  if (Get() & 0x01) p->_symmetry |= SYM_Y; // Vertical symmetry
+
+  do {
+    p->ClearGrid();
+    Cell* start = &p->_grid->Get(0, 0);
+    start->start = true;
+    p->GetSymmetricalCell(start)->start = true;
+
+    Cell* end = &p->_grid->Get(0, 12);
+    end->end = End::Top; p->_numConnections++;
+    p->GetSymmetricalCell(end)->end = End::Top; p->_numConnections++;
+
+    Cell* cell;
+    for (u8 i = 0; i < 3; i++) {
+      cell = p->GetEmptyCell(*this);
+      cell->type = Type::Square;
+      cell->color = 0x2; // White
+
+      cell = p->GetEmptyCell(*this);
+      cell->type = Type::Square;
+      cell->color = 0x1; // Black
+    }
+
+  } while (!IsSolvable(p));
+
+  return p;
 }
 
 #include "Windows.h"
@@ -490,10 +482,15 @@ bool Random::IsSolvable(int seed) {
       solvability.Resize(1 << 27);
       HANDLE file = CreateFileA("puzzle_solvability.dat", FILE_GENERIC_READ, NULL, nullptr, OPEN_EXISTING, NULL, nullptr);
       assert(file != INVALID_HANDLE_VALUE)
-      ReadFile((HANDLE)file, &solvability[0], solvability.Size() * sizeof(solvability[0]), nullptr, nullptr);
+        ReadFile((HANDLE)file, &solvability[0], solvability.Size() * sizeof(solvability[0]), nullptr, nullptr);
       CloseHandle(file);
     }
   }
 
   return (solvability[seed >> 4] & (1 << (seed % 16))) != 0;
+}
+
+bool Random::IsSolvable(Puzzle* p) {
+  return p != nullptr;
+  // return !Solver(p).Solve(1).Empty();
 }

@@ -132,7 +132,6 @@ private:
 extern Console console;
 
 // Functions I wish std::vector had
-
 template <typename T>
 std::vector<T> Append(std::vector<T>& dest, const std::vector<T>& source) {
   dest.insert(dest.end(), source.begin(), source.end());
