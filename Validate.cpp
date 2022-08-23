@@ -50,11 +50,12 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
     }
   }
 
+  LinearAllocator<Cell*> alloc(puzzle._width * puzzle._height);
   _regions.Resize(0);
   if (needsRegions) {
-    puzzle.GetRegions(_regions);
+    puzzle.GetRegions(_regions, alloc);
   } else {
-    Region monoRegion(monoRegionSize);
+    Region monoRegion(monoRegionSize, alloc);
     for (u8 x=0; x<puzzle._width; x++) {
       for (u8 y=0; y<puzzle._height; y++) {
         Cell* cell = &puzzle._grid->Get(x, y);

@@ -64,7 +64,7 @@ public:
 
   void _floodFill(u8 x, u8 y, Region& region);
   void GenerateMaskedGrid();
-  void GetRegions(Vector<Region>& regions);
+  void GetRegions(Vector<Region>& regions, LinearAllocator<Cell*>& alloc);
   Region GetRegion(s8 x, s8 y);
   // Works for up to an 8x8 region
   u64 GetPolyishFromMaskedGrid(u8 rotation, bool flip);

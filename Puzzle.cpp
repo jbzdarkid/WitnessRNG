@@ -22,7 +22,8 @@ Puzzle::Puzzle(u8 width, u8 height, bool pillar) {
       if (x%2 != 1 || y%2 != 1) cell->type = Type::Line;
     }
   }
-  _connections = new Vector<u8>(_numConnections * 2);
+  // Extra connections because we'll probably add a connection for the end
+  _connections = new Vector<u8>(_numConnections * 2 + 2);
 
   // J is the dot index
   for (u8 j=0; j<(height+1) * (width+1); j++) {
@@ -238,7 +239,7 @@ void Puzzle::GenerateMaskedGrid() {
   */
 }
 
-void Puzzle::GetRegions(Vector<Region>& regions) {
+void Puzzle::GetRegions(Vector<Region>& regions, LinearAllocator<Cell*>& alloc) {
   regions.Resize(0);
   GenerateMaskedGrid();
 
@@ -251,7 +252,7 @@ void Puzzle::GetRegions(Vector<Region>& regions) {
 
       // If this cell is empty (aka hasn't already been used by a region), then create a new one
       // This will also mark all lines inside the new region as used.
-      Region region(remainingRegionSize);
+      Region region(remainingRegionSize, alloc);
       _floodFill(x, y, region);
       remainingRegionSize -= region.Size();
       regions.Emplace(move(region));

@@ -3,6 +3,8 @@
 
 class Random {
 public:
+  Random();
+  ~Random();
   int Get();
   int Peek();
   void Set(int rng);
@@ -18,7 +20,7 @@ public:
   int CheckStarsFailure();
 
   Vector<Puzzle*> GenerateChallenge();
-  bool TestChallenge(u8 triple2, u8 triple3, const Vector<int>& expectedOrder, const Vector<int>& expectedPuzzle, const std::string& stones);
+  bool TestChallenge(u8 triple2, u8 triple3, const Vector<int>& expectedOrder, const Vector<int>& expectedPuzzle, const char* easy, const char* stones);
   Puzzle* GenerateSimpleMaze();
   Puzzle* GenerateHardMaze();
   Puzzle* GenerateStones();
@@ -36,4 +38,6 @@ public:
 
 private:
   int _seed = 0;
+  Vector<int>* _visitOrder;
+  Vector<int>* _puzzleOrder;
 };

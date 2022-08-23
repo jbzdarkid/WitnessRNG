@@ -8,8 +8,10 @@ int Random::Get() {
   }
   // This first operation is relatively low entropy, since the multiplicand is close to -2^31 (-2'147'483'648)
   // Thus, this operation is approximately (int32_t)((float)this._current_rng / -2.053f);
-  int nextRng = (int)(_seed * 0xFFFF'FFFF'834E'0B5FL / 0x1'0000'0000L);
-  nextRng = (_seed + nextRng) / 0x1'0000;
+  assert(((int)(_seed * 0xFFFF'FFFF'834E'0B5FL / 0x1'0000'0000L)) == ((int)((_seed * 0xFFFF'FFFF'834E'0B5FL) >> 32)));
+  int nextRng = (int)((_seed * 0xFFFF'FFFF'834E'0B5FL) >> 32);
+  assert(((_seed + nextRng) / 0x1'0000) == ((_seed + nextRng) >> 16));
+  nextRng = (_seed + nextRng) >> 16;
   // This is also kind of weird. It takes a different action if nextRng is even or odd.
   // This operation is also expressible as (nextRng % 2 == 0 : -nextRng ? 2^31 - nextRng)
   nextRng = -nextRng * m_prime;
@@ -101,22 +103,56 @@ int Random::CheckStarsFailure() {
   return i;
 }
 
-bool Random::TestChallenge(u8 triple2, u8 triple3, const Vector<int>& expectedOrder, const Vector<int>& expectedPuzzle, const std::string& stones) {
+Random::Random() {
+  _visitOrder = new Vector<int>({0, 1, 2, 3});
+  _puzzleOrder = new Vector<int>({0, 1, 2, 3});
+}
+
+Random::~Random() {
+  delete _visitOrder;
+  delete _puzzleOrder;
+}
+
+bool Random::TestChallenge(u8 triple2, u8 triple3, const Vector<int>& expectedOrder, const Vector<int>& expectedPuzzle, const char* easy, const char* stones) {
   if (triple2 != (Get() >> 10) % 3) return false;
   if (triple3 != (Get() >> 10) % 3) return false;
 
-  Vector<int> visitOrder = {0, 1, 2, 3};
-  ShuffleIntegers(visitOrder);
-  if (visitOrder != expectedOrder) return false;
-  Vector<int> puzzleOrder = {0, 1, 2, 3};
-  ShuffleIntegers(puzzleOrder);
-  if (puzzleOrder != expectedPuzzle) return false;
+  _visitOrder->At(0) = 0;
+  _visitOrder->At(1) = 1;
+  _visitOrder->At(2) = 2;
+  _visitOrder->At(3) = 3;
+  ShuffleIntegers(*_visitOrder);
+  if (*_visitOrder != expectedOrder) return false;
+  _puzzleOrder->At(0) = 0;
+  _puzzleOrder->At(1) = 1;
+  _puzzleOrder->At(2) = 2;
+  _puzzleOrder->At(3) = 3;
+  ShuffleIntegers(*_puzzleOrder);
+  if (*_puzzleOrder != expectedPuzzle) return false;
 
-  delete GenerateSimpleMaze();
-  delete GenerateHardMaze();
-  Puzzle* stonesPuzzle = GenerateStones();
-  assert(stones.size() == 16);
+  Puzzle* easyPuzzle = GenerateSimpleMaze();
+  assert(strnlen_s(easy, 49) == 49);
   bool match = true;
+  for (u8 y = 0; y < easyPuzzle->_height; y++) {
+    for (u8 x = 0; x < easyPuzzle->_width; x++) {
+      u8 i = y * easyPuzzle->_width + x;
+      Cell* cell = easyPuzzle->GetCell(x, y);
+      if (!cell || cell->type != Type::Line) continue;
+
+      // There's several symbols you can use, but space should always mean 'no line'
+      // and non-space should always be a line.
+      if (cell->gap == Gap::Break && easy[i] != ' ') match = false;
+      if (cell->gap == Gap::None  && easy[i] == ' ') match = false;
+    }
+  }
+  delete easyPuzzle;
+  if (!match) return false;
+
+  delete GenerateHardMaze();
+
+  Puzzle* stonesPuzzle = GenerateStones();
+  assert(strnlen_s(stones, 16) == 16);
+  match = true;
   for (u8 i = 0; i < 16; i++) {
     u8 x = 2 * (i % 4) + 1;
     u8 y = 2 * (i / 4) + 1;

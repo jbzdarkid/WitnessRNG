@@ -27,8 +27,6 @@ bool Contains(const std::string_view& str, const std::string_view& substr) {
   return false;
 }
 
-// TODO: I'm a little worried about the _numConnections overflow. Double-check (ugh) with TW.
-
 // Ideas to bring back to the javascript version:
 // - Try making a single maskedGrid (and polyGrid?) per puzzle. Then, instead of swapping out the puzzle, just write into that grid.
 // - Clean up parameters passed through solveLoop.
@@ -405,15 +403,25 @@ int main(int argc, char* argv[]) {
       3, // Maze
     };
 
-    std::string stones =  " WW "
-                          " BWW"
-                          "BB B"
-                          "    ";
+    const char* easy = \
+      "+ + +-+"
+      "| |   |"
+      "+-+-+-+"
+      "| |   |"
+      "+ +-+ +"
+      "| |    "
+      "+-+ +-+";
+
+    const char* stones = \
+      " WW "
+      " BWW"
+      "BB B"
+      "    ";
 
     Random rng;
-    for (int seed=1; seed <= /*0x7FFF'FFFE*/ 0x100'0000; seed++) {
+    for (int seed=1; seed <= 0x7FFF'FFFE; seed++) {
       rng.Set(seed);
-      if (rng.TestChallenge(triple2, triple3, expectedOrder, expectedPuzzles, stones)) cout << seed << endl;
+      if (rng.TestChallenge(triple2, triple3, expectedOrder, expectedPuzzles, easy, stones)) cout << seed << endl;
     }
   } else if (argc > 1 && strcmp(argv[1], "rand") == 0) {
     Random rng;

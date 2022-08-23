@@ -25,6 +25,72 @@ using s64 = long long;
 #endif // #ifndef assert
 
 template <typename T>
+class LinearAllocator {
+public:
+  LinearAllocator(u32 initialCapacity = 16) {
+    _firstArray = _lastArray = Array::New(initialCapacity * sizeof(T));
+  }
+
+  ~LinearAllocator() {
+    Array::Delete(_firstArray);
+  }
+
+  // Copying does not make sense for this type. Make a new one if you want another.
+  LinearAllocator(const LinearAllocator& other) = delete; // Copy constructor
+  LinearAllocator& operator=(const LinearAllocator& other) = delete; // Copy assignment
+
+  T* allocate(size_t n) {
+    if (_lastArray->size + n > _lastArray->capacity) {
+      assert(n == (u32)n);
+      if (n > _lastArray->capacity) NewArray((u32)n); // Asking for a large amount of data
+      else NewArray(_lastArray->capacity * 2); // Asking for a small amount of data
+    }
+    T* data = &_lastArray->data;
+    T* addr = &data[_lastArray->size];
+    _lastArray->size += (u32)n;
+    return addr;
+  }
+
+  void deallocate(T* const addr, size_t n) {
+    // free!
+  }
+
+private:
+  struct Array {
+    static Array* New(u32 capacity) {
+      Array* b = (Array*)malloc(sizeof(Array) + sizeof(T) * (capacity - 1));
+      if (b == nullptr) throw std::bad_alloc();
+      b->size = 0;
+      b->capacity = capacity;
+      b->next = nullptr;
+      return b;
+    }
+
+    static void Delete(Array* a) {
+      if (!a) return;
+      Array* next = a->next;
+      a->next = nullptr;
+      free(a);
+      Delete(next);
+    }
+
+    u32 size = 0;
+    u32 capacity = 0;
+    Array* next;
+    T data; // This is actually an array of length |capacity|.
+  };
+
+  void NewArray(u32 capacity) {
+    Array* a = Array::New(capacity);
+    _lastArray->next = a;
+    _lastArray = a;
+  }
+
+  Array* _firstArray;
+  Array* _lastArray;
+};
+
+template <typename T>
 class NArray {
 public:
   NArray() {}
@@ -61,17 +127,17 @@ public:
    }
 
   const T& Get(u8 a, u8 b = 0, u8 c = 0, u8 d = 0) const {
-      assert(a < _maxA);
-      assert(b < _maxB);
-      assert(c < _maxC);
-      assert(d < _maxD);
-      int index = a;
-      if (_maxB > 1) index = index * _maxB + b;
-      if (_maxC > 1) index = index * _maxC + c;
-      if (_maxD > 1) index = index * _maxD + d;
-      assert(index == ((a * _maxB + b) * _maxC + c) * _maxD + d);
-      assert(index < _maxA * _maxB * _maxC * _maxD);
-      return _data[index];
+    assert(a < _maxA);
+    assert(b < _maxB);
+    assert(c < _maxC);
+    assert(d < _maxD);
+    int index = a;
+    if (_maxB > 1) index = index * _maxB + b;
+    if (_maxC > 1) index = index * _maxC + c;
+    if (_maxD > 1) index = index * _maxD + d;
+    assert(index == ((a * _maxB + b) * _maxC + c) * _maxD + d);
+    assert(index < _maxA * _maxB * _maxC * _maxD);
+    return _data[index];
   }
 
   const T* GetRow(u8 a, u8 b = 0, u8 c = 0, u8 d = 0) const {
@@ -119,19 +185,26 @@ private:
   T* _data = nullptr;
 };
 
-
 template <typename T>
 class Vector {
 public:
   // Construct an empty vector. This allocates space in memory (or on the stack) for the vector *container*,
   // but does not allocate any memory for the vector *contents*.
-  Vector() { }
-  // Construct a vector of |size|. This allocates space in memory (or on the stack) for the vector *container*,
+  Vector() {}
+  // Construct a vector of |capacity|. This allocates space in memory (or on the stack) for the vector *container*,
   // AND allocates memory for the vector *contents*.
-  Vector(int size) {
+  Vector(int capacity) {
     _size = 0;
-    _capacity = size;
-    _data = new T[size];
+    _capacity = capacity;
+    _data = new T[capacity];
+  }
+  // Construct a vector of maximum |capacity|, using allocator |alloc|. This allocates space in memory (or on the stack) for the vector *container*,
+  // BUT uses the allocator to allocate memory for the vector *contents*.
+  Vector(int capacity, LinearAllocator<T>& alloc) {
+    _size = 0;
+    _capacity = capacity;
+    void* addr = alloc.allocate(capacity * sizeof(T));
+    _data = new (addr) T[capacity];
   }
   // Construct a vector from an initializer list. This allocates exactly enough space for the initializer contents.
   Vector(std::initializer_list<T> init) : Vector((int)init.size()) {
@@ -514,66 +587,6 @@ private:
   T* _previous = nullptr;
   T* _current = nullptr;
   int _size = 0;
-};
-
-
-template <typename T>
-class LinearAllocator {
-public:
-  LinearAllocator() {
-    _firstBucket = _lastBucket = Bucket::New(16);
-  }
-
-  ~LinearAllocator() {
-    Bucket* b = _firstBucket;
-    while (b) {
-      Bucket* next = b->next;
-      free(b);
-      b = next;
-    }
-  }
-
-  // Copying does not make sense for this type. Make a new one if you want another.
-  LinearAllocator(const LinearAllocator& other) = delete; // Copy constructor
-  LinearAllocator& operator=(const LinearAllocator& other) = delete; // Copy assignment
-
-  T* allocate(size_t n) {
-    assert(n == 1); // for now
-    if (_lastBucket->size + n > _lastBucket->capacity) NewBucket(_lastBucket->capacity * 2);
-    T* data = &_lastBucket->data;
-    T* addr = &data[_lastBucket->size];
-    _lastBucket->size += (u32)n;
-    return addr;
-  }
-
-  void deallocate(T* const addr, size_t n) {
-    // free!
-  }
-
-private:
-  struct Bucket {
-    static Bucket* New(u32 capacity) {
-      Bucket* b = (Bucket*)malloc(sizeof(Bucket) + sizeof(T) * (capacity - 1));
-      if (b == nullptr) throw std::bad_alloc();
-      b->size = 0;
-      b->capacity = capacity;
-      b->next = nullptr;
-      return b;
-    }
-    u32 size = 0;
-    u32 capacity = 0;
-    Bucket* next;
-    T data; // This is actually an array of length |capacity|.
-  };
-
-  void NewBucket(u32 capacity) {
-    Bucket* b = Bucket::New(capacity);
-    _lastBucket->next = b;
-    _lastBucket = b;
-  }
-
-  Bucket* _firstBucket;
-  Bucket* _lastBucket;
 };
 
 // Adapted from Matt Kulukundis's (Google) CppCon 2017 talk
