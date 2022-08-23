@@ -65,7 +65,11 @@ public:
       assert(b < _maxB);
       assert(c < _maxC);
       assert(d < _maxD);
-      int index = ((a * _maxB + b) * _maxC + c) * _maxD + d;
+      int index = a;
+      if (_maxB > 1) index = index * _maxB + b;
+      if (_maxC > 1) index = index * _maxC + c;
+      if (_maxD > 1) index = index * _maxD + d;
+      assert(index == ((a * _maxB + b) * _maxC + c) * _maxD + d);
       assert(index < _maxA * _maxB * _maxC * _maxD);
       return _data[index];
   }

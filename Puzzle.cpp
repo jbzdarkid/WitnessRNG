@@ -238,8 +238,8 @@ void Puzzle::GenerateMaskedGrid() {
   */
 }
 
-Vector<Region> Puzzle::GetRegions() {
-  Vector<Region> regions(4);
+void Puzzle::GetRegions(Vector<Region>& regions) {
+  regions.Resize(0);
   GenerateMaskedGrid();
 
   // A limit for the total size of all regions -- at least this way, we won't allocate all the regions as large as possible.
@@ -257,8 +257,6 @@ Vector<Region> Puzzle::GetRegions() {
       regions.Emplace(move(region));
     }
   }
-
-  return regions;
 }
 
 Region Puzzle::GetRegion(s8 x, s8 y) {

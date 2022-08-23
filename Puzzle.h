@@ -64,7 +64,7 @@ public:
 
   void _floodFill(u8 x, u8 y, Region& region);
   void GenerateMaskedGrid();
-  Vector<Region> GetRegions();
+  void GetRegions(Vector<Region>& regions);
   Region GetRegion(s8 x, s8 y);
   // Works for up to an 8x8 region
   u64 GetPolyishFromMaskedGrid(u8 rotation, bool flip);

@@ -39,7 +39,8 @@ private:
   u8 GetColoredObject(int color);
   void AddColoredObject(int color);
 
-  Vector<Cell*> squares;
-  Vector<Cell*> stars;
-  ColoredObjectArr coloredObjects;
+  Vector<Cell*> _squares;
+  Vector<Cell*> _stars;
+  ColoredObjectArr _coloredObjects;
+  Vector<Region> _regions;
 };
