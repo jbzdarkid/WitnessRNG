@@ -334,10 +334,11 @@ public:
     assert(err == 0);
   }
 
-  // Resize the vector to set its maximum capacity to |size| (or greater).
-  // void Ensure(int size) {
-  //   Expand(_capacity + size); // wait, what? Isn't it size - _capacity?
-  // }
+  // Resize the vector such that its capacity is |required| or greater.
+  // If |required| is less than the current capacity, no resize is performed.
+  void Ensure(int required) {
+    Expand(required - _capacity);
+  }
 
   // Resize the vector to increase its maximum capacity by |size|.
   void Expand(int size) {
@@ -375,6 +376,9 @@ bool operator==(const Vector<T>& a, const Vector<T>& b) {
   }
   return true;
 }
+
+template <typename T>
+bool operator!=(const Vector<T>& a, const Vector<T>& b) { return !(a == b); }
 
 template <typename T>
 class LinkedList {
@@ -612,7 +616,7 @@ public:
       if (heapValue) *heapValue = _slots[pos];
       return false;
     }
-  
+
     T* newValue;
     try {
       newValue = _allocator.allocate(1);
@@ -690,7 +694,7 @@ private:
 
   void Insert(size_t pos, size_t hash, T* value) {
     _ctrl[pos] = H2(hash);
-    _slots[pos] = value; 
+    _slots[pos] = value;
     _size++;
     if (_size * 8 > _capacity * 7) Resize();
   }
@@ -726,7 +730,7 @@ private:
       if (pos > _capacity) pos -= _capacity; // Extremely obvious branch prediction is faster than modulo here.
     }
     _ctrl[pos] = H2(hash);
-    _slots[pos] = value; 
+    _slots[pos] = value;
   }
 
   size_t H1(size_t hash) { return hash >> 7; }

@@ -18,6 +18,7 @@ public:
   int CheckStarsFailure();
 
   Vector<Puzzle*> GenerateChallenge();
+  bool TestChallenge(u8 triple2, u8 triple3, const Vector<int>& expectedOrder, const Vector<int>& expectedPuzzle, const std::string& stones);
   Puzzle* GenerateSimpleMaze();
   Puzzle* GenerateHardMaze();
   Puzzle* GenerateStones();

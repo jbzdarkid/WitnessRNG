@@ -57,6 +57,43 @@ Cell* Puzzle::GetCell(s8 x, s8 y) const {
   return &_grid->Get(x, y);
 }
 
+void Puzzle::SetStart(s8 x, s8 y) {
+  Cell* cell = GetCell(x, y);
+  assert(cell);
+  assert(!cell->start);
+  cell->start = true;
+
+  if (_symmetry != SYM_NONE) {
+    Cell* sym = GetSymmetricalCell(cell);
+    assert(sym);
+    assert(!sym->start);
+    sym->start = true;
+    _connections->Push(sym->x);
+    _connections->Push(sym->y);
+    _numConnections++;
+  }
+}
+
+void Puzzle::SetEnd(s8 x, s8 y, End dir) {
+  Cell* cell = GetCell(x, y);
+  assert(cell);
+  assert(cell->end == End::None);
+  cell->end = dir;
+  _connections->Push(x);
+  _connections->Push(y);
+  _numConnections++;
+
+  if (_symmetry != SYM_NONE) {
+    Cell* sym = GetSymmetricalCell(cell);
+    assert(sym);
+    assert(sym->end == End::None);
+    sym->end = (End)(5 - (int)dir);
+    _connections->Push(sym->x);
+    _connections->Push(sym->y);
+    _numConnections++;
+  }
+}
+
 pair<u8, u8> Puzzle::GetSymmetricalPos(s8 x, s8 y) {
   if (_symmetry != SYM_NONE) {
     if (_pillar == true) {
@@ -275,12 +312,12 @@ u64 Puzzle::GetPolyishFromMaskedGrid(u8 rotation, bool flip) {
 }
 
 void Puzzle::CutRandomEdges(Random& rng, u8 numCuts) {
-  u8 numConnections = _numConnections; // TW stores the value of this before making cuts.
+  u8 numConnections = _numConnections; // TW stores the value of this before making cuts, so that we only attempt to cut valid edges.
   for (int i=0; i<numCuts; i++) {
     int rand = rng.Get() % numConnections;
 
-    // In TW, additional connections are added whenever a cut is made. So, we continue if the RNG is larger than the true connection size.
-    if (rand*2 >= _connections->Size()) continue;
+    // In TW, additional connections are added for the endpoint. This are added whenever a cut is made. So, we continue if the RNG is larger than the true connection size.
+    if (rand*2 >= _connections->Size()) { __debugbreak(); continue; }
 
     u8 x = _connections->At(rand*2);
     u8 y = _connections->At(rand*2 + 1);
@@ -370,7 +407,7 @@ const char* IntToString(int i) {
 
 std::string Cell::ToString() {
   if (x%2 == 1 && y%2 == 1 && type == Type::Null) return "null";
-  
+
   const char* typeStr = "";
   if (type == Type::Null    ) typeStr = ",\"type\":null";
   if (type == Type::Line    ) typeStr = ",\"type\":\"line\"";

@@ -101,6 +101,37 @@ int Random::CheckStarsFailure() {
   return i;
 }
 
+bool Random::TestChallenge(u8 triple2, u8 triple3, const Vector<int>& expectedOrder, const Vector<int>& expectedPuzzle, const std::string& stones) {
+  if (triple2 != (Get() >> 10) % 3) return false;
+  if (triple3 != (Get() >> 10) % 3) return false;
+
+  Vector<int> visitOrder = {0, 1, 2, 3};
+  ShuffleIntegers(visitOrder);
+  if (visitOrder != expectedOrder) return false;
+  Vector<int> puzzleOrder = {0, 1, 2, 3};
+  ShuffleIntegers(puzzleOrder);
+  if (puzzleOrder != expectedPuzzle) return false;
+
+  delete GenerateSimpleMaze();
+  delete GenerateHardMaze();
+  Puzzle* stonesPuzzle = GenerateStones();
+  assert(stones.size() == 16);
+  bool match = true;
+  for (u8 i = 0; i < 16; i++) {
+    u8 x = 2 * (i % 4) + 1;
+    u8 y = 2 * (i / 4) + 1;
+    if (stones[i] == ' ' && stonesPuzzle->GetCell(x, y)->color != 0x0) match = false; // 0x0 == None
+    if (stones[i] == 'B' && stonesPuzzle->GetCell(x, y)->color != 0x1) match = false; // 0x1 == Black
+    if (stones[i] == 'W' && stonesPuzzle->GetCell(x, y)->color != 0x2) match = false; // 0x2 == White
+  }
+  delete stonesPuzzle;
+  if (!match) return false;
+
+  // Potentially further validation
+
+  return true;
+}
+
 Vector<Puzzle*> Random::GenerateChallenge() {
   u8 triple2 = (Get() >> 10) % 3;
   u8 triple3 = (Get() >> 10) % 3;
@@ -142,16 +173,24 @@ Vector<Puzzle*> Random::GenerateChallenge() {
   return challenge;
 }
 
+// portable_id == 88F (lotus_simple_maze_1)
 Puzzle* Random::GenerateSimpleMaze() {
   Puzzle* p = new Puzzle(3, 3);
   p->_name = "Random easy maze #" + std::to_string(_seed);
 
+  // 0x706ACFA0
   do {
     p->ClearGrid();
-    p->_grid->Get(0, 6).start = true;
-    p->_grid->Get(6, 0).end = End::Right; p->_numConnections++;
+    p->SetStart(0, 6);
+    p->SetEnd(6, 0, End::Top);
 
     p->CutRandomEdges(*this, 9);
+    // ???, 0x00
+    // 0x262135EB, 0x18
+    // 0x4E5AEADB, 0x0B
+    // 0x32F0F80D, 0x10
+    // 0x6A2D379B, 0x01
+    // 0x3E9DD792, 0x05
   } while (!IsSolvable(p));
 
   return p;
@@ -163,8 +202,8 @@ Puzzle* Random::GenerateHardMaze() {
 
   do {
     p->ClearGrid();
-    p->_grid->Get(0, 14).start = true;
-    p->_grid->Get(14, 0).end = End::Right; p->_numConnections++;
+    p->SetStart(0, 14);
+    p->SetEnd(14, 0, End::Top);
 
     p->CutRandomEdges(*this, 57);
   } while (!IsSolvable(p));
@@ -178,8 +217,8 @@ Puzzle* Random::GenerateStones() {
 
   do {
     p->ClearGrid();
-    p->_grid->Get(0, 8).start = true;
-    p->_grid->Get(8, 0).end = End::Right; p->_numConnections++;
+    p->SetStart(0, 8);
+    p->SetEnd(8, 0, End::Top);
 
     for (int i = 0; i < 7; i++) {
       Cell* cell = p->GetRandomCell(*this);
@@ -193,6 +232,8 @@ Puzzle* Random::GenerateStones() {
       cell->color = 0x1; // Black
     }
 
+    if (p->TestStonesEarlyFail()) continue;
+
     p->CutRandomEdges(*this, 5);
   } while (!IsSolvable(p));
 
@@ -205,8 +246,8 @@ Puzzle* Random::GeneratePedestal() {
 
   do {
     p->ClearGrid();
-    p->_grid->Get(0, 10).start = true;
-    p->_grid->Get(10, 0).end = End::Right; p->_numConnections++;
+    p->SetStart(0, 10);
+    p->SetEnd(10, 0, End::Right);
 
     p->CutRandomEdges(*this, 25);
     p->AddRandomDots(*this, 2);
@@ -226,8 +267,8 @@ Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible) {
 
   rerollPuzzle:
   {
-    p->_grid->Get(0, 8).start = true;
-    p->_grid->Get(8, 0).end = End::Right; p->_numConnections++;
+    p->SetStart(0, 8);
+    p->SetEnd(8, 0, End::Right);
 
     rerollStars:
     Cell* star1 = p->GetEmptyCell(*this);
@@ -258,8 +299,8 @@ Puzzle* Random::GeneratePolyominos(bool rerollOnImpossible) {
     if (rerollOnImpossible) {
       if (!IsSolvable(p)) {
         if (_seed == 0x7db993b5) { // This seed is known to be solvable (and is used by the tests)
-          auto solutions = Solver(p).Solve();
-          assert(false);
+          auto solutions = Solver().Solve(p);
+          __debugbreak();
         }
         p->ClearGrid();
         goto rerollPuzzle;
@@ -276,8 +317,8 @@ Puzzle* Random::GenerateStars() {
 
   do {
     p->ClearGrid();
-    p->_grid->Get(0, 8).start = true;
-    p->_grid->Get(8, 0).end = End::Right; p->_numConnections++;
+    p->SetStart(0, 8);
+    p->SetEnd(8, 0, End::Right);
 
     p->CutRandomEdges(*this, 10);
 
@@ -301,10 +342,10 @@ Puzzle* Random::GenerateSymmetry() {
 
   do {
     p->ClearGrid();
-    p->_grid->Get(0, 12).start = true;
-    p->_grid->Get(12, 0).start = true;
-    p->_grid->Get(12, 12).end = End::Right; p->_numConnections++;
-    p->_grid->Get(0, 0).end = End::Left; p->_numConnections++;
+    p->SetStart(0, 12);
+    p->SetStart(12, 0);
+    p->SetEnd(12, 12, End::Right);
+    p->SetEnd(0, 0, End::Left);
 
     p->CutRandomEdges(*this, 6);
 
@@ -323,8 +364,8 @@ Puzzle* Random::GenerateTriple2(bool shouldBeSolvable) {
 
   do {
     p->ClearGrid();
-    p->_grid->Get(0, 8).start = true;
-    p->_grid->Get(8, 0).end = End::Right; p->_numConnections++;
+    p->SetStart(0, 8);
+    p->SetEnd(8, 0, End::Right);
 
     for (int i = 0; i < 6; i++) {
       Cell* cell = p->GetEmptyCell(*this);
@@ -349,8 +390,8 @@ Puzzle* Random::GenerateTriple3(bool shouldBeSolvable) {
 
   do {
     p->ClearGrid();
-    p->_grid->Get(0, 8).start = true;
-    p->_grid->Get(8, 0).end = End::Right; p->_numConnections++;
+    p->SetStart(0, 8);
+    p->SetEnd(8, 0, End::Right);
 
     for (int i = 0; i < 5; i++) {
       Cell* cell = p->GetEmptyCell(*this);
@@ -384,8 +425,8 @@ Puzzle* Random::GenerateTriangles(u8 count) {
 
   do {
     p->ClearGrid();
-    p->_grid->Get(0, 8).start = true;
-    p->_grid->Get(8, 0).end = End::Right; p->_numConnections++;
+    p->SetStart(0, 8);
+    p->SetEnd(8, 0, End::Right);
 
     for (u8 i = 0; i < count; i++) {
       Cell* cell = p->GetEmptyCell(*this);
@@ -408,13 +449,8 @@ Puzzle* Random::GenerateDotsPillar() {
 
   do {
     p->ClearGrid();
-    Cell* start = &p->_grid->Get(0, 0);
-    start->start = true;
-    p->GetSymmetricalCell(start)->start = true;
-
-    Cell* end = &p->_grid->Get(0, 12);
-    end->end = End::Top; p->_numConnections++;
-    p->GetSymmetricalCell(end)->end = End::Top; p->_numConnections++;
+    p->SetStart(0, 0);
+    p->SetEnd(0, 12, End::Top);
 
     for (u8 i = 0; i < 8; i++) {
       if ((Get() & 0x01) != 0) {
@@ -444,13 +480,8 @@ Puzzle* Random::GenerateStonesPillar() {
 
   do {
     p->ClearGrid();
-    Cell* start = &p->_grid->Get(0, 0);
-    start->start = true;
-    p->GetSymmetricalCell(start)->start = true;
-
-    Cell* end = &p->_grid->Get(0, 12);
-    end->end = End::Top; p->_numConnections++;
-    p->GetSymmetricalCell(end)->end = End::Top; p->_numConnections++;
+    p->SetStart(0, 0);
+    p->SetEnd(0, 12, End::Top);
 
     Cell* cell;
     for (u8 i = 0; i < 3; i++) {
@@ -490,7 +521,8 @@ bool Random::IsSolvable(int seed) {
   return (solvability[seed >> 4] & (1 << (seed % 16))) != 0;
 }
 
+static Solver solver;
+
 bool Random::IsSolvable(Puzzle* p) {
-  return p != nullptr;
-  // return !Solver(p).Solve(1).Empty();
+  return !solver.Solve(p, 1).Empty();
 }

@@ -12,8 +12,9 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
 
   // Validate gap failures as an early exit.
   for (u8 x=0; x<puzzle._width; x++) {
+    Cell* row = puzzle._grid->GetRow(x);
     for (u8 y=0; y<puzzle._height; y++) {
-      Cell* cell = &puzzle._grid->Get(x, y);
+      Cell* cell = &row[y];
       switch (cell->type) {
         case Type::Nega:
           puzzle._hasNegations = true;
@@ -147,32 +148,13 @@ RegionData Validator::RegionCheckNegations2(
   return RegionData(0);
 }
 
-using ColoredObjectArr = Vector<pair<int, u8>>;
-u8 GetColoredObject(const ColoredObjectArr& coloredObjects, int color_) {
-  for (auto [color, count] : coloredObjects) {
-    if (color == color_) return count;
-  }
-  return 0;
-}
-
-void AddColoredObject(ColoredObjectArr& coloredObjects, int color_) {
-  for (auto& it : coloredObjects) {
-    if (it.first == color_) {
-      it.second++;
-      return;
-    }
-  }
-  coloredObjects.Emplace({ color_, (u8)1 });
-}
-
 RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bool quick) {
   console.log("Validating region of size", region.Size());
   RegionData regionData(quick ? 0 : region.Size());
 
-  // We could re-use these! Just make a Validator class.
-  Vector<Cell*> squares;
-  Vector<Cell*> stars;
-  ColoredObjectArr coloredObjects;
+  squares.Resize(0);
+  stars.Resize(0);
+  coloredObjects.Resize(0);
   int squareColor = 0;
 
   for (Cell* cell : region) {
@@ -207,7 +189,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
 
       case Type::Square:
         squares.Push(cell);
-        AddColoredObject(coloredObjects, cell->color);
+        AddColoredObject(cell->color);
         if (squareColor == 0) {
           squareColor = cell->color;
         } else if (squareColor != cell->color) {
@@ -217,7 +199,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
 
       case Type::Star:
         stars.Push(cell);
-        AddColoredObject(coloredObjects, cell->color);
+        AddColoredObject(cell->color);
         continue;
     }
   }
@@ -230,7 +212,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
   }
 
   for (Cell* star : stars) {
-    u8 count = GetColoredObject(coloredObjects, star->color);
+    u8 count = GetColoredObject(star->color);
     if (count == 1) {
       console.log("Found a", star->color, "star in a region with 1", star->color, "object");
       regionData.veryInvalidElements.Push(star);
@@ -256,4 +238,21 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
   console.debug("Region has", regionData.veryInvalidElements.Size(), "very invalid elements");
   console.debug("Region has", regionData.invalidElements.Size(), "invalid elements");
   return regionData;
+}
+
+u8 Validator::GetColoredObject(int color) {
+  for (auto [color_, count] : coloredObjects) {
+    if (color == color_) return count;
+  }
+  return 0;
+}
+
+void Validator::AddColoredObject(int color) {
+  for (auto& it : coloredObjects) {
+    if (it.first == color) {
+      it.second++;
+      return;
+    }
+  }
+  coloredObjects.Emplace({ color, (u8)1 });
 }

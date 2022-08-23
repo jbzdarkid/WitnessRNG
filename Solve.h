@@ -3,11 +3,11 @@
 
 class Solver {
 public:
-  Solver(Puzzle* puzzle_);
+  Solver();
   ~Solver();
 
   // Generates a solution via DFS recursive backtracking
-  Vector<Path> Solve(int maxSolutions = 10'000);
+  Vector<Path> Solve(Puzzle* puzzle_, int maxSolutions = 10'000);
 
 private:
   void TailRecurse(Cell* cell);
@@ -17,6 +17,7 @@ private:
 
   Puzzle* puzzle;
   Path* path;
+  Validator* validator;
   int MAX_SOLUTIONS = 0;
   bool doPruning = false;
   struct EarlyExitData {

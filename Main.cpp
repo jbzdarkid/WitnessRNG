@@ -21,8 +21,8 @@ Console console;
 bool Contains(const std::string_view& str, const std::string_view& substr) {
   if (substr.size() > str.size()) return false;
   if (substr.size() == str.size()) return substr == str;
-  for (int i = 0; i < str.size() - substr.size(); i++) {
-    if (str.substr(i, substr.size()) == substr) return true;
+  for (int i = 0; i <= str.size() - substr.size(); i++) {
+    if (str.compare(i, substr.size(), substr)) return true;
   }
   return false;
 }
@@ -361,7 +361,7 @@ int main(int argc, char* argv[]) {
 
   } else if (argc > 1 && strcmp(argv[1], "seed") == 0) {
     Random rng;
-    rng.Set(10);
+    rng.Set(0x48); // ... somehow, this is 10? ... and 0x2A is 1. I think there was a bug in my string parser, and sadly I don't have source code right now.
     Vector<Puzzle*> challenge = rng.GenerateChallenge();
     // For seed 10, we expect:
     // Stars, top right
@@ -381,13 +381,47 @@ int main(int argc, char* argv[]) {
       cout << puzzle->ToString() << endl;
       delete puzzle;
     }
+
+  } else if (argc > 1 && strcmp(argv[1], "rseed") == 0) {
+
+    // TR stars
+    // TL sym
+    // BL maze
+    // B poly
+
+    u8 triple2 = 2; // Right
+    u8 triple3 = 1; // Middle
+    Vector<int> expectedOrder = {
+      1, // Top right
+      3, // Top left
+      0, // Bottom left
+      2, // Back
+    };
+
+    Vector<int> expectedPuzzles = {
+      1, // Stars
+      2, // Symmetry
+      0, // Polyominos
+      3, // Maze
+    };
+
+    std::string stones =  " WW "
+                          " BWW"
+                          "BB B"
+                          "    ";
+
+    Random rng;
+    for (int seed=1; seed <= /*0x7FFF'FFFE*/ 0x100'0000; seed++) {
+      rng.Set(seed);
+      if (rng.TestChallenge(triple2, triple3, expectedOrder, expectedPuzzles, stones)) cout << seed << endl;
+    }
   } else if (argc > 1 && strcmp(argv[1], "rand") == 0) {
     Random rng;
     rng.Set(806297464);
     // rng.Set(819664878);
     Puzzle* p = rng.GeneratePolyominos(false);
     cout << p->ToString() << endl;
-    auto solutions = Solver(p).Solve();
+    auto solutions = Solver().Solve(p);
     delete p;
 
   } else if (argc > 1 && strcmp(argv[1], "thrd") == 0) {
@@ -410,6 +444,7 @@ int main(int argc, char* argv[]) {
         auto badFile  = CreateFileA(("thread_" + to_string(i+threadOffset) + "_bad.dat").c_str(),  FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
 
         Random rng;
+        Solver solver;
         for (u32 j=0;; j++) {
           u32 seed = initSeed + 1 + i + (j * numThreads); // RNG starts at 1
           if (seed > maxSeed) break;
@@ -420,7 +455,7 @@ int main(int argc, char* argv[]) {
 
           Vector<Path> solutions;
           if (!starsFailure) { // If stars fail, then we will hit this seed in another thread, and there's no reason to solve.
-            solutions = Solver(p).Solve();
+            solutions = solver.Solve(p);
           }
 
           u32 endingRng = rng.Peek();
@@ -464,7 +499,7 @@ int main(int argc, char* argv[]) {
 
     for (u32 i=0; i<numThreads; i++) {
       thread t([&](int i) {
-        Vector<u16> threadData = finalData.Copy(); 
+        Vector<u16> threadData = finalData.Copy();
         Random rng;
         for (int j = i;; j+=numThreads) {
           File badFile("thread_" + to_string(j) + "_bad.dat");
@@ -495,7 +530,7 @@ int main(int argc, char* argv[]) {
             // if (rng.Peek() == 0x6a5d128c) DebugBreak();
 
             // Computing *solvability* here
-            threadData[rng.Peek() >> 4] &= ~(1 << (rng.Peek() % 16)); 
+            threadData[rng.Peek() >> 4] &= ~(1 << (rng.Peek() % 16));
           }
         }
 
@@ -556,7 +591,7 @@ int main(int argc, char* argv[]) {
         // Compute polyshapes
         for (u8 x = 1; x < p->_width; x += 2) {
           for (u8 y = 1; y < p->_height; y += 2) {
-            Cell* cell = &p->_grid->Get(x, y);
+            Cell* cell = p->GetCell(x, y);
             u16 polyshape = cell->polyshape;
             if (polyshape == 0) continue;
 
@@ -633,7 +668,7 @@ int main(int argc, char* argv[]) {
             else if (dir == PATH_TOP)    y--;
             else if (dir == PATH_BOTTOM) y++;
           }
-          
+
           Region region = p->GetRegion(firstPoly->x, firstPoly->y);
           bool sameRegion = false;
           bool containsStars = false;

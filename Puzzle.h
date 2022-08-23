@@ -14,10 +14,14 @@ struct Cell {
   u16 polyshape = 0u;
   int color = 0;
 
+  std::string ToString();
+
+private:
   End end = (End)0;
   bool start = false;
 
-  std::string ToString();
+  friend class Puzzle;
+  friend class Solver;
 };
 
 class Puzzle {
@@ -28,7 +32,6 @@ public:
   u8 _width = 0;
   u8 _numConnections = 0;
   u8 _symmetry = 0;
-  NArray<Cell>* _grid;
   NArray<Masked>* _maskedGrid;
   Vector<u8>* _connections;
   std::string _name;
@@ -45,6 +48,10 @@ public:
   ~Puzzle();
   DELETE_RO3(Puzzle)
   DELETE_RO5(Puzzle)
+
+  // Start/end setters, for safety reasons
+  void SetStart(s8 x, s8 y);
+  void SetEnd(s8 x, s8 y, End dir);
 
   Cell* GetCell(s8 x, s8 y) const;
   std::pair<u8, u8> GetSymmetricalPos(s8 x, s8 y);
@@ -74,6 +81,11 @@ public:
   bool TestStonesEarlyFail();
 
 private:
+  NArray<Cell>* _grid;
+
   u8 _mod(s8 x) const;
   bool _safeCell(s8 x, s8 y) const;
+
+  friend class Solver;
+  friend class Validator;
 };

@@ -1,15 +1,20 @@
 #include "stdafx.h"
 
-Solver::Solver(Puzzle* puzzle_) {
-  puzzle = puzzle_;
-  path = new Path(puzzle->_width * puzzle->_height); // A little overkill but whatever.
+Solver::Solver() {
+  path = new Path();
+  validator = new Validator();
 }
 
 Solver::~Solver() {
   delete path;
+  if (validator) delete validator;
 }
 
-Vector<Path> Solver::Solve(int maxSolutions) {
+Vector<Path> Solver::Solve(Puzzle* puzzle_, int maxSolutions) {
+  puzzle = puzzle_;
+  path->Ensure(puzzle->_width * puzzle->_height); // A little overkill but whatever.
+  path->Resize(0);
+
   Vector<Cell*> startPoints(puzzle->_width);
   u8 numEndpoints = 0;
 
@@ -103,7 +108,7 @@ void Solver::SolveLoop(s8 x, s8 y, Vector<Path>& solutionPaths, u8 numEndpoints)
   if (cell->end != End::None) {
     path->UnsafePush(PATH_NONE);
     puzzle->_endPoint = cell;
-    RegionData puzzleData = Validator::Validate(*puzzle, true);
+    RegionData puzzleData = validator->Validate(*puzzle, true);
     if (puzzleData.Valid()) {
       solutionPaths.Emplace(path->Copy());
     }
@@ -131,7 +136,7 @@ void Solver::SolveLoop(s8 x, s8 y, Vector<Path>& solutionPaths, u8 numEndpoints)
       s8 floodY = earlyExitData.y2 + (earlyExitData.y1 - y);
       Region region = puzzle->GetRegion(floodX, floodY);
       if (!region.Empty()) {
-        RegionData regionData = Validator::ValidateRegion(*puzzle, region, true);
+        RegionData regionData = validator->ValidateRegion(*puzzle, region, true);
         if (!regionData.Valid()) {
           TailRecurse(cell);
           return;

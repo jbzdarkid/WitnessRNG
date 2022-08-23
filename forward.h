@@ -20,6 +20,7 @@ enum class Masked : u8;
 struct Cell;
 class Puzzle;
 class Random;
+class Validator;
 struct RegionData;
 template <typename T> class Vector;
 template <typename T> class NArray;
