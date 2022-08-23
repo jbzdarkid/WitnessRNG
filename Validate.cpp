@@ -50,6 +50,7 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
     }
   }
 
+  _regions.Resize(0);
   if (needsRegions) {
     puzzle.GetRegions(_regions);
   } else {

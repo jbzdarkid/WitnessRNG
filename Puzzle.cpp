@@ -239,24 +239,30 @@ void Puzzle::GenerateMaskedGrid() {
 }
 
 void Puzzle::GetRegions(Vector<Region>& regions) {
-  regions.Resize(0);
   GenerateMaskedGrid();
 
   // A limit for the total size of all regions -- at least this way, we won't allocate all the regions as large as possible.
   int remainingRegionSize = _width * _height;
 
+  int numRegions = 0;
   for (u8 x=0; x<_width; x++) {
     for (u8 y=0; y<_height; y++) {
       if (_maskedGrid->Get(x, y) == Masked::Processed) continue;
-
       // If this cell is empty (aka hasn't already been used by a region), then create a new one
       // This will also mark all lines inside the new region as used.
-      Region region(remainingRegionSize);
+
+      // TODO: Comments about this new nonsense.
+      if (numRegions >= regions.Size()) regions.Emplace(move(Region()));
+      Region& region = regions.At(numRegions++); // remainingRegionSize);
+      region.Ensure(remainingRegionSize);
+      region.Resize(0);
       _floodFill(x, y, region);
       remainingRegionSize -= region.Size();
-      regions.Emplace(move(region));
+      // regions.Emplace(move(region));
     }
   }
+
+  regions.Resize(numRegions); // Truncate
 }
 
 Region Puzzle::GetRegion(s8 x, s8 y) {
@@ -313,9 +319,6 @@ void Puzzle::CutRandomEdges(Random& rng, u8 numCuts) {
   u8 numConnections = _numConnections; // TW stores the value of this before making cuts, so that we only attempt to cut valid edges.
   for (int i=0; i<numCuts; i++) {
     int rand = rng.Get() % numConnections;
-
-    // In TW, additional connections are added for the endpoint. This are added whenever a cut is made. So, we continue if the RNG is larger than the true connection size.
-    if (rand*2 >= _connections->Size()) { __debugbreak(); continue; }
 
     u8 x = _connections->At(rand*2);
     u8 y = _connections->At(rand*2 + 1);
@@ -473,18 +476,19 @@ void Puzzle::LogGrid() {
   for (u8 y=0; y<_height; y++) {
     for (u8 x=0; x<_width; x++) {
       Cell* cell = &_grid->Get(x, y);
-      if (cell == nullptr)               cout << ' ';
-      else if (cell->type == Type::Null) cout << ' ';
-      else if (cell->start == true)      cout << 'S';
-      else if (cell->end != End::None)   cout << 'E';
+      if (cell == nullptr)                    cout << ' ';
+      else if (cell->type == Type::Null)      cout << ' ';
       else if (cell->type == Type::Line) {
         if (cell->gap > Gap::None)            cout << ' ';
         else if (cell->dot > Dot::None)       cout << 'X';
+        else if (cell->start == true)         cout << 'S';
+        else if (cell->end != End::None)      cout << 'E';
         else if (cell->line == Line::None)    cout << '.';
         else if (cell->line == Line::Black)   cout << '#';
         else if (cell->line == Line::Blue)    cout << '#';
         else if (cell->line == Line::Yellow)  cout << 'o';
-      } else                                  cout << '?';
+      }
+      else                                    cout << '?';
     }
     cout << endl;
   }

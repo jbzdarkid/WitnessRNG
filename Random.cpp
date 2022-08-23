@@ -512,8 +512,8 @@ bool Random::IsSolvable(int seed) {
       solvability.Expand(1 << 27);
       solvability.Resize(1 << 27);
       HANDLE file = CreateFileA("puzzle_solvability.dat", FILE_GENERIC_READ, NULL, nullptr, OPEN_EXISTING, NULL, nullptr);
-      assert(file != INVALID_HANDLE_VALUE)
-        ReadFile((HANDLE)file, &solvability[0], solvability.Size() * sizeof(solvability[0]), nullptr, nullptr);
+      assert(file != INVALID_HANDLE_VALUE);
+      ReadFile((HANDLE)file, &solvability[0], solvability.Size() * sizeof(solvability[0]), nullptr, nullptr);
       CloseHandle(file);
     }
   }

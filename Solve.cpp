@@ -7,7 +7,7 @@ Solver::Solver() {
 
 Solver::~Solver() {
   delete path;
-  if (validator) delete validator;
+  delete validator;
 }
 
 Vector<Path> Solver::Solve(Puzzle* puzzle_, int maxSolutions) {

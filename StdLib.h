@@ -228,6 +228,8 @@ public:
   }
 
   // Shrink (or grow) the vector's size to equal |size|. This does not affect the underlying data nor capacity.
+  // WARNING: If you resize down, any data beyond the |size| will be inaccessible! If it is heap-allocated,
+  // be sure to delete/free it before downsizing.
   void Resize(int size) {
     assert(size >= 0);
     assert(size <= _capacity);
