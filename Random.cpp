@@ -117,53 +117,47 @@ bool Random::TestChallenge(u8 triple2, u8 triple3, const Vector<int>& expectedOr
   if (triple2 != (Get() >> 10) % 3) return false;
   if (triple3 != (Get() >> 10) % 3) return false;
 
-  _visitOrder->At(0) = 0;
-  _visitOrder->At(1) = 1;
-  _visitOrder->At(2) = 2;
-  _visitOrder->At(3) = 3;
+  for (u8 i=0; i<4; i++) _visitOrder->At(i) = i;
   ShuffleIntegers(*_visitOrder);
   if (*_visitOrder != expectedOrder) return false;
-  _puzzleOrder->At(0) = 0;
-  _puzzleOrder->At(1) = 1;
-  _puzzleOrder->At(2) = 2;
-  _puzzleOrder->At(3) = 3;
+  for (u8 i=0; i<4; i++) _puzzleOrder->At(i) = i;
   ShuffleIntegers(*_puzzleOrder);
   if (*_puzzleOrder != expectedPuzzle) return false;
 
   Puzzle* easyPuzzle = GenerateSimpleMaze();
-  assert(strnlen_s(easy, 49) == 49);
-  bool match = true;
-  for (u8 y = 0; y < easyPuzzle->_height; y++) {
-    for (u8 x = 0; x < easyPuzzle->_width; x++) {
-      u8 i = y * easyPuzzle->_width + x;
-      Cell* cell = easyPuzzle->GetCell(x, y);
-      if (!cell || cell->type != Type::Line) continue;
+  if (easy != nullptr && strnlen_s(easy, 49) == 49) {
+    bool match = true;
+    for (u8 y = 0; y < easyPuzzle->_height; y++) {
+      for (u8 x = 0; x < easyPuzzle->_width; x++) {
+        u8 i = y * easyPuzzle->_width + x;
+        Cell* cell = easyPuzzle->GetCell(x, y);
+        if (!cell || cell->type != Type::Line) continue;
 
-      // There's several symbols you can use, but space should always mean 'no line'
-      // and non-space should always be a line.
-      if (cell->gap == Gap::Break && easy[i] != ' ') match = false;
-      if (cell->gap == Gap::None  && easy[i] == ' ') match = false;
+        // There's several symbols you can use, but space should always mean 'no line'
+        // and non-space should always be a line.
+        if (cell->gap == Gap::Break && easy[i] != ' ') match = false;
+        if (cell->gap == Gap::None  && easy[i] == ' ') match = false;
+      }
     }
+    delete easyPuzzle;
+    if (!match) return false;
   }
-  delete easyPuzzle;
-  if (!match) return false;
 
   delete GenerateHardMaze();
 
   Puzzle* stonesPuzzle = GenerateStones();
-  assert(strnlen_s(stones, 16) == 16);
-  match = true;
-  for (u8 i = 0; i < 16; i++) {
-    u8 x = 2 * (i % 4) + 1;
-    u8 y = 2 * (i / 4) + 1;
-    if (stones[i] == ' ' && stonesPuzzle->GetCell(x, y)->color != 0x0) match = false; // 0x0 == None
-    if (stones[i] == 'B' && stonesPuzzle->GetCell(x, y)->color != 0x1) match = false; // 0x1 == Black
-    if (stones[i] == 'W' && stonesPuzzle->GetCell(x, y)->color != 0x2) match = false; // 0x2 == White
+  if (stones != nullptr && strnlen_s(stones, 16) == 16) {
+    bool match = true;
+    for (u8 i = 0; i < 16; i++) {
+      u8 x = 2 * (i % 4) + 1;
+      u8 y = 2 * (i / 4) + 1;
+      if (stones[i] == ' ' && stonesPuzzle->GetCell(x, y)->color != 0) match = false; // 0x0 == None
+      if (stones[i] == 'B' && stonesPuzzle->GetCell(x, y)->color != 1) match = false; // 0x1 == Black
+      if (stones[i] == 'W' && stonesPuzzle->GetCell(x, y)->color != 2) match = false; // 0x2 == White
+    }
+    delete stonesPuzzle;
+    if (!match) return false;
   }
-  delete stonesPuzzle;
-  if (!match) return false;
-
-  // Potentially further validation
 
   return true;
 }

@@ -381,14 +381,9 @@ int main(int argc, char* argv[]) {
     }
 
   } else if (argc > 1 && strcmp(argv[1], "rseed") == 0) {
-
-    // TR stars
-    // TL sym
-    // BL maze
-    // B poly
-
     u8 triple2 = 2; // Right
     u8 triple3 = 1; // Middle
+
     Vector<int> expectedOrder = {
       1, // Top right
       3, // Top left
@@ -412,11 +407,14 @@ int main(int argc, char* argv[]) {
       "| |    "
       "+-+ +-+";
 
+    const char* stones = nullptr;
+    /*
     const char* stones = \
       " WW "
       " BWW"
       "BB B"
       "    ";
+    */
 
     Random rng;
     for (int seed=1; seed <= 0x7FFF'FFFE; seed++) {
