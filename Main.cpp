@@ -22,7 +22,7 @@ bool Contains(const std::string_view& str, const std::string_view& substr) {
   if (substr.size() > str.size()) return false;
   if (substr.size() == str.size()) return substr == str;
   for (int i = 0; i <= str.size() - substr.size(); i++) {
-    if (str.compare(i, substr.size(), substr)) return true;
+    if (str.compare(i, substr.size(), substr) == 0) return true;
   }
   return false;
 }
@@ -381,46 +381,77 @@ int main(int argc, char* argv[]) {
     }
 
   } else if (argc > 1 && strcmp(argv[1], "rseed") == 0) {
-    u8 triple2 = 2; // Right
-    u8 triple3 = 1; // Middle
+    string line;
 
-    Vector<int> expectedOrder = {
-      1, // Top right
-      3, // Top left
-      0, // Bottom left
-      2, // Back
-    };
+    string easy;
+    cout << "Input the first puzzle (easy maze), in a 9x9 grid. Empty line finishes." << endl;
+    while (true) {
+      getline(cin, line);
+      if (line.empty()) break;
+      easy += line;
+    }
 
-    Vector<int> expectedPuzzles = {
-      1, // Stars
-      2, // Symmetry
-      0, // Polyominos
-      3, // Maze
-    };
+    string stones;
+    cout << "[OPTIONAL] Input the third puzzle (stones), in a 4x4 grid, e.g. 'BW W'. Empty line finishes." << endl;
+    while (true) {
+      getline(cin, line);
+      if (line.empty()) break;
+      stones += line;
+    }
 
-    const char* easy = \
-      "+ + +-+"
-      "| |   |"
-      "+-+-+-+"
-      "| |   |"
-      "+ +-+ +"
-      "| |    "
-      "+-+ +-+";
+    cout << "Input the puzzles on the central pillar. For example, 'BL poly', 'TR stars', 'B sym', or 'TL maze'." << endl;
+    Vector<int> expectedOrder{0, 0, 0, 0};
+    Vector<int> expectedPuzzles{0, 0, 0, 0};
+    for (u8 i=0; i<4; i++) {
+      cout << to_string(i + 1) << ": ";
+      getline(cin, line);
+      if      (line.substr(0, 2) == "BL") expectedOrder[i] = 0;
+      else if (line.substr(0, 2) == "TR") expectedOrder[i] = 1;
+      else if (line.substr(0, 2) == "B ") expectedOrder[i] = 2;
+      else if (line.substr(0, 2) == "TL") expectedOrder[i] = 3;
+      else { cout << "Couldn't recognize the location, try again" << endl; continue; }
 
-    const char* stones = nullptr;
-    /*
-    const char* stones = \
-      " WW "
-      " BWW"
-      "BB B"
-      "    ";
-    */
+      if      (Contains(line, "poly")) expectedPuzzles[i] = 0;
+      else if (Contains(line, "star")) expectedPuzzles[i] = 1;
+      else if (Contains(line, "sym"))  expectedPuzzles[i] = 2;
+      else if (Contains(line, "maze")) expectedPuzzles[i] = 3;
+      else { cout << "Couldn't recognize the puzzle type, try again" << endl; continue; }
+    }
 
+    u8 triple2;
+    while (true) {
+      cout << "Input the b/w triple location (left, middle, right): ";
+      getline(cin, line);
+      if      (Contains(line, "eft"))   triple2 = 0;
+      else if (Contains(line, "iddle")) triple2 = 1;
+      else if (Contains(line, "ight"))  triple2 = 2;
+      else { cout << "Couldn't recognize the location, try again" << endl; continue; }
+      break;
+    }
+
+    u8 triple3;
+    while (true) {
+      cout << "Input the w/g/p triple location (left, middle, right): ";
+      getline(cin, line);
+      if      (Contains(line, "eft"))   triple3 = 0;
+      else if (Contains(line, "iddle")) triple3 = 1;
+      else if (Contains(line, "ight"))  triple3 = 2;
+      else { cout << "Couldn't recognize the location, try again" << endl; continue; }
+      break;
+    }
+
+    cout << "Processing..." << endl;
+
+    bool found = false;
     Random rng;
     for (int seed=1; seed <= 0x7FFF'FFFE; seed++) {
       rng.Set(seed);
-      if (rng.TestChallenge(triple2, triple3, expectedOrder, expectedPuzzles, easy, stones)) cout << seed << endl;
+      if (rng.TestChallenge(triple2, triple3, expectedOrder, expectedPuzzles, easy, stones)) {
+        cout << "Found seed: " << seed << endl;
+        found = true;
+      }
     }
+    if (!found) cout << "Couldn't find any matching seeds" << endl;
   } else if (argc > 1 && strcmp(argv[1], "rand") == 0) {
     Random rng;
     rng.Set(806297464);

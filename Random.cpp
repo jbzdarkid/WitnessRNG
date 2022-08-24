@@ -113,7 +113,7 @@ Random::~Random() {
   delete _puzzleOrder;
 }
 
-bool Random::TestChallenge(u8 triple2, u8 triple3, const Vector<int>& expectedOrder, const Vector<int>& expectedPuzzle, const char* easy, const char* stones) {
+bool Random::TestChallenge(u8 triple2, u8 triple3, const Vector<int>& expectedOrder, const Vector<int>& expectedPuzzle, const string& easy, const string& stones) {
   if (triple2 != (Get() >> 10) % 3) return false;
   if (triple3 != (Get() >> 10) % 3) return false;
 
@@ -125,7 +125,7 @@ bool Random::TestChallenge(u8 triple2, u8 triple3, const Vector<int>& expectedOr
   if (*_puzzleOrder != expectedPuzzle) return false;
 
   Puzzle* easyPuzzle = GenerateSimpleMaze();
-  if (easy != nullptr && strnlen_s(easy, 49) == 49) {
+  if (easy.size() == 49) {
     bool match = true;
     for (u8 y = 0; y < easyPuzzle->_height; y++) {
       for (u8 x = 0; x < easyPuzzle->_width; x++) {
@@ -146,7 +146,7 @@ bool Random::TestChallenge(u8 triple2, u8 triple3, const Vector<int>& expectedOr
   delete GenerateHardMaze();
 
   Puzzle* stonesPuzzle = GenerateStones();
-  if (stones != nullptr && strnlen_s(stones, 16) == 16) {
+  if (stones.size() == 16) {
     bool match = true;
     for (u8 i = 0; i < 16; i++) {
       u8 x = 2 * (i % 4) + 1;
