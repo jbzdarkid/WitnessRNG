@@ -3,7 +3,8 @@
 
 class Validator {
 public:
-  Validator() = default;
+  Validator();
+  ~Validator();
 
   // Determines if the current grid state is solvable. Modifies the puzzle element with:
   // valid: Whether or not the puzzle is valid
@@ -35,12 +36,11 @@ private:
   // @Performance: This is a pretty core function to the solve loop.
   RegionData RegionCheck(const Puzzle& puzzle, const Region& region, bool quick = false);
 
-  using ColoredObjectArr = Vector<std::pair<int, u8>>;
   u8 GetColoredObject(int color);
   void AddColoredObject(int color);
 
-  Vector<Cell*> _squares = Vector<Cell*>(4);
-  Vector<Cell*> _stars = Vector<Cell*>(4);
-  ColoredObjectArr _coloredObjects;
-  Vector<Region> _regions = Vector<Region>(4);
+  Vector<Cell*>* _squares;
+  Vector<Cell*>* _stars;
+  Vector<std::pair<int, u8>>* _coloredObjects;
+  Vector<Region>* _regions;
 };

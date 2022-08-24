@@ -1,5 +1,20 @@
 #include "stdafx.h"
 
+Validator::Validator() {
+  _squares = new Vector<Cell*>(4);
+  _stars = new Vector<Cell*>(4);
+  _coloredObjects = new Vector<std::pair<int, u8>>();
+  _regions = new Vector<Region>();
+}
+
+Validator::~Validator() {
+  __debugbreak();
+  delete _squares;
+  delete _stars;
+  delete _coloredObjects;
+  // delete _regions; // Leak the container because I can't figure out how to free it properly.
+}
+
 RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
   console.log("Validating", puzzle._name);
   RegionData puzzleData(quick ? 0 : puzzle._width * puzzle._height);
@@ -51,9 +66,9 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
   }
 
   LinearAllocator<Cell*> alloc(puzzle._width * puzzle._height);
-  _regions.Resize(0);
+  _regions->Resize(0);
   if (needsRegions) {
-    puzzle.GetRegions(_regions, alloc);
+    puzzle.GetRegions(*_regions, alloc);
   } else {
     Region monoRegion(monoRegionSize, alloc);
     for (u8 x=0; x<puzzle._width; x++) {
@@ -62,11 +77,11 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
         if (cell->type == Type::Line && cell->line == Line::None) monoRegion.UnsafePush(cell);
       }
     }
-    _regions.Emplace(move(monoRegion));
+    _regions->Emplace(move(monoRegion));
   }
-  console.log("Found", _regions.Size(), "region(s)");
+  console.log("Found", _regions->Size(), "region(s)");
 
-  for (const Region& region : _regions) {
+  for (const Region& region : *_regions) {
     auto regionData = ValidateRegion(puzzle, region, quick);
     console.log("Region valid:", regionData.Valid());
     puzzleData.negations.Append(regionData.negations);
@@ -74,6 +89,7 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
     puzzleData.veryInvalidElements.Append(regionData.veryInvalidElements);
     if (quick && !puzzleData.Valid()) break;
   }
+
   console.log("Puzzle has", puzzleData.invalidElements.Size(), "invalid elements");
   return puzzleData;
 }
@@ -153,9 +169,9 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
   console.log("Validating region of size", region.Size());
   RegionData regionData(quick ? 0 : region.Size());
 
-  _squares.Resize(0);
-  _stars.Resize(0);
-  _coloredObjects.Resize(0);
+  _squares->Resize(0);
+  _stars->Resize(0);
+  _coloredObjects->Resize(0);
   int squareColor = 0;
 
   for (Cell* cell : region) {
@@ -189,7 +205,7 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
         continue;
 
       case Type::Square:
-        _squares.Push(cell);
+        _squares->Push(cell);
         AddColoredObject(cell->color);
         if (squareColor == 0) {
           squareColor = cell->color;
@@ -199,20 +215,20 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
         continue;
 
       case Type::Star:
-        _stars.Push(cell);
+        _stars->Push(cell);
         AddColoredObject(cell->color);
         continue;
     }
   }
 
   if (squareColor == -1) {
-    for (Cell* square : _squares) {
+    for (Cell* square : *_squares) {
       regionData.invalidElements.Push(square);
       if (quick) return regionData;
     }
   }
 
-  for (Cell* star : _stars) {
+  for (Cell* star : *_stars) {
     u8 count = GetColoredObject(star->color);
     if (count == 1) {
       console.log("Found a", star->color, "star in a region with 1", star->color, "object");
@@ -242,18 +258,18 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
 }
 
 u8 Validator::GetColoredObject(int color) {
-  for (auto [color_, count] : _coloredObjects) {
+  for (auto [color_, count] : *_coloredObjects) {
     if (color == color_) return count;
   }
   return 0;
 }
 
 void Validator::AddColoredObject(int color) {
-  for (auto& it : _coloredObjects) {
+  for (auto& it : *_coloredObjects) {
     if (it.first == color) {
       it.second++;
       return;
     }
   }
-  _coloredObjects.Emplace({ color, (u8)1 });
+  _coloredObjects->Emplace({ color, (u8)1 });
 }

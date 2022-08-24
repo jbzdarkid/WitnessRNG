@@ -49,7 +49,7 @@ Puzzle::Puzzle(u8 width, u8 height, bool pillar) {
 Puzzle::~Puzzle() {
   if (_grid) delete _grid;
   if (_maskedGrid) delete _maskedGrid;
-  delete _connections;
+  if (_connections) delete _connections;
 }
 
 Cell* Puzzle::GetCell(s8 x, s8 y) const {

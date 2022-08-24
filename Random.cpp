@@ -139,7 +139,7 @@ bool Random::TestChallenge(u8 triple2, u8 triple3, const Vector<int>& expectedOr
         if (cell->gap == Gap::None  && easy[i] == ' ') match = false;
       }
     }
-    delete easyPuzzle;
+    delete easyPuzzle; // TODO: Defer this!
     if (!match) return false;
   }
 
@@ -155,7 +155,7 @@ bool Random::TestChallenge(u8 triple2, u8 triple3, const Vector<int>& expectedOr
       if (stones[i] == 'B' && stonesPuzzle->GetCell(x, y)->color != 1) match = false; // 0x1 == Black
       if (stones[i] == 'W' && stonesPuzzle->GetCell(x, y)->color != 2) match = false; // 0x2 == White
     }
-    delete stonesPuzzle;
+    delete stonesPuzzle; // TODO: Defer this!
     if (!match) return false;
   }
 
