@@ -1,5 +1,20 @@
 #include "stdafx.h"
 
+Validator::Validator() {
+  _squares = new Vector<Cell*>(4);
+  _stars = new Vector<Cell*>(4);
+  _coloredObjects = new Vector<std::pair<int, u8>>();
+  _regions = new Vector<Region>();
+}
+
+Validator::~Validator() {
+  __debugbreak();
+  delete _squares;
+  delete _stars;
+  delete _coloredObjects;
+  // delete _regions; // Leak the container because I can't figure out how to free it properly.
+}
+
 RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
   console.log("Validating", puzzle._name);
   RegionData puzzleData(quick ? 0 : puzzle._width * puzzle._height);
@@ -12,8 +27,9 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
 
   // Validate gap failures as an early exit.
   for (u8 x=0; x<puzzle._width; x++) {
+    Cell* row = puzzle._grid->GetRow(x);
     for (u8 y=0; y<puzzle._height; y++) {
-      Cell* cell = &puzzle._grid[x][y];
+      Cell* cell = &row[y];
       switch (cell->type) {
         case Type::Nega:
           puzzle._hasNegations = true;
@@ -29,7 +45,9 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
           needsRegions = true;
           break;
         case Type::Line:
-          if (cell->line != Line::None) {
+          if (cell->line == Line::None) {
+            monoRegionSize++;
+          } else {
             if (cell->gap != Gap::None) {
               console.log("Solution line goes over a gap at", x, y);
               puzzleData.veryInvalidElements.Push(cell);
@@ -41,30 +59,29 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
               puzzleData.veryInvalidElements.Push(cell);
               if (quick) return puzzleData;
             }
-          } else {
-            monoRegionSize++;
           }
           break;
       }
     }
   }
 
-  Vector<Region> regions;
+  LinearAllocator<Cell*> alloc(puzzle._width * puzzle._height);
+  _regions->Resize(0);
   if (needsRegions) {
-    regions = puzzle.GetRegions();
+    puzzle.GetRegions(*_regions, alloc);
   } else {
-    Region monoRegion(monoRegionSize);
+    Region monoRegion(monoRegionSize, alloc);
     for (u8 x=0; x<puzzle._width; x++) {
       for (u8 y=0; y<puzzle._height; y++) {
-        Cell* cell = &puzzle._grid[x][y];
-        if (cell->line == Line::None) monoRegion.UnsafePush(cell);
+        Cell* cell = &puzzle._grid->Get(x, y);
+        if (cell->type == Type::Line && cell->line == Line::None) monoRegion.UnsafePush(cell);
       }
     }
-    regions.Emplace(move(monoRegion));
+    _regions->Emplace(move(monoRegion));
   }
-  console.log("Found", regions.Size(), "region(s)");
+  console.log("Found", _regions->Size(), "region(s)");
 
-  for (const Region& region : regions) {
+  for (const Region& region : *_regions) {
     auto regionData = ValidateRegion(puzzle, region, quick);
     console.log("Region valid:", regionData.Valid());
     puzzleData.negations.Append(regionData.negations);
@@ -72,6 +89,7 @@ RegionData Validator::Validate(Puzzle& puzzle, bool quick) {
     puzzleData.veryInvalidElements.Append(regionData.veryInvalidElements);
     if (quick && !puzzleData.Valid()) break;
   }
+
   console.log("Puzzle has", puzzleData.invalidElements.Size(), "invalid elements");
   return puzzleData;
 }
@@ -147,32 +165,13 @@ RegionData Validator::RegionCheckNegations2(
   return RegionData(0);
 }
 
-using ColoredObjectArr = Vector<pair<int, u8>>;
-u8 GetColoredObject(const ColoredObjectArr& coloredObjects, int color_) {
-  for (auto [color, count] : coloredObjects) {
-    if (color == color_) return count;
-  }
-  return 0;
-}
-
-void AddColoredObject(ColoredObjectArr& coloredObjects, int color_) {
-  for (auto& it : coloredObjects) {
-    if (it.first == color_) {
-      it.second++;
-      return;
-    }
-  }
-  coloredObjects.Emplace({ color_, (u8)1 });
-}
-
 RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bool quick) {
   console.log("Validating region of size", region.Size());
   RegionData regionData(quick ? 0 : region.Size());
 
-  // We could re-use these! Just make a Validator class.
-  Vector<Cell*> squares;
-  Vector<Cell*> stars;
-  ColoredObjectArr coloredObjects;
+  _squares->Resize(0);
+  _stars->Resize(0);
+  _coloredObjects->Resize(0);
   int squareColor = 0;
 
   for (Cell* cell : region) {
@@ -206,8 +205,8 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
         continue;
 
       case Type::Square:
-        squares.Push(cell);
-        AddColoredObject(coloredObjects, cell->color);
+        _squares->Push(cell);
+        AddColoredObject(cell->color);
         if (squareColor == 0) {
           squareColor = cell->color;
         } else if (squareColor != cell->color) {
@@ -216,21 +215,21 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
         continue;
 
       case Type::Star:
-        stars.Push(cell);
-        AddColoredObject(coloredObjects, cell->color);
+        _stars->Push(cell);
+        AddColoredObject(cell->color);
         continue;
     }
   }
 
   if (squareColor == -1) {
-    for (Cell* square : squares) {
+    for (Cell* square : *_squares) {
       regionData.invalidElements.Push(square);
       if (quick) return regionData;
     }
   }
 
-  for (Cell* star : stars) {
-    u8 count = GetColoredObject(coloredObjects, star->color);
+  for (Cell* star : *_stars) {
+    u8 count = GetColoredObject(star->color);
     if (count == 1) {
       console.log("Found a", star->color, "star in a region with 1", star->color, "object");
       regionData.veryInvalidElements.Push(star);
@@ -256,4 +255,21 @@ RegionData Validator::RegionCheck(const Puzzle& puzzle, const Region& region, bo
   console.debug("Region has", regionData.veryInvalidElements.Size(), "very invalid elements");
   console.debug("Region has", regionData.invalidElements.Size(), "invalid elements");
   return regionData;
+}
+
+u8 Validator::GetColoredObject(int color) {
+  for (auto [color_, count] : *_coloredObjects) {
+    if (color == color_) return count;
+  }
+  return 0;
+}
+
+void Validator::AddColoredObject(int color) {
+  for (auto& it : *_coloredObjects) {
+    if (it.first == color) {
+      it.second++;
+      return;
+    }
+  }
+  _coloredObjects->Emplace({ color, (u8)1 });
 }

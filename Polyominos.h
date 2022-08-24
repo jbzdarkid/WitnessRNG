@@ -31,14 +31,14 @@ private:
   static Polyomino PolyominoFromPolyshape(u16 polyshape);
   // If false, poly doesn"t fit and grid is unmodified
   // If true, poly fits and grid is modified (with the placement)
-  static bool TryPlacePolyshape(const Polyomino& cells, u8 x, u8 y, const Puzzle& puzzle, s8** polyGrid, s8 sign);
+  static bool TryPlacePolyshape(const Polyomino& cells, u8 x, u8 y, const Puzzle& puzzle, NArray<s8>& polyGrid, s8 sign);
   // Places the ylops such that they are inside of the grid, then checks if the polys
   // zero the region.
-  static bool PlaceYlops(const std::vector<Cell*>& ylops, u8 i, std::vector<Cell*>& polys, const Puzzle& puzzle, s8** polyGrid);
+  static bool PlaceYlops(const std::vector<Cell*>& ylops, u8 i, std::vector<Cell*>& polys, const Puzzle& puzzle, NArray<s8>& polyGrid);
   // Returns whether or not a set of polyominos fit into a region.
   // Solves via recursive backtracking: Some piece must fill the top left square,
   // so try every piece to fill it, then recurse.
-  static bool PlacePolys(std::vector<Cell*>& polys, const Puzzle& puzzle, s8** polyGrid);
+  static bool PlacePolys(std::vector<Cell*>& polys, const Puzzle& puzzle, NArray<s8>& polyGrid);
 
   static inline u16 Mask(u8 x, u8 y) {
     return 1 << (x * 4 + y);

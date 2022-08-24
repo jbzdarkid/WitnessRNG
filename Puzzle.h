@@ -14,10 +14,14 @@ struct Cell {
   u16 polyshape = 0u;
   int color = 0;
 
+  std::string ToString();
+
+private:
   End end = (End)0;
   bool start = false;
 
-  std::string ToString();
+  friend class Puzzle;
+  friend class Solver;
 };
 
 class Puzzle {
@@ -28,8 +32,7 @@ public:
   u8 _width = 0;
   u8 _numConnections = 0;
   u8 _symmetry = 0;
-  Cell** _grid;
-  Masked** _maskedGrid;
+  NArray<Masked>* _maskedGrid;
   Vector<u8>* _connections;
   std::string _name;
   bool _pillar = false;
@@ -46,6 +49,10 @@ public:
   DELETE_RO3(Puzzle)
   DELETE_RO5(Puzzle)
 
+  // Start/end setters, for safety reasons
+  void SetStart(s8 x, s8 y);
+  void SetEnd(s8 x, s8 y, End dir);
+
   Cell* GetCell(s8 x, s8 y) const;
   std::pair<u8, u8> GetSymmetricalPos(s8 x, s8 y);
   Cell* GetSymmetricalCell(Cell* cell);
@@ -57,7 +64,7 @@ public:
 
   void _floodFill(u8 x, u8 y, Region& region);
   void GenerateMaskedGrid();
-  Vector<Region> GetRegions();
+  void GetRegions(Vector<Region>& regions, LinearAllocator<Cell*>& alloc);
   Region GetRegion(s8 x, s8 y);
   // Works for up to an 8x8 region
   u64 GetPolyishFromMaskedGrid(u8 rotation, bool flip);
@@ -67,10 +74,18 @@ public:
 
   // RNG functions (from TW)
   void CutRandomEdges(Random& rng, u8 numCuts);
-  // void AddRandomDots(Random& rng, int numDots);
+  void AddRandomDots(Random& rng, u8 numDots, Dot color = (Dot)1 /* Dot::Black */);
   Cell* GetEmptyCell(Random& rng);
+  Cell* GetRandomCell(Random& rng);
+  // Non-RNG, also from TW
+  bool TestStonesEarlyFail();
 
 private:
+  NArray<Cell>* _grid;
+
   u8 _mod(s8 x) const;
   bool _safeCell(s8 x, s8 y) const;
+
+  friend class Solver;
+  friend class Validator;
 };

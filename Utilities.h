@@ -32,9 +32,9 @@ enum class Gap : u8 {
 enum class End : u8 {
   None   = 0,
   Left   = 1,
-  Right  = 2,
-  Top    = 3,
-  Bottom = 4,
+  Top    = 2,
+  Bottom = 3,
+  Right  = 4,
 };
 
 #define PATH_NONE   0
@@ -132,7 +132,6 @@ private:
 extern Console console;
 
 // Functions I wish std::vector had
-
 template <typename T>
 std::vector<T> Append(std::vector<T>& dest, const std::vector<T>& source) {
   dest.insert(dest.end(), source.begin(), source.end());

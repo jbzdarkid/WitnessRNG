@@ -17,7 +17,15 @@ using namespace std;
 
 Console console;
 
-// TODO: I'm a little worried about the _numConnections overflow. Double-check (ugh) with TW.
+// Functions I wish std::string had
+bool Contains(const std::string_view& str, const std::string_view& substr) {
+  if (substr.size() > str.size()) return false;
+  if (substr.size() == str.size()) return substr == str;
+  for (int i = 0; i <= str.size() - substr.size(); i++) {
+    if (str.compare(i, substr.size(), substr) == 0) return true;
+  }
+  return false;
+}
 
 // Ideas to bring back to the javascript version:
 // - Try making a single maskedGrid (and polyGrid?) per puzzle. Then, instead of swapping out the puzzle, just write into that grid.
@@ -263,7 +271,7 @@ void GenerateTables(const unordered_map<u32, u32>& totalPuzzles, u64 uberTotal) 
 
 int main(int argc, char* argv[]) {
 #ifdef _DEBUG
-    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+  _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
 
   if (argc > 1 && strcmp(argv[1], "test") == 0) {
@@ -284,7 +292,7 @@ int main(int argc, char* argv[]) {
       rng.Set(initRng);
       Puzzle* p = rng.GeneratePolyominos(false);
       assert(rng.Peek() == endRng);
-      auto solutions = Solver(p).Solve();
+      auto solutions = Solver().Solve(p);
       assert(solutions.Size() == numSolutions);
 
       // See comment in merge. We need to increment until we reach the loop start.
@@ -353,7 +361,7 @@ int main(int argc, char* argv[]) {
     // rng.Set(819664878);
     Puzzle* p = rng.GeneratePolyominos(false);
     cout << p->ToString() << endl;
-    auto solutions = Solver(p).Solve();
+    auto solutions = Solver().Solve(p);
     delete p;
 
   } else if (argc > 1 && strcmp(argv[1], "thrd") == 0) {
@@ -376,6 +384,7 @@ int main(int argc, char* argv[]) {
         auto badFile  = CreateFileA(("thread_" + to_string(i+threadOffset) + "_bad.dat").c_str(),  FILE_GENERIC_WRITE, NULL, nullptr, CREATE_ALWAYS, NULL, nullptr);
 
         Random rng;
+        Solver solver;
         for (u32 j=0;; j++) {
           u32 seed = initSeed + 1 + i + (j * numThreads); // RNG starts at 1
           if (seed > maxSeed) break;
@@ -386,7 +395,7 @@ int main(int argc, char* argv[]) {
 
           Vector<Path> solutions;
           if (!starsFailure) { // If stars fail, then we will hit this seed in another thread, and there's no reason to solve.
-            solutions = Solver(p).Solve();
+            solutions = solver.Solve(p);
           }
 
           u32 endingRng = rng.Peek();
@@ -419,7 +428,7 @@ int main(int argc, char* argv[]) {
   } else if (argc > 1 && strcmp(argv[1], "merge") == 0) {
     Vector<u16> finalData(1 << 27); // A single bit per seed
     std::mutex dataLock;
-    finalData.Fill(0xFF);
+    finalData.Fill((u8)0xFF);
 
 #if _DEBUG
     const int numThreads = 1;
@@ -430,7 +439,7 @@ int main(int argc, char* argv[]) {
 
     for (u32 i=0; i<numThreads; i++) {
       thread t([&](int i) {
-        Vector<u16> threadData = finalData.Copy(); 
+        Vector<u16> threadData = finalData.Copy();
         Random rng;
         for (int j = i;; j+=numThreads) {
           File badFile("thread_" + to_string(j) + "_bad.dat");
@@ -461,7 +470,7 @@ int main(int argc, char* argv[]) {
             // if (rng.Peek() == 0x6a5d128c) DebugBreak();
 
             // Computing *solvability* here
-            threadData[rng.Peek() >> 4] &= ~(1 << (rng.Peek() % 16)); 
+            threadData[rng.Peek() >> 4] &= ~(1 << (rng.Peek() % 16));
           }
         }
 
@@ -522,7 +531,7 @@ int main(int argc, char* argv[]) {
         // Compute polyshapes
         for (u8 x = 1; x < p->_width; x += 2) {
           for (u8 y = 1; y < p->_height; y += 2) {
-            Cell* cell = &p->_grid[x][y];
+            Cell* cell = p->GetCell(x, y);
             u16 polyshape = cell->polyshape;
             if (polyshape == 0) continue;
 
@@ -599,7 +608,7 @@ int main(int argc, char* argv[]) {
             else if (dir == PATH_TOP)    y--;
             else if (dir == PATH_BOTTOM) y++;
           }
-          
+
           Region region = p->GetRegion(firstPoly->x, firstPoly->y);
           bool sameRegion = false;
           bool containsStars = false;
