@@ -14,11 +14,11 @@ using s64 = long long;
 #ifndef assert
 #ifdef _DEBUG
 #define assert(cond) \
-{ \
+do { \
   if (!(cond)) { \
     __debugbreak(); \
   } \
-}
+} while (0)
 #else
 #define assert(cond) do {} while (0)
 #endif
@@ -198,7 +198,8 @@ public:
     _capacity = capacity;
     _data = new T[capacity];
   }
-  // Construct a vector of maximum |capacity|, using allocator |alloc|. This allocates space in memory (or on the stack) for the vector *container*,
+  // Construct a vector of maximum |capacity|, using allocator |alloc|.
+  // This allocates space in memory (or on the stack) for the vector *container*,
   // BUT uses the allocator to allocate memory for the vector *contents*.
   Vector(int capacity, LinearAllocator<T>& alloc) {
     _size = 0;
@@ -464,11 +465,7 @@ bool operator!=(const Vector<T>& a, const Vector<T>& b) { return !(a == b); }
 template <typename T>
 class LinkedList {
 public:
-  // Default constructor for declaration purposes only
   LinkedList() {}
-  LinkedList(T* head) : _head(head), _tail(head), _size(1) {
-    assert(head);
-  }
 
   T* Head() { return _head; }
   T* Tail() { return _tail; }
@@ -476,8 +473,14 @@ public:
 
   void AddToTail(T* newTail) {
     assert(newTail);
-    _tail->next = newTail;
-    _tail = newTail;
+    if (_tail == nullptr) { // UNLIKELY()
+      assert(_head == nullptr);
+      _head = newTail;
+      _tail = newTail;
+    } else {
+      _tail->next = newTail;
+      _tail = newTail;
+    }
     _size++;
   }
 
@@ -485,6 +488,10 @@ public:
     assert(_size > 0);
     _head = _head->next;
     _size--;
+    if (_head == nullptr) {
+      assert(_size == 0);
+      _tail = nullptr; // If we empty the entire LinkedList, we need to clear _tail too.
+    }
   }
 
   // Functions for range-based iteration
@@ -522,9 +529,7 @@ private:
 template <typename T>
 class LinkedLoop {
 public:
-  // Default constructor for declaration purposes only
   LinkedLoop() {}
-  LinkedLoop(T* node) { AddCurrent(node); }
 
   T* Previous() { return _previous; }
   T* Current() { return _current; }
@@ -550,16 +555,22 @@ public:
     _current = _current->next;
   }
 
-  void Pop() {
-    T* next = _current->next;
-    _previous->next = next;
-    _current = next;
+  /* I don't think this works at _size == 1, sadly
+  T* Pop() {
+    T* toPop = _current;
+    _previous->next = toPop->next;
+    _current = toPop->next;
     _size--;
+    toPop->next = nullptr;
+    return toPop;
   }
+  */
 
   // Functions for range-based iteration
   struct iterator {
-    iterator(T* node) : _node(node) {}
+    iterator(T* node) : _node(node) {
+      if (node) _first = true; // Required so that we don't immediately exit the loop (because begin() == end())
+    }
 
     T* operator*() {
       return _node;
@@ -576,7 +587,7 @@ public:
 
   private:
     T* _node;
-    bool _first = true; // Required so that we don't immediately exit the loop (because begin() == end())
+    bool _first = false;
   };
   iterator begin() {
     return iterator(_current);
@@ -603,7 +614,7 @@ class NodeHashSet {
 
 public:
   // Construct a hashtable of |capacity| (default 7).
-  NodeHashSet(int capacity = 7) {
+  NodeHashSet(size_t capacity = 7) {
     _size = 0;
     _capacity = capacity;
     _ctrl = new u8[capacity];
@@ -723,7 +734,7 @@ private:
   void Resize() {
     // Abseil uses a "power of 2 minus 1" for capacities. Probably because they have a good chance of being prime or pseudo-prime.
     NodeHashSet newTable((_capacity + 1) * 2 - 1);
-    for (int i=0; i<_capacity; i++) {
+    for (size_t i=0; i<_capacity; i++) {
       if (_ctrl[i] & kEmpty) continue; // High bit is set, so the associated slot had no real data.
       T* value = _slots[i];
       newTable.ResizeAdd(value);
@@ -757,8 +768,8 @@ private:
   size_t H1(size_t hash) { return hash >> 7; }
   u8 H2(size_t hash) { return (u8)(hash & 0x7F); }
 
-  int _size = 0;
-  int _capacity = 0;
+  size_t _size = 0;
+  size_t _capacity = 0;
   LinearAllocator<T> _allocator;
   u8* _ctrl = nullptr;
   T** _slots = nullptr;
