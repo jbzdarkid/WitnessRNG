@@ -20,7 +20,7 @@ using s64 = long long;
   } \
 }
 #else
-#define assert(cond)
+#define assert(cond) do {} while (0)
 #endif
 #endif // #ifndef assert
 
@@ -141,9 +141,9 @@ public:
   }
 
   const T* GetRow(u8 a, u8 b = 0, u8 c = 0, u8 d = 0) const {
-    if (c != 0) assert(d == 0) // Accessing a 3D row as a 4D array
-    else if (b != 0) assert(c == 0 && _maxD == 1) // Accessing a 2D row in a 3D array
-    else if (a != 0) assert(b == 0 && _maxC == 1) // Accessing a 1D row in a 2D array
+    if (c != 0) assert(d == 0); // Accessing a 3D row as a 4D array
+    else if (b != 0) assert(c == 0 && _maxD == 1); // Accessing a 2D row in a 3D array
+    else if (a != 0) assert(b == 0 && _maxC == 1); // Accessing a 1D row in a 2D array
     return &Get(a, b, c, d);
   }
 
@@ -222,12 +222,14 @@ public:
   Vector(Vector&& other) noexcept { // Move constructor
     _size = other._size;
     _capacity = other._capacity;
+    // TODO: Are we leaking _data here?
     _data = other._data;
     other._data = nullptr;
   }
   Vector& operator=(Vector&& other) noexcept { // Move assignment
     _size = other._size;
     _capacity = other._capacity;
+    // TODO: Are we leaking _data here?
     _data = other._data;
     other._data = nullptr;
     return *this;
