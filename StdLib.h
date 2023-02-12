@@ -24,42 +24,73 @@ do { \
 #endif
 #endif // #ifndef assert
 
-template <typename T>
 class LinearAllocator {
 public:
-  LinearAllocator(u32 initialCapacity = 16) {
-    _firstArray = _lastArray = Array::New(initialCapacity * sizeof(T));
+  LinearAllocator(u32 initialCapacity = 0x4000 - sizeof(Array) /* 4096 is the usual page size */) {
+    _firstArray = _lastArray = Array::New(initialCapacity);
   }
 
   ~LinearAllocator() {
     Array::Delete(_firstArray);
   }
 
-  // Copying does not make sense for this type. Make a new one if you want another.
+  // Copying does not make sense for this type. Make a new one if you want more storage,
+  // or just share the allocator between the two objects.
   LinearAllocator(const LinearAllocator& other) = delete; // Copy constructor
   LinearAllocator& operator=(const LinearAllocator& other) = delete; // Copy assignment
 
-  T* allocate(size_t n) {
-    if (_lastArray->size + n > _lastArray->capacity) {
-      assert(n == (u32)n);
-      if (n > _lastArray->capacity) NewArray((u32)n); // Asking for a large amount of data
-      else NewArray(_lastArray->capacity * 2); // Asking for a small amount of data
-    }
-    T* data = &_lastArray->data;
-    T* addr = &data[_lastArray->size];
-    _lastArray->size += (u32)n;
-    return addr;
+  // T* obj = new T();
+  template <typename T>
+  [[nodiscard]]
+  T* make() {
+    void* addr = allocate(sizeof(T));
+    if (!addr) return nullptr;
+    return new (addr) T();
   }
 
-  void deallocate(T* const addr, size_t n) {
+  // T* obj = new T(value);
+  template <typename T>
+  [[nodiscard]]
+  T* make(const T& value) {
+    void* addr = allocate(sizeof(T));
+    if (!addr) return nullptr;
+    return new (addr) T(value);
+  }
+
+  // T* array = new T[n];
+  template <typename T>
+  [[nodiscard]]
+  T* make_array(size_t n) {
+    void* addr = allocate(sizeof(T) * n);
+    if (!addr) return nullptr;
+    return new (addr) T[n];
+  }
+
+  void deallocate(void* const addr, size_t n) {
     // free!
   }
 
 private:
+  [[nodiscard]]
+  void* allocate(size_t bytes) {
+    if (_lastArray->size + bytes > _lastArray->capacity) {
+      assert(bytes == (u32)bytes); // Safety; size_t is not always u32.
+
+      // Allocate the requested bytes if it's more than doubling the existing size (i.e. a large amount of data)
+      u32 toAllocate = (u32)(bytes > _lastArray->capacity * 2 ? bytes : _lastArray->capacity * 2);
+      if (!NewArray(toAllocate)) return nullptr;
+    }
+    u8* data = &_lastArray->data;
+    void* addr = &data[_lastArray->size];
+    _lastArray->size += (u32)bytes;
+    return addr;
+  }
+
   struct Array {
+    [[nodiscard]]
     static Array* New(u32 capacity) {
-      Array* b = (Array*)malloc(sizeof(Array) + sizeof(T) * (capacity - 1));
-      if (b == nullptr) throw std::bad_alloc();
+      Array* b = (Array*)malloc(sizeof(Array) + capacity - 1);
+      if (b == nullptr) return nullptr;
       b->size = 0;
       b->capacity = capacity;
       b->next = nullptr;
@@ -77,13 +108,16 @@ private:
     u32 size = 0;
     u32 capacity = 0;
     Array* next;
-    T data; // This is actually an array of length |capacity|.
+    u8 data; // This is actually the first element in an array of size |capacity|.
   };
 
-  void NewArray(u32 capacity) {
+  [[nodiscard]]
+  bool NewArray(u32 capacity) {
     Array* a = Array::New(capacity);
+    if (!a) return false;
     _lastArray->next = a;
     _lastArray = a;
+    return true;
   }
 
   Array* _firstArray;
@@ -201,11 +235,10 @@ public:
   // Construct a vector of maximum |capacity|, using allocator |alloc|.
   // This allocates space in memory (or on the stack) for the vector *container*,
   // BUT uses the allocator to allocate memory for the vector *contents*.
-  Vector(int capacity, LinearAllocator<T>& alloc) {
+  Vector(int capacity, LinearAllocator& alloc) {
     _size = 0;
     _capacity = capacity;
-    void* addr = alloc.allocate(capacity * sizeof(T));
-    _data = new (addr) T[capacity];
+    _data = alloc.make_array(capacity);
   }
   // Construct a vector from an initializer list. This allocates exactly enough space for the initializer contents.
   Vector(std::initializer_list<T> init) : Vector((int)init.size()) {
@@ -649,13 +682,9 @@ public:
       return false;
     }
 
-    T* newValue;
-    try {
-      newValue = _allocator.allocate(1);
-    } catch (std::bad_alloc&) {
-      return false;
-    }
-    newValue = new (newValue) T(value); // Initialization via copy constructor
+    T* newValue = _allocator.make(value);
+    if (newValue == nullptr) return false;
+
     if (heapValue) *heapValue = newValue;
     Insert(pos, hash, newValue);
     return true; // Just added
@@ -770,7 +799,7 @@ private:
 
   size_t _size = 0;
   size_t _capacity = 0;
-  LinearAllocator<T> _allocator;
+  LinearAllocator _allocator;
   u8* _ctrl = nullptr;
   T** _slots = nullptr;
 };
